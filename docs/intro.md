@@ -26,7 +26,7 @@ The Bitnami Production Runtime for Kubernetes builds on a default
 
    For example, to install onto GKE-1.9.x, use:
    ```sh
-   installer --platform gke-1.9
+   installer install --platform gke-1.9
    ```
 
    The installer may require some additional platform-specific
