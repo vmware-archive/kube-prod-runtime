@@ -53,6 +53,9 @@ var installCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
+		if len(manifestBase) > 0 && manifestBase[len(manifestBase)-1] != '/' {
+			manifestBase = manifestBase + "/"
+		}
 		c.ManifestBase, err = cwdUrl.Parse(manifestBase)
 		if err != nil {
 			return err
