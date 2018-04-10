@@ -12,7 +12,8 @@ local cert_manager = import "cert-manager.jsonnet";
       },
     },
   },
-*/
+  */
+
   //svc_cat: svc_cat {
   //  etcd+: {
   //    svc:: $.etcd.svc,
@@ -22,5 +23,4 @@ local cert_manager = import "cert-manager.jsonnet";
   cert_manager: cert_manager,
 
   // prometheus
-  // pagekite-ingress
 }

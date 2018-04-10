@@ -25,12 +25,12 @@ var Platforms = []Platform{
 		Description: "Minikube 0.25 with Kubernetes 1.8",
 	},
 	{
-		Name:        "gke-1.9",
-		Description: "Google Kubernetes Engine with Kubernetes 1.9",
+		Name:        "aks+k8s-1.9",
+		Description: "Azure Container Service (AKS) with Kubernetes 1.9",
 	},
 	{
-		Name:        "gke-1.8",
-		Description: "Google Kubernetes Engine with Kubernetes 1.8",
+		Name:        "aks+k8s-1.8",
+		Description: "Azure Container Service (AKS) with Kubernetes 1.8",
 	},
 }
 
