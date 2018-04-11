@@ -1,4 +1,5 @@
-KUBECFG = kubecfg -J components:lib:$(HOME)/go/src/github.com/ksonnet/kubecfg/lib
+KUBECFG = kubecfg
+KUBECFG_FLAGS = -J components -J lib
 
 COMPONENTS := $(wildcard components/*.jsonnet)
 PLATFORMS := $(wildcard platforms/*.jsonnet)
@@ -10,13 +11,13 @@ JFILES := \
 all: $(PLATFORMS:%.jsonnet=%.yaml)
 
 %.yaml: %.jsonnet $(JFILES)
-	$(KUBECFG) show $< >$@.tmp
+	$(KUBECFG) $(KUBECFG_FLAGS) show $< >$@.tmp
 	mv $@.tmp $@
 
 validate: $(PLATFORMS:%.jsonnet=%.jsonnet-validate)
 
 %.jsonnet-validate: %.jsonnet $(JFILES)
-	$(KUBECFG) validate $<
+	$(KUBECFG) $(KUBECFG_FLAGS) validate --ignore-unknown $<
 
 .PHONY: all validate
 .PHONY: %.jsonnet-validate
