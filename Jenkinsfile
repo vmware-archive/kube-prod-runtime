@@ -85,11 +85,6 @@ containers: [
                 sh 'make validate KUBECFG="kubecfg -v"'
               }
               stash includes: 'manifests/**', excludes: 'manifests/Makefile', name: 'manifests'
-
-              dir('manifests') {
-                sh 'make all KUBECFG="kubecfg -v"'
-                stash includes: 'platforms/*.yaml', name: 'yaml'
-              }
             }
           }
         }

@@ -1,26 +1,41 @@
-local etcd = import "etcd.jsonnet";
-local svc_cat = import "svc-cat.jsonnet";
+local kube = import "kube.libsonnet";
 local cert_manager = import "cert-manager.jsonnet";
+local edns = import "externaldns.jsonnet";
+local nginx_ingress = import "nginx-ingress.jsonnet";
 
 {
-  /*
-  etcd: etcd {
-    p: "svc-cat-",
-    etcd+: {
+  edns: edns {
+    azconf:: kube.Secret(self.p+"external-dns-azure-config") + self.namespace {
+      // to be filled in by installer
+    },
+
+    deploy+: {
       spec+: {
-        replicas: 1,
+        template+: {
+          spec+: {
+            volumes_+: {
+              azconf: kube.SecretVolume($.edns.azconf),
+            },
+            containers_+: {
+              edns+: {
+                args_+: {
+                  provider: "azure",
+                  "azure-config-file": "/etc/kubernetes/azure.json",
+                },
+                volumeMounts_+: {
+                  azconf: {mountPath: "/etc/kubernetes", readOnly: true},
+                },
+              },
+            },
+          },
+        },
       },
     },
   },
-  */
-
-  //svc_cat: svc_cat {
-  //  etcd+: {
-  //    svc:: $.etcd.svc,
-  //  },
-  //},
 
   cert_manager: cert_manager,
+
+  nginx_ingress: nginx_ingress,
 
   // prometheus
 }
