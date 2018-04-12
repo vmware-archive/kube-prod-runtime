@@ -46,7 +46,7 @@ containers: [
                 dir('src/github.com/bitnami/kube-prod-runtime') {
                   unstash 'src'
 
-                  dir('installer') {
+                  dir('kubeprod') {
                     sh 'go version'
                     sh 'make all'
                     sh 'make test'
@@ -54,8 +54,8 @@ containers: [
 
                     sh 'make release VERSION=$BUILD_TAG'
                     dir('release') {
-                      sh './installer --help'
-                      stash includes: 'installer', name: 'installer'
+                      sh './kubeprod --help'
+                      stash includes: 'kubeprod', name: 'installer'
                     }
                   }
                 }
@@ -121,7 +121,7 @@ containers: [
             stage("${platform} install") {
               unstash 'installer'
               unstash 'manifests'
-              sh "./installer --platform=${platform} --manifests=manifests"
+              sh "./kubeprod --platform=${platform} --manifests=manifests"
             }
 
             stage("${platform} test") {
@@ -189,7 +189,7 @@ containers: [
                     dir('do-install') {
                       unstash 'installer'
                       unstash 'manifests'
-                      sh "./installer install --platform=${platform} --manifests=manifests"
+                      sh "./kubeprod install --platform=${platform} --manifests=manifests"
                     }
                   }
 
