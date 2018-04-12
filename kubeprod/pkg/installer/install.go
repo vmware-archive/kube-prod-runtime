@@ -18,7 +18,7 @@ import (
 	"k8s.io/client-go/dynamic"
 	restclient "k8s.io/client-go/rest"
 
-	"github.com/bitnami/kube-prod-runtime/installer/pkg/prodruntime"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
 )
 
 const GcTag = "bitnami.com/prod-runtime"

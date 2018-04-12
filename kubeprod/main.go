@@ -6,7 +6,7 @@ import (
 
 	log "github.com/sirupsen/logrus"
 
-	"github.com/bitnami/kube-prod-runtime/installer/cmd"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/cmd"
 )
 
 var version = "(dev build)"

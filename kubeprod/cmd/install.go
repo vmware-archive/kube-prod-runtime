@@ -7,8 +7,8 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/bitnami/kube-prod-runtime/installer/pkg/installer"
-	"github.com/bitnami/kube-prod-runtime/installer/pkg/prodruntime"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/installer"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
 )
 
 const (

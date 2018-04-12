@@ -12,13 +12,13 @@ BINDIR = bin
 
 GOPKGS = . ./cmd/... ./pkg/...
 
-all: $(BINDIR)/installer
+all: $(BINDIR)/kubeprod
 
-$(BINDIR)/installer: $(shell tools/godeps.sh .)
+$(BINDIR)/kubeprod: $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
 release:
-	$(MAKE) release/installer BINDIR=release CGO_ENABLED=0 GOBUILDFLAGS="$(GORELEASEFLAGS)"
+	$(MAKE) release/kubeprod BINDIR=release CGO_ENABLED=0 GOBUILDFLAGS="$(GORELEASEFLAGS)"
 
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)

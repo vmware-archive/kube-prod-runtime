@@ -4,10 +4,10 @@ Usage:
 
 ```sh
 # Find supported platform
-installer list-platforms
+kubeprod list-platforms
 
 # Install to cluster given by current kubectl context
-installer install --platform=$platform
+kubeprod install --platform=$platform
 ```
 
 ## Development
@@ -15,7 +15,7 @@ installer install --platform=$platform
 Requires a typical golang development environment.  To build:
 
 ```sh
-go get github.com/bitnami/kube-prod-runtime/installer
+go get github.com/bitnami/kube-prod-runtime/kubeprod
 ```
 
 For local development against minikube:
@@ -23,5 +23,5 @@ For local development against minikube:
 ```sh
 minikube start --kubernetes-version=v1.9.0
 
-./installer -v install --platform=minikube-0.25+k8s-1.9 --manifests=../manifests
+./kubeprod -v install --platform=minikube-0.25+k8s-1.9 --manifests=../manifests
 ```
