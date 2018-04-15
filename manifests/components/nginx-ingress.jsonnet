@@ -4,26 +4,12 @@ local kube = import "kube.libsonnet";
   p:: "",
   namespace:: {metadata+: {namespace: "kube-system"}},
 
-  // Exported helper for others to use
-  TlsIngress(name):: kube.Ingress(name) {
-    local this = self,
-    metadata+: {
-      annotations+: {"kubernetes.io/tls-acme": "true"},
-    },
-    spec+: {
-      tls+: [{
-        hosts: std.set([r.host for r in this.spec.rules]),
-        secretName: this.metadata.name + "-tls",
-      }],
-    },
-  },
-
   config: kube.ConfigMap($.p+"nginx-ingress") + $.namespace {
     data+: {
       "proxy-connect-timeout": "15",
       "disable-ipv6": "false",
 
-      //"hsts": "true",
+      "hsts": "true",
       //"hsts-include-subdomains": "false",
 
       "enable-vts-status": "true",
@@ -191,7 +177,7 @@ local kube = import "kube.libsonnet";
           terminationGracePeriodSeconds: 60,
           containers_+: {
             default: kube.Container("nginx") {
-              image: "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.9.0",
+              image: "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.12.0",
               env_+: {
                 POD_NAME: kube.FieldRef("metadata.name"),
                 POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
@@ -206,6 +192,7 @@ local kube = import "kube.libsonnet";
                 "tcp-services-configmap": fqname($.tcpconf),
                 "udp-services-configmap": fqname($.udpconf),
                 "sort-backends": true,
+                //"ingress-class": "kubeprod.bitnami.com/nginx",
               },
               ports_: {
                 http: {containerPort: 80},
