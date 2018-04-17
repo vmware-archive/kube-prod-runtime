@@ -31,6 +31,7 @@ type InstallCmd struct {
 
 	Platform     *prodruntime.Platform
 	ManifestBase *url.URL
+	ContactEmail string
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
@@ -64,7 +65,10 @@ func (c InstallCmd) Run(out io.Writer) error {
 		return err
 	}
 
-	objs, err := readObjs(importer, input)
+	extvars := map[string]string{
+		"EMAIL": c.ContactEmail,
+	}
+	objs, err := readObjs(importer, extvars, input)
 	if err != nil {
 		return err
 	}
@@ -85,7 +89,7 @@ func (c InstallCmd) Run(out io.Writer) error {
 	return nil
 }
 
-func evaluateJsonnet(importer jsonnet.Importer, input *url.URL) (string, error) {
+func evaluateJsonnet(importer jsonnet.Importer, extvars map[string]string, input *url.URL) (string, error) {
 	vm := jsonnet.MakeVM()
 	vm.Importer(importer)
 	utils.RegisterNativeFuncs(vm, utils.NewIdentityResolver())
@@ -93,6 +97,10 @@ func evaluateJsonnet(importer jsonnet.Importer, input *url.URL) (string, error) 
 	inputDir := *input // copy
 	dir, _ := path.Split(input.Path)
 	inputDir.Path = dir
+
+	for k, v := range extvars {
+		vm.ExtVar(k, v)
+	}
 
 	data, err := importer.Import(inputDir.String(), input.String())
 	if err != nil {
@@ -151,8 +159,8 @@ func jsonWalk(obj interface{}) ([]interface{}, error) {
 
 // TODO: refactor kubecfg's `readObjs()`, so we can share this code
 // with less omg-my-eyes.
-func readObjs(importer jsonnet.Importer, input *url.URL) ([]*unstructured.Unstructured, error) {
-	jsonstr, err := evaluateJsonnet(importer, input)
+func readObjs(importer jsonnet.Importer, extvars map[string]string, input *url.URL) ([]*unstructured.Unstructured, error) {
+	jsonstr, err := evaluateJsonnet(importer, extvars, input)
 	if err != nil {
 		return nil, err
 	}

@@ -5,6 +5,7 @@ import (
 	"net/url"
 	"os"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/installer"
@@ -14,6 +15,7 @@ import (
 const (
 	flagPlatform        = "platform"
 	flagManifests       = "manifests"
+	flagEmail           = "email"
 	DefaultManifestBase = "https://github.com/bitnami/kube-prod-runtime/manifests/"
 )
 
@@ -22,6 +24,7 @@ func init() {
 	installCmd.PersistentFlags().String(flagPlatform, "", "Target platform name.  See list-platforms for possible values")
 	installCmd.MarkPersistentFlagRequired(flagPlatform)
 	installCmd.PersistentFlags().String(flagManifests, DefaultManifestBase, "Base URL below which to find platform manifests")
+	installCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
 }
 
 func cwdURL() (*url.URL, error) {
@@ -70,6 +73,14 @@ var installCmd = &cobra.Command{
 			// TODO: add some more helpful advice about how to
 			// find valid values, etc
 			return fmt.Errorf("unknown platform %q", platform)
+		}
+
+		c.ContactEmail, err = flags.GetString(flagEmail)
+		if err != nil {
+			return err
+		}
+		if c.ContactEmail == "" {
+			log.Warning("Email address was not provided. Some services may not function correctly.")
 		}
 
 		c.Config, err = clientConfig.ClientConfig()

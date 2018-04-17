@@ -1,5 +1,5 @@
 KUBECFG = kubecfg
-KUBECFG_FLAGS = -J components -J lib
+KUBECFG_FLAGS = -J components -J lib -V EMAIL=foo@example.com
 
 COMPONENTS := $(wildcard components/*.jsonnet)
 PLATFORMS := $(wildcard platforms/*.jsonnet)
@@ -7,12 +7,6 @@ PLATFORMS := $(wildcard platforms/*.jsonnet)
 JFILES := \
   $(wildcard */*.libsonnet) \
   $(COMPONENTS) $(PLATFORMS)
-
-all: $(PLATFORMS:%.jsonnet=%.yaml)
-
-%.yaml: %.jsonnet $(JFILES)
-	$(KUBECFG) $(KUBECFG_FLAGS) show $< >$@.tmp
-	mv $@.tmp $@
 
 validate: $(PLATFORMS:%.jsonnet=%.jsonnet-validate)
 
