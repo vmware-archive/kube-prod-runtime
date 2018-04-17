@@ -76,5 +76,17 @@ local oauth2_proxy = import "oauth2-proxy.jsonnet";
       // FIXME: parameterise!
       host: "prometheus.aztest.oldmacdonald.farm",
     },
+    config+: {
+      scrape_configs_+: {
+        apiservers+: {
+          // AKS firewalls off cluster jobs from reaching the APIserver
+          // except via the kube-proxy.
+          // TODO: see if we can just fix this by tweaking a NetworkPolicy
+          kubernetes_sd_configs:: null,
+          static_configs: [{targets: ["kubernetes.default.svc:443"]}],
+          relabel_configs: [],
+        },
+      },
+    },
   },
 }
