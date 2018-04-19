@@ -7,6 +7,8 @@ local path_join(prefix, suffix) = (
   else prefix + "/" + suffix
 );
 
+// TODO: add blackbox-exporter
+
 {
   p:: "",
   namespace:: {metadata+: {namespace: "kube-system"}},

@@ -198,7 +198,7 @@ local NODE_NAME = "__meta_kubernetes_node_name";
         },
         {
           target_label: "__address__",
-          replacement: "blackbox-exporter.example.com:9115",
+          replacement: "blackbox-exporter:9115",
         },
         {
           source_labels: ["__param_target"],
@@ -245,7 +245,7 @@ local NODE_NAME = "__meta_kubernetes_node_name";
         },
         {
           target_label: "__address__",
-          replacement: "blackbox-exporter.example.com:9115",
+          replacement: "blackbox-exporter:9115",
         },
         {
           source_labels: ["__param_target"],

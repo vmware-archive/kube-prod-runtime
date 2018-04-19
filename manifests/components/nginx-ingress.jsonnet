@@ -177,7 +177,7 @@ local kube = import "kube.libsonnet";
           terminationGracePeriodSeconds: 60,
           containers_+: {
             default: kube.Container("nginx") {
-              image: "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.12.0",
+              image: "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.13.0",
               env_+: {
                 POD_NAME: kube.FieldRef("metadata.name"),
                 POD_NAMESPACE: kube.FieldRef("metadata.namespace"),

@@ -1,7 +1,7 @@
 local kube = import "kube.libsonnet";
 
 local arch = "amd64";
-local version = "v1.4.3";
+local version = "v1.5.2";
 
 {
   namespace:: {
