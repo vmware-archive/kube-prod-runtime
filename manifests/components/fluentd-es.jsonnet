@@ -11,7 +11,15 @@ local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
   config:: (import "fluentd-es-config.jsonnet"),
 
   fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.namespace {
-    data+: $.config,
+    data+: $.config {
+      params: {
+        elasticsearch_host: $.p + "elasticsearch-logging",
+        // TODO: As this uses node's /var/log/ for fluentd pos and (possibly
+        // large) buffer files, consider using instead emptydir or dynamically
+        // provisioned local dir (requires localdir provisioner, kube >= 1.10)
+        fluentd_buffer_dir: "/var/log",
+      }
+    },
   },
   fluentd_es: {
     local f = self,
