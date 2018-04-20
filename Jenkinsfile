@@ -13,14 +13,26 @@ def label = UUID.randomUUID().toString()
 
 podTemplate(
 label: "${label} linux x86",
-resourceLimitCpu: '2000m',
-resourceLimitMemory: '2Gi',
-resourceRequestCpu: '10m',     // rely on burst CPU
-resourceRequestMemory: '1Gi',  // but actually need ram to avoid oom killer
 idleMinutes: 1,  // Allow some best-effort reuse between successive stages
 containers: [
-  containerTemplate(name: 'go', image: 'golang:1.10.1-stretch', ttyEnabled: true, command: 'cat'),
-  containerTemplate(name: 'az', image: 'microsoft/azure-cli:2.0.30', ttyEnabled: true, command: 'cat'),
+  containerTemplate(
+  name: 'go',
+  image: 'golang:1.10.1-stretch',
+  ttyEnabled: true, command: 'cat',
+  resourceLimitCpu: '2000m',
+  resourceLimitMemory: '2Gi',
+  resourceRequestCpu: '10m',     // rely on burst CPU
+  resourceRequestMemory: '1Gi',  // but actually need ram to avoid oom killer
+  ),
+  containerTemplate(
+  name: 'az',
+  image: 'microsoft/azure-cli:2.0.30',
+  ttyEnabled: true, command: 'cat',
+  resourceLimitCpu: '100m',
+  resourceLimitMemory: '500Mi',
+  resourceRequestCpu: '1m',
+  resourceRequestMemory: '100Mi',
+  ),
 ]) {
 
   env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
