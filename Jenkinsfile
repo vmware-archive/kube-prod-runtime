@@ -15,6 +15,8 @@ podTemplate(
 label: "${label} linux x86",
 resourceLimitCpu: '2000m',
 resourceLimitMemory: '2Gi',
+resourceRequestCpu: '10m',     // rely on burst CPU
+resourceRequestMemory: '1Gi',  // but actually need ram to avoid oom killer
 idleMinutes: 1,  // Allow some best-effort reuse between successive stages
 containers: [
   containerTemplate(name: 'go', image: 'golang:1.10.1-stretch', ttyEnabled: true, command: 'cat'),
