@@ -4,9 +4,6 @@ local utils = import "utils.libsonnet";
 
 local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
 
-// TODO(jjo):
-// * confirm we're ok to split E-F-K jsonnets by their components
-// * confirm we stil prefer "kube-system" instead of "logging" ns
 {
   p:: "",
   namespace:: { metadata+: { namespace: "kube-system" } },
@@ -47,6 +44,8 @@ local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
                   limits: { memory: "500Mi" },
                 },
                 volumeMounts_+: {
+                  // See TODO note at fluentd-es-config/output.conf re: voiding
+                  // fluentd from using node's /var/log for buffering
                   varlog: { mountPath: "/var/log" },
                   varlibdockercontainers: {
                     mountPath: "/var/lib/docker/containers",
