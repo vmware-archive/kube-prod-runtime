@@ -200,7 +200,10 @@
     containers_:: {},
 
     local container_names_ordered = [self.default_container] + [n for n in container_names if n != self.default_container],
-    containers: [{ name: $.hyphenate(name) } + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
+    containers:
+      if std.length(self.containers_) > 0
+      then [{ name: $.hyphenate(name) } + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null]
+      else error "PodSpec containers_ length can't be zero",
 
     initContainers_:: {},
     initContainers: [{name: $.hyphenate(name) } + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
