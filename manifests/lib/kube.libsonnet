@@ -66,7 +66,6 @@
     metadata: {
       name: name,
       labels: { name: std.join("-", std.split(this.metadata.name, ":")) },
-      annotations: {},
     },
   },
 
@@ -301,7 +300,6 @@
         spec: $.PodSpec,
         metadata: {
           labels: deployment.metadata.labels,
-          annotations: {},
         },
       },
 
@@ -361,15 +359,6 @@
   StatefulSet(name): $._Object("apps/v1beta2", "StatefulSet", name) {
     local sset = self,
 
-    // StatefulSet is overly fussy about "changes" (even when
-    // they're no-ops).
-    // In particular annotations={} is apparently a "change", since
-    // the server-side comparison is ignorant of omitempty defaults.
-    local emptyAnnotation = {
-      annotations+: {"bitnami.com/avoid-omitempty": ""},
-    },
-    metadata+: emptyAnnotation,
-
     spec: {
       serviceName: name,
 
@@ -382,7 +371,7 @@
 
       template: {
         spec: $.PodSpec,
-        metadata: emptyAnnotation {
+        metadata: {
           labels: sset.metadata.labels,
         },
       },
@@ -393,7 +382,11 @@
 
       volumeClaimTemplates_:: {},
       volumeClaimTemplates: [
-        $.PersistentVolumeClaim($.hyphenate(kv[0])) + {metadata+: emptyAnnotation, apiVersion:: null, kind:: null} + kv[1]
+        // StatefulSet is overly fussy about "changes" (even when
+        // they're no-ops).
+        // In particular annotations={} is apparently a "change",
+        // since the comparison is ignorant of defaults.
+        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + {apiVersion:: null, kind:: null} + kv[1])
         for kv in $.objectItems(self.volumeClaimTemplates_)],
 
       replicas: 1,
@@ -411,7 +404,6 @@
         },
         metadata: {
           labels: job.metadata.labels,
-          annotations: {},
         },
       },
 
@@ -432,7 +424,6 @@
       template: {
         metadata: {
           labels: ds.metadata.labels,
-          annotations: {},
         },
         spec: $.PodSpec,
       },

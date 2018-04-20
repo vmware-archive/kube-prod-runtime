@@ -2,6 +2,9 @@ local kube = import "kube.libsonnet";
 local cert_manager = import "cert-manager.jsonnet";
 local edns = import "externaldns.jsonnet";
 local nginx_ingress = import "nginx-ingress.jsonnet";
+local prometheus = import "prometheus.jsonnet";
+local heapster = import "heapster.jsonnet";
+local oauth2_proxy = import "oauth2-proxy.jsonnet";
 
 {
   edns: edns {
@@ -37,5 +40,53 @@ local nginx_ingress = import "nginx-ingress.jsonnet";
 
   nginx_ingress: nginx_ingress,
 
-  // prometheus
+  oauth2_proxy: oauth2_proxy {
+    local oauth2 = self,
+
+    secret+: {
+      data_+: {
+        azure_tenant: error "azure_tenant is required",
+      },
+    },
+
+    deploy+: {
+      spec+: {
+        template+: {
+          spec+: {
+            containers_+: {
+              proxy+: {
+                args_+: {
+                  provider: "azure",
+                },
+                env_+: {
+                  OAUTH2_PROXY_AZURE_TENANT: kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+
+  heapster: heapster,
+
+  prometheus: prometheus {
+    ingress+: {
+      // FIXME: parameterise!
+      host: "prometheus.aztest.oldmacdonald.farm",
+    },
+    config+: {
+      scrape_configs_+: {
+        apiservers+: {
+          // AKS firewalls off cluster jobs from reaching the APIserver
+          // except via the kube-proxy.
+          // TODO: see if we can just fix this by tweaking a NetworkPolicy
+          kubernetes_sd_configs:: null,
+          static_configs: [{targets: ["kubernetes.default.svc:443"]}],
+          relabel_configs: [],
+        },
+      },
+    },
+  },
 }
