@@ -9,9 +9,6 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
   namespace:: { metadata+: { namespace: "kube-system" } },
   elasticsearch: {
     local es = self,
-    // NOTE: ES resources below tighten to be able to run these beasts in a 3x
-    // AKS cluster with default VM resources
-    resources:: { cpu: 100, memory: 1200, disk: 100 },
 
     serviceAccount: kube.ServiceAccount($.p + "elasticsearch") + $.namespace,
 
@@ -30,9 +27,16 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
       subjects_+: [es.serviceAccount],
     },
 
+    disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.namespace {
+      target_pod: es.sts.spec.template,
+      spec+: { maxUnavailable: 1 },
+    },
+
     sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.namespace {
+      local this = self,
       spec+: {
         replicas: 3,
+        podManagementPolicy: "Parallel",
         template+: {
           metadata+: {
             annotations+: {
@@ -41,19 +45,37 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
             },
           },
           spec+: {
+            affinity: {
+              podAntiAffinity: {
+                preferredDuringSchedulingIgnoredDuringExecution: [
+                  {
+                    weight: 100,
+                    podAffinityTerm: {
+                      labelSelector: this.spec.selector,
+                      topologyKey: "kubernetes.io/hostname",
+                    },
+                  },
+                  {
+                    weight: 10,
+                    podAffinityTerm: {
+                      labelSelector: this.spec.selector,
+                      topologyKey: "failure-domain.beta.kubernetes.io/zone",
+                    },
+                  },
+                ],
+              },
+            },
             default_container: "elasticsearch",
             containers_+: {
               elasticsearch: kube.Container("elasticsearch") {
+                local container = self,
                 image: ELASTICSEARCH_IMAGE,
                 // This can massively vary depending on the logging volume
                 resources: {
-                  requests: {
-                    cpu: es.resources.cpu + "m",
-                    memory: es.resources.memory + "Mi",
-                  },
+                  requests: { cpu: "100m", memory: "1200Mi" },
                   limits: {
-                    cpu: (2 * es.resources.cpu) + "m",
-                    memory: (2 * es.resources.memory) + "Mi",
+                    cpu: "1", // uses lots of CPU when indexing
+                    memory: "2Gi",
                   },
                 },
                 ports_+: {
@@ -74,22 +96,35 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
                           es.sts.spec.replicas < self.min_master_nodes * 2) :
                          "Not enough quorum, verify min_master_nodes vs replicas",
                   MINIMUM_MASTER_NODES: std.toString(self.min_master_nodes),
+
+                  // TODO: offer a dynamically sized pool of
+                  // non-master nodes.  Autoscaler will require custom
+                  // HPA metrics in practice.
+
+                  // NB: wrapper script always adds a -Xms value, so can't
+                  // just rely on -XX:+UseCGroupMemoryLimitForHeap
+                  local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                   ES_JAVA_OPTS: std.join(" ", [
-                    "-XX:+UnlockExperimentalVMOptions",
-                    "-XX:+UseCGroupMemoryLimitForHeap",
-                    "-XX:MaxRAMFraction=1",
+                    "-Xms%dm" % heapsize, // ES asserts that these are equal
+                    "-Xmx%dm" % heapsize,
+                    "-XshowSettings:vm",
                   ]),
                 },
                 readinessProbe: {
-                  httpGet: { path: "/_cluster/health?local=true", port: "db" },
+                  local probe = self,
                   // don't allow rolling updates to kill containers until the cluster is green
                   // ...meaning it's not allocating replicas or relocating any shards
+                  // FIXME: great idea in theory, breaks bootstrapping.
+                  //httpGet: { path: "/_cluster/health?local=true&wait_for_status=green&timeout=%ds" % probe.timeoutSeconds, port: "db" },
+                  httpGet: { path: "/_nodes/_local/version", port: "db" },
+                  timeoutSeconds: 5,
                   initialDelaySeconds: 2 * 60,
                   periodSeconds: 30,
                   failureThreshold: 4,
-
                 },
                 livenessProbe: self.readinessProbe {
+                  httpGet: { path: "/_nodes/_local/version", port: "db" },
+
                   // elasticsearch_logging_discovery has a 5min timeout on cluster bootstrap
                   initialDelaySeconds: 5 * 60,
                 },
@@ -115,6 +150,7 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
             initContainers_+: {
               elasticsearch_init: kube.Container("elasticsearch-init") {
                 image: "alpine:3.6",
+                // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
                 command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"],
                 securityContext: {
                   privileged: true,
@@ -126,15 +162,14 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
           },
         },
         volumeClaimTemplates_+: {
-          datadir: kube.PersistentVolumeClaim("datadir") + $.namespace {
-            storage: es.resources.disk + "Gi",
-          },
+          datadir: { storage: "100Gi" },
         },
       },
     },
 
     svc: kube.Service($.p + "elasticsearch-logging") + $.namespace {
       target_pod: es.sts.spec.template,
+      spec+: {clusterIP: "None"}, // headless
     },
   },
 }

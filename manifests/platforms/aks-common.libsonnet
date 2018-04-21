@@ -5,6 +5,8 @@ local nginx_ingress = import "nginx-ingress.jsonnet";
 local prometheus = import "prometheus.jsonnet";
 local heapster = import "heapster.jsonnet";
 local oauth2_proxy = import "oauth2-proxy.jsonnet";
+local fluentd_es = import "fluentd-es.jsonnet";
+local elasticsearch = import "elasticsearch.jsonnet";
 
 {
   edns: edns {
@@ -89,4 +91,8 @@ local oauth2_proxy = import "oauth2-proxy.jsonnet";
       },
     },
   },
+
+  fluentd_es: fluentd_es,
+
+  elasticsearch: elasticsearch,
 }
