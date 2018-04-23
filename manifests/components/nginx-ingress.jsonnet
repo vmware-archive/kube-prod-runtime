@@ -208,6 +208,9 @@ local kube = import "kube.libsonnet";
               livenessProbe: self.readinessProbe {
                 initialDelaySeconds: 10,
               },
+              resources+: {
+                requests+: {cpu: "100m"},
+              },
             },
           },
         },
