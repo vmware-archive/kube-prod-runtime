@@ -183,6 +183,8 @@ containers: [
                             --resource-group ${resourceGroup} \
                             --name ${name}                    \
                             --node-count 3                    \
+                            --node-vm-size Standard_DS2_v2    \
+                            --location eastus                 \
                             --kubernetes-version ${kversion}  \
                             --generate-ssh-keys                   \
                             --service-principal \$AZURE_CLIENT_ID \
