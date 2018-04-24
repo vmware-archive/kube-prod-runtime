@@ -182,7 +182,7 @@
     local this = self,
     target_pod:: error "target_pod required",
     spec: {
-      minAvailable: 1,
+      assert std.objectHas(self, "minAvailable") || std.objectHas(self, "maxUnavailable") : "exactly one of minAvailable/maxUnavailable required",
       selector: {
         matchLabels: this.target_pod.metadata.labels,
       },

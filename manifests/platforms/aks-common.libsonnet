@@ -5,6 +5,9 @@ local nginx_ingress = import "nginx-ingress.jsonnet";
 local prometheus = import "prometheus.jsonnet";
 local heapster = import "heapster.jsonnet";
 local oauth2_proxy = import "oauth2-proxy.jsonnet";
+local fluentd_es = import "fluentd-es.jsonnet";
+local elasticsearch = import "elasticsearch.jsonnet";
+local kibana = import "kibana.jsonnet";
 
 {
   edns: edns {
@@ -87,6 +90,21 @@ local oauth2_proxy = import "oauth2-proxy.jsonnet";
           relabel_configs: [],
         },
       },
+    },
+  },
+
+  fluentd_es: fluentd_es {
+    es:: $.elasticsearch,
+  },
+
+  elasticsearch: elasticsearch,
+
+  kibana: kibana {
+    es:: $.elasticsearch,
+
+    ingress+: {
+      // FIXME: parameterise!
+      host: "kibana.aztest.oldmacdonald.farm",
     },
   },
 }

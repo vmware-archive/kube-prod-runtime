@@ -60,7 +60,7 @@ manifest='
 '
 
 reply_urls() {
-    for h in prometheus; do
+    for h in prometheus kibana; do
         echo "https://$h.$AZURE_PUBLIC_DNS_ZONE/oauth2/callback"
     done
 }
@@ -97,4 +97,4 @@ kubectl create secret generic \
         -n kube-system oauth2-proxy
 
 # TODO: should reread secret configs somehow (eg: use configmap-reload)
-kubectl delete pod -n kube-system -l oauth2-proxy
+kubectl delete pod -n kube-system -l name=oauth2-proxy
