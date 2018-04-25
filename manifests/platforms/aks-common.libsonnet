@@ -9,6 +9,8 @@ local fluentd_es = import "fluentd-es.jsonnet";
 local elasticsearch = import "elasticsearch.jsonnet";
 local kibana = import "kibana.jsonnet";
 
+local az_dns_zone = std.extVar("DNS_SUFFIX");
+
 {
   edns: edns {
     azconf:: kube.Secret(self.p+"external-dns-azure-config") + self.namespace {
@@ -48,7 +50,7 @@ local kibana = import "kibana.jsonnet";
 
     secret+: {
       data_+: {
-        azure_tenant: error "azure_tenant is required",
+        azure_tenant: error "azure_tenant is required",  // filled by installer
       },
     },
 
@@ -76,8 +78,7 @@ local kibana = import "kibana.jsonnet";
 
   prometheus: prometheus {
     ingress+: {
-      // FIXME: parameterise!
-      host: "prometheus.aztest.oldmacdonald.farm",
+      host: "prometheus." + az_dns_zone,
     },
     config+: {
       scrape_configs_+: {
@@ -103,8 +104,7 @@ local kibana = import "kibana.jsonnet";
     es:: $.elasticsearch,
 
     ingress+: {
-      // FIXME: parameterise!
-      host: "kibana.aztest.oldmacdonald.farm",
+      host: "kibana." + az_dns_zone,
     },
   },
 }

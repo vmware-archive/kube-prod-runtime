@@ -32,6 +32,7 @@ while [ $# -gt 0 ] ; do
             ;;
         --dns-suffix)
             AZURE_PUBLIC_DNS_ZONE="$2"
+            kpargs="--dns-suffix $2"
             shift 2
             ;;
         help|--help)
