@@ -10,7 +10,7 @@
 #        ns3-09.azure-dns.org. ns4-09.azure-dns.info. >
 #   <optional: set KUBECONFIG to some empty file>
 #   make -C kubeprod
-#   alias kubeprod=$repo/demo.sh
+#   alias kubeprod=$repo/aks-demo.sh
 # Demo:
 #   az aks create --resource-group prod-runtime-rg --name demo --node-count 3 --node-vm-size Standard_DS2_v2 --generate-ssh-key --kubernetes-version 1.9.4
 #   az aks get-credentials --resource-group prod-runtime-rg --name demo --admin --file $KUBECONFIG
