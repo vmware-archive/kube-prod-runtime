@@ -33,7 +33,7 @@ local kube = import "kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             edns: kube.Container("external-dns") {
-              image: "registry.opensource.zalan.do/teapot/external-dns:v0.4.8",
+              image: "registry.opensource.zalan.do/teapot/external-dns:v0.5.0",
               args_+: {
                 sources_:: ["service", "ingress"],
                 //"domain-filter": "example.com",

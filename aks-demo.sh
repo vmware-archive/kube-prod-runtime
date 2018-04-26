@@ -41,7 +41,7 @@
 
 mydir=${0%/*}
 # This can go away once we are a public github project
-kpargs="--manifests $mydir/manifests"
+kpargs=""
 isinstall=
 
 set -e
@@ -54,7 +54,7 @@ while [ $# -gt 0 ] ; do
             ;;
         --dns-suffix)
             AZURE_PUBLIC_DNS_ZONE="$2"
-            kpargs="--dns-suffix $2"
+            kpargs="$kpargs --dns-suffix $2"
             shift 2
             ;;
         help|--help)
@@ -65,6 +65,7 @@ while [ $# -gt 0 ] ; do
         install)
             kpargs="$kpargs $1"
             : ${isinstall:=true}
+            kpargs="$kpargs --manifests $mydir/manifests"
             shift
             ;;
         *)
