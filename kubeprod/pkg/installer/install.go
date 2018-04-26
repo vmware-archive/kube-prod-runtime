@@ -32,6 +32,7 @@ type InstallCmd struct {
 	Platform     *prodruntime.Platform
 	ManifestBase *url.URL
 	ContactEmail string
+	DnsSuffix    string
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
@@ -66,7 +67,8 @@ func (c InstallCmd) Run(out io.Writer) error {
 	}
 
 	extvars := map[string]string{
-		"EMAIL": c.ContactEmail,
+		"EMAIL":      c.ContactEmail,
+		"DNS_SUFFIX": c.DnsSuffix,
 	}
 	objs, err := readObjs(importer, extvars, input)
 	if err != nil {

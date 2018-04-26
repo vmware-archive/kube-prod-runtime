@@ -200,7 +200,12 @@ containers: [
                     dir('do-install') {
                       unstash 'installer'
                       unstash 'manifests'
-                      sh "./kubeprod install --platform=${platform} --manifests=manifests"
+                      // FIXME: we should have a better "test mode",
+                      // that uses letsencrypt-staging, fewer
+                      // replicas, etc.  My plan is to do that via
+                      // some sort of custom jsonnet overlay, since
+                      // power users will want similar flexibility.
+                      sh "./kubeprod install --platform=${platform} --manifests=manifests --email=foo@example.com --dns-suffix=example.com"
                     }
                   }
 

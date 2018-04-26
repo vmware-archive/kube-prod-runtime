@@ -6,10 +6,34 @@
 # NOTE! Assumes current kubectl config/context is correct!
 #
 
-set -e -x
+set -e
 
 : ${AZURE_RESOURCE_GROUP:?AZURE_RESOURCE_GROUP needs to be set}
 : ${AZURE_PUBLIC_DNS_ZONE:?AZURE_PUBLIC_DNS_ZONE needs to be set}
+
+resources=$(mktemp)
+trap "rm $resources" EXIT
+
+# matches the style of kubecfg/kubeprod logging output
+info() {
+    {
+        tput setaf 4
+        echo -n "INFO  "
+        tput op
+        echo "$@"
+    } >&2
+}
+
+xkubectl() {
+    echo --- >> $resources
+    kubectl "$@" --dry-run -o yaml >> $resources
+}
+
+# ---
+# externaldns
+# ---
+
+info "Creating Azure DNS zone $AZURE_PUBLIC_DNS_ZONE"
 
 az network dns zone create -g $AZURE_RESOURCE_GROUP -n $AZURE_PUBLIC_DNS_ZONE
 rgid=$(az group show --name $AZURE_RESOURCE_GROUP --query id -o tsv)
@@ -17,24 +41,31 @@ rgid=$(az group show --name $AZURE_RESOURCE_GROUP --query id -o tsv)
 authfile=$(mktemp)
 trap "rm $authfile" EXIT
 
-az ad sp create-for-rbac \
-   --role=Contributor \
-   --scopes=$rgid \
-   --sdk-auth \
-    | \
-    jq --arg rg $AZURE_RESOURCE_GROUP '{"tenantId": .tenantId, "subscriptionId": .subscriptionId, "aadClientId": .clientId, "aadClientSecret": .clientSecret, "resourceGroup": $rg}' |
-    tee $authfile
+info "Creating Azure service principal for DNS management"
 
-kubectl delete secret \
-        --ignore-not-found \
-        -n kube-system external-dns-azure-config
-kubectl create secret generic \
+# NB: the fd finagling is so I can grep stderr, since
+# 'create-for-rbac' insists on writing unsightly `Retrying role
+# assignment creation: N/36` "errors" to stderr.
+(
+    az ad sp create-for-rbac \
+       --role=Contributor \
+       --scopes=$rgid \
+       --sdk-auth |\
+    jq --arg rg $AZURE_RESOURCE_GROUP '{"tenantId": .tenantId, "subscriptionId": .subscriptionId, "aadClientId": .clientId, "aadClientSecret": .clientSecret, "resourceGroup": $rg}' | \
+    tee $authfile
+) 2>&1 | grep -v 'Retrying role assignment creation:' 1>&2
+
+xkubectl create secret generic \
         --from-file=azure.json=$authfile \
         -n kube-system external-dns-azure-config
 
 # TODO: Configure dns01 provider after cert-manager 0.3 is released
 
 # ---
+# oauth2-proxy
+# ---
+
+info "Creating Azure OAuth2 application"
 
 oauth_host=oauth.$AZURE_PUBLIC_DNS_ZONE
 
@@ -86,15 +117,18 @@ createupdate \
 cat $oauthfile
 # --homepage ?
 
-kubectl delete secret \
-        --ignore-not-found \
-        -n kube-system oauth2-proxy
-kubectl create secret generic \
+xkubectl create secret generic \
         --from-literal=client_id=$(jq -r <$oauthfile .appId) \
         --from-literal=client_secret=$client_secret \
         --from-literal=cookie_secret=$cookie_secret \
         --from-literal=azure_tenant=$(jq -r <$authfile .tenantId) \
         -n kube-system oauth2-proxy
+
+# ---
+# /end services
+# ---
+
+kubectl apply -f $resources
 
 # TODO: should reread secret configs somehow (eg: use configmap-reload)
 kubectl delete pod -n kube-system -l name=oauth2-proxy
