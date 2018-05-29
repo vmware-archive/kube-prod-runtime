@@ -37,7 +37,7 @@ type InstallCmd struct {
 
 func (c InstallCmd) Run(out io.Writer) error {
 	var err error
-	log.Info("Installing to ", c.Platform.Name)
+	log.Info("Installing platform ", c.Platform.Name)
 
 	update := kubecfg.UpdateCmd{
 		ClientPool:       c.ClientPool,

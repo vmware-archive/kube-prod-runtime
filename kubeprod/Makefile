@@ -18,7 +18,7 @@ $(BINDIR)/kubeprod: $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
 release:
-	$(MAKE) release/kubeprod BINDIR=release CGO_ENABLED=0 GOBUILDFLAGS="$(GORELEASEFLAGS)"
+	$(MAKE) all BINDIR=release CGO_ENABLED=0 GOBUILDFLAGS="$(GORELEASEFLAGS)"
 
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
@@ -28,3 +28,5 @@ fmt:
 
 vet:
 	$(GO) vet $(GOPKGS)
+
+.PHONY: all release test fmt vet

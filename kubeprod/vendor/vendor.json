@@ -9,6 +9,36 @@
 			"revisionTime": "2018-03-13T23:25:41Z"
 		},
 		{
+			"checksumSHA1": "jf0lz1wRA07ILyDujw/NzoU3kMA=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization",
+			"revision": "0a8ed6c65dc34935d90dee3ddbc901f1f497f221",
+			"revisionTime": "2018-05-07T17:40:36Z"
+		},
+		{
+			"checksumSHA1": "t6ChlDNU9eaDOo9OgEf/RpWbLZE=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-03-01-preview/dns",
+			"revision": "372468613aa2441986867c6cdd09af7f14a9866c",
+			"revisionTime": "2018-06-01T00:56:11Z"
+		},
+		{
+			"checksumSHA1": "x9ceW8JE2/FgODRSywClj0fRlh8=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac",
+			"revision": "0a8ed6c65dc34935d90dee3ddbc901f1f497f221",
+			"revisionTime": "2018-05-07T17:40:36Z"
+		},
+		{
+			"checksumSHA1": "UBLchee+9ee41iMybEQTPU+OvPE=",
+			"path": "github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources",
+			"revision": "0a8ed6c65dc34935d90dee3ddbc901f1f497f221",
+			"revisionTime": "2018-05-07T17:40:36Z"
+		},
+		{
+			"checksumSHA1": "XyIOza8Omavl4pjYGJInE/M8auY=",
+			"path": "github.com/Azure/azure-sdk-for-go/version",
+			"revision": "0a8ed6c65dc34935d90dee3ddbc901f1f497f221",
+			"revisionTime": "2018-05-07T17:40:36Z"
+		},
+		{
 			"checksumSHA1": "s5Fg7eWtMJHutu2wZF71OkqJ8ek=",
 			"path": "github.com/Azure/go-autorest/autorest",
 			"revision": "05cc91b23cb791df3737aa915d76c76d216ea732",
@@ -27,10 +57,34 @@
 			"revisionTime": "2018-03-09T19:05:52Z"
 		},
 		{
+			"checksumSHA1": "6i7kwcXGTn55WqfubQs21swgr34=",
+			"path": "github.com/Azure/go-autorest/autorest/azure/auth",
+			"revision": "eaa7994b2278094c904d31993d26f56324db3052",
+			"revisionTime": "2018-05-02T23:02:43Z"
+		},
+		{
+			"checksumSHA1": "+nXRwVB/JVEGe+oLsFhCmSkKPuI=",
+			"path": "github.com/Azure/go-autorest/autorest/azure/cli",
+			"revision": "eaa7994b2278094c904d31993d26f56324db3052",
+			"revisionTime": "2018-05-02T23:02:43Z"
+		},
+		{
 			"checksumSHA1": "9nXCi9qQsYjxCeajJKWttxgEt0I=",
 			"path": "github.com/Azure/go-autorest/autorest/date",
 			"revision": "05cc91b23cb791df3737aa915d76c76d216ea732",
 			"revisionTime": "2018-03-09T19:05:52Z"
+		},
+		{
+			"checksumSHA1": "SbBb2GcJNm5GjuPKGL2777QywR4=",
+			"path": "github.com/Azure/go-autorest/autorest/to",
+			"revision": "eaa7994b2278094c904d31993d26f56324db3052",
+			"revisionTime": "2018-05-02T23:02:43Z"
+		},
+		{
+			"checksumSHA1": "5UH4IFIB/98iowPCzzVs4M4MXiQ=",
+			"path": "github.com/Azure/go-autorest/autorest/validation",
+			"revision": "eaa7994b2278094c904d31993d26f56324db3052",
+			"revisionTime": "2018-05-02T23:02:43Z"
 		},
 		{
 			"checksumSHA1": "nJrp/CKnvpO+vzTfOeR8qmzRZ4c=",
@@ -55,6 +109,12 @@
 			"path": "github.com/dgrijalva/jwt-go",
 			"revision": "06ea1031745cb8b3dab3f6a236daf2b0aa468b7e",
 			"revisionTime": "2018-03-08T23:13:08Z"
+		},
+		{
+			"checksumSHA1": "vI06gXltt7k8zik7bOZvG2PmfYo=",
+			"path": "github.com/dimchansky/utfbom",
+			"revision": "6c6132ff69f0f6c088739067407b5d32c52e1d0f",
+			"revisionTime": "2017-03-28T06:13:12Z"
 		},
 		{
 			"checksumSHA1": "7DxViusFRJ7UPH0jZqYatwDrOkY=",
@@ -339,6 +399,12 @@
 			"revisionTime": "2017-11-07T05:05:31Z"
 		},
 		{
+			"checksumSHA1": "V/quM7+em2ByJbWBLOsEwnY3j/Q=",
+			"path": "github.com/mitchellh/go-homedir",
+			"revision": "b8bc1bf767474819792c23f32d8286a45736f1c6",
+			"revisionTime": "2016-12-03T19:45:07Z"
+		},
+		{
 			"checksumSHA1": "LvE9II+KCxiAwRHCTMzisivddhw=",
 			"path": "github.com/modern-go/concurrent",
 			"revision": "bacd9c7ef1dd9b15be4a9909b8ac7a4e313eec94",
@@ -355,6 +421,12 @@
 			"path": "github.com/peterbourgon/diskv",
 			"revision": "2973218375c3d13162e1d3afe1708aaee318ef3f",
 			"revisionTime": "2017-11-20T01:46:56Z"
+		},
+		{
+			"checksumSHA1": "eDQ6f1EsNf+frcRO/9XukSEchm8=",
+			"path": "github.com/satori/go.uuid",
+			"revision": "36e9d2ebbde5e3f13ab2e25625fd453271d6522e",
+			"revisionTime": "2018-01-03T17:44:51Z"
 		},
 		{
 			"checksumSHA1": "QxBGuFiDP7AZx9/QOwJVVDlHjLM=",
@@ -397,6 +469,18 @@
 			"path": "github.com/yudai/golcs",
 			"revision": "ecda9a501e8220fae3b4b600c3db4b0ba22cfc68",
 			"revisionTime": "2017-03-16T03:48:04Z"
+		},
+		{
+			"checksumSHA1": "PJY7uCr3UnX4/Mf/RoWnbieSZ8o=",
+			"path": "golang.org/x/crypto/pkcs12",
+			"revision": "94e3fad7f1b4eed4ec147751ad6b4c4d33f00611",
+			"revisionTime": "2018-05-12T23:40:47Z"
+		},
+		{
+			"checksumSHA1": "p0GC51McIdA7JygoP223twJ1s0E=",
+			"path": "golang.org/x/crypto/pkcs12/internal/rc2",
+			"revision": "94e3fad7f1b4eed4ec147751ad6b4c4d33f00611",
+			"revisionTime": "2018-05-12T23:40:47Z"
 		},
 		{
 			"checksumSHA1": "Ao5HhoVpFHluO66vMKkIgsZxxiM=",
@@ -1186,5 +1270,5 @@
 			"revisionTime": "2018-02-16T21:26:18Z"
 		}
 	],
-	"rootPath": "github.com/bitnami/kube-prod-runtime/installer"
+	"rootPath": "github.com/bitnami/kube-prod-runtime/kubeprod"
 }

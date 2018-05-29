@@ -16,7 +16,7 @@ const (
 	flagPlatform        = "platform"
 	flagManifests       = "manifests"
 	flagEmail           = "email"
-	flagDnsSuffix       = "dns-suffix"
+	flagDnsSuffix       = "dns-zone" // This is really pkg/aks.dnsZoneParam
 	DefaultManifestBase = "https://github.com/bitnami/kube-prod-runtime/manifests/"
 )
 
@@ -26,7 +26,6 @@ func init() {
 	installCmd.MarkPersistentFlagRequired(flagPlatform)
 	installCmd.PersistentFlags().String(flagManifests, DefaultManifestBase, "Base URL below which to find platform manifests")
 	installCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
-	installCmd.PersistentFlags().String(flagDnsSuffix, "", "DNS suffix for admin consoles")
 }
 
 func cwdURL() (*url.URL, error) {
@@ -90,7 +89,7 @@ var installCmd = &cobra.Command{
 			return err
 		}
 		if c.DnsSuffix == "" {
-			log.Warning("DNS suffix was not provided. Some services may not function correctly.")
+			return fmt.Errorf("DNS suffix was not provided.")
 		}
 
 		c.Config, err = clientConfig.ClientConfig()

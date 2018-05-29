@@ -159,6 +159,7 @@ containers: [
       timeout(60) {
         withCredentials([azureServicePrincipal('azure-cli-2018-04-06-01-39-19')]) {
           def resourceGroup = 'prod-runtime-rg'
+          def dnszone = "${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test'
           node(label) {
             container('go') {
               def aks
@@ -205,7 +206,9 @@ containers: [
                       // replicas, etc.  My plan is to do that via
                       // some sort of custom jsonnet overlay, since
                       // power users will want similar flexibility.
-                      sh "./kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com --dns-suffix=example.com"
+                      // NB: This also uses az cli credentials and
+                      // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
+                      sh "./kubeprod -v=1 --dns-zone=${dnszone} --dns-resource-group=${resourceGroup} install --platform=${platform} --manifests=manifests --email=foo@example.com"
                     }
                   }
 
