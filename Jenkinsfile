@@ -205,7 +205,7 @@ containers: [
                       // replicas, etc.  My plan is to do that via
                       // some sort of custom jsonnet overlay, since
                       // power users will want similar flexibility.
-                      sh "./kubeprod install --platform=${platform} --manifests=manifests --email=foo@example.com --dns-suffix=example.com"
+                      sh "./kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com --dns-suffix=example.com"
                     }
                   }
 
