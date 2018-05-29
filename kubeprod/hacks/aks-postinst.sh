@@ -46,14 +46,16 @@ info "Creating Azure service principal for DNS management"
 # NB: the fd finagling is so I can grep stderr, since
 # 'create-for-rbac' insists on writing unsightly `Retrying role
 # assignment creation: N/36` "errors" to stderr.
-(
+{
     az ad sp create-for-rbac \
        --role=Contributor \
        --scopes=$rgid \
-       --sdk-auth |\
+       --sdk-auth \
+       2>&1 1>&3 |
+        grep -v 'Retrying role assignment creation:' 1>&2
+} 3>&1 | \
     jq --arg rg $AZURE_RESOURCE_GROUP '{"tenantId": .tenantId, "subscriptionId": .subscriptionId, "aadClientId": .clientId, "aadClientSecret": .clientSecret, "resourceGroup": $rg}' | \
     tee $authfile
-) 2>&1 | grep -v 'Retrying role assignment creation:' 1>&2
 
 xkubectl create secret generic \
         --from-file=azure.json=$authfile \
