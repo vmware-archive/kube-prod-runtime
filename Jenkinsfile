@@ -108,7 +108,7 @@ containers: [
 
   def platforms = [:]
 
-  def minikubeKversions = []  // fixme: disabled minikube for now ["v1.8.0", "v1.9.4"]
+  def minikubeKversions = []  // fixme: disabled minikube for now ["v1.8.0", "v1.9.6"]
   for (x in minikubeKversions) {
     def kversion = x  // local bind required because closures
     def platform = "minikube-0.25+k8s-" + kversion[1..3]
@@ -151,7 +151,7 @@ containers: [
   // See:
   //  az aks get-versions -l centralus
   //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-  def aksKversions = ["1.8.7", "1.9.2"]
+  def aksKversions = ["1.8.7", "1.9.6"]
   for (x in aksKversions) {
     def kversion = x  // local bind required because closures
     def platform = "aks+k8s-" + kversion[0..2]
