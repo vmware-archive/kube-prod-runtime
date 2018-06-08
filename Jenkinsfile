@@ -208,7 +208,16 @@ containers: [
                       // power users will want similar flexibility.
                       // NB: This also uses az cli credentials and
                       // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                      sh "./kubeprod -v=1 --dns-zone=${dnszone} --dns-resource-group=${resourceGroup} install --platform=${platform} --manifests=manifests --email=foo@example.com"
+
+                      // FIXME: this is disabled for now, until we can
+                      // fix the Azure permissions issue that leads
+                      // to:
+                      //
+                      //  Creating AD application ...
+                      //  {"odata.error":{"code":"Authorization_RequestDenied","message":{"lang":"en","value":"Insufficient privileges to complete the operation."}}}
+                      //  Error: graphrbac.ApplicationsClient#List: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="Unknown" Message="Unknown service error"
+
+                      //sh "./kubeprod -v --dns-zone=${dnszone} --dns-resource-group=${resourceGroup} install --platform=${platform} --manifests=manifests --email=foo@example.com"
                     }
                   }
 
