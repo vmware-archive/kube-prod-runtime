@@ -6,6 +6,8 @@ import (
 
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	restclient "k8s.io/client-go/rest"
+
+	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
 )
 
 type Platform struct {
@@ -27,10 +29,12 @@ var Platforms = []Platform{
 	{
 		Name:        "aks+k8s-1.9",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.9",
+		PreUpdate:   aks.PreUpdate,
 	},
 	{
 		Name:        "aks+k8s-1.8",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.8",
+		PreUpdate:   aks.PreUpdate,
 	},
 }
 

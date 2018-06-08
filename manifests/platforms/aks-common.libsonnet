@@ -13,8 +13,9 @@ local az_dns_zone = std.extVar("DNS_SUFFIX");
 
 {
   edns: edns {
-    azconf:: kube.Secret(self.p+"external-dns-azure-config") + self.namespace {
-      // to be filled in by installer
+    azconf:: kube.Secret("external-dns-azure-conf") {
+      // created by installer (see kubeprod/pkg/aks/platform.go)
+      metadata+: {namespace: "kube-system"},
     },
 
     deploy+: {
@@ -48,9 +49,11 @@ local az_dns_zone = std.extVar("DNS_SUFFIX");
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
 
-    secret+: {
+    secret+:: {
+      // created by installer (see kubeprod/pkg/aks/platform.go)
+      metadata+: {namespace: "kube-system", name: "oauth2-proxy"},
       data_+: {
-        azure_tenant: error "azure_tenant is required",  // filled by installer
+        azure_tenant: error "azure_tenant is required",
       },
     },
 

@@ -22,7 +22,7 @@
 #           kubernetes.io/tls-acme: true
 #   EOF
 # Demo:
-#   az aks create --resource-group prod-runtime-rg --name demo --node-count 3 --node-vm-size Standard_DS2_v2 --generate-ssh-key --kubernetes-version 1.9.4
+#   az aks create --resource-group prod-runtime-rg --name demo --node-count 3 --node-vm-size Standard_DS2_v2 --generate-ssh-key --kubernetes-version 1.9.6
 #   (creating an AKS cluster typically takes ~15minutes, so don't do that live)
 #   az aks get-credentials --resource-group prod-runtime-rg --name demo --admin --file $KUBECONFIG
 #   kubeprod install --platform aks+k8s-1.9 --email gus@bitnami.com --azure-resource-group prod-runtime-rg --dns-suffix aztest.oldmacdonald.farm

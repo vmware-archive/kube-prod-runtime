@@ -108,7 +108,7 @@ containers: [
 
   def platforms = [:]
 
-  def minikubeKversions = []  // fixme: disabled minikube for now ["v1.8.0", "v1.9.4"]
+  def minikubeKversions = []  // fixme: disabled minikube for now ["v1.8.0", "v1.9.6"]
   for (x in minikubeKversions) {
     def kversion = x  // local bind required because closures
     def platform = "minikube-0.25+k8s-" + kversion[1..3]
@@ -151,7 +151,7 @@ containers: [
   // See:
   //  az aks get-versions -l centralus
   //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-  def aksKversions = ["1.8.7", "1.9.2"]
+  def aksKversions = ["1.8.7", "1.9.6"]
   for (x in aksKversions) {
     def kversion = x  // local bind required because closures
     def platform = "aks+k8s-" + kversion[0..2]
@@ -159,6 +159,7 @@ containers: [
       timeout(60) {
         withCredentials([azureServicePrincipal('azure-cli-2018-04-06-01-39-19')]) {
           def resourceGroup = 'prod-runtime-rg'
+          def dnszone = "${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test'
           node(label) {
             container('go') {
               def aks
@@ -205,7 +206,18 @@ containers: [
                       // replicas, etc.  My plan is to do that via
                       // some sort of custom jsonnet overlay, since
                       // power users will want similar flexibility.
-                      sh "./kubeprod install --platform=${platform} --manifests=manifests --email=foo@example.com --dns-suffix=example.com"
+                      // NB: This also uses az cli credentials and
+                      // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
+
+                      // FIXME: this is disabled for now, until we can
+                      // fix the Azure permissions issue that leads
+                      // to:
+                      //
+                      //  Creating AD application ...
+                      //  {"odata.error":{"code":"Authorization_RequestDenied","message":{"lang":"en","value":"Insufficient privileges to complete the operation."}}}
+                      //  Error: graphrbac.ApplicationsClient#List: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="Unknown" Message="Unknown service error"
+
+                      //sh "./kubeprod -v --dns-zone=${dnszone} --dns-resource-group=${resourceGroup} install --platform=${platform} --manifests=manifests --email=foo@example.com"
                     }
                   }
 

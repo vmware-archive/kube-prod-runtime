@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/golang/glog"
 	"github.com/ksonnet/kubecfg/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,8 +27,6 @@ var clientConfig clientcmd.ClientConfig
 var overrides clientcmd.ConfigOverrides
 
 func init() {
-	RootCmd.PersistentFlags().CountP(flagVerbose, "v", "Increase verbosity. May be given multiple times.")
-
 	// The "usual" clientcmd/kubectl flags
 	loadingRules := clientcmd.NewDefaultClientConfigLoadingRules()
 	loadingRules.DefaultClientConfig = &clientcmd.DefaultClientConfig
@@ -38,6 +37,8 @@ func init() {
 	clientConfig = clientcmd.NewInteractiveDeferredLoadingClientConfig(loadingRules, &overrides, os.Stdin)
 
 	RootCmd.PersistentFlags().Set("logtostderr", "true")
+
+	RootCmd.PersistentFlags().AddGoFlagSet(goflag.CommandLine)
 }
 
 var RootCmd = &cobra.Command{
@@ -47,30 +48,20 @@ var RootCmd = &cobra.Command{
 	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 		goflag.CommandLine.Parse([]string{})
-		flags := cmd.Flags()
 		out := cmd.OutOrStderr()
 		log.SetOutput(out)
 
 		logFmt := NewLogFormatter(out)
 		log.SetFormatter(logFmt)
 
-		verbosity, err := flags.GetCount(flagVerbose)
-		if err != nil {
-			return err
+		if glog.V(1) {
+			log.SetLevel(log.DebugLevel)
+		} else {
+			log.SetLevel(log.InfoLevel)
 		}
-		log.SetLevel(logLevel(verbosity))
 
 		return nil
 	},
-}
-
-func logLevel(verbosity int) log.Level {
-	switch verbosity {
-	case 0:
-		return log.InfoLevel
-	default:
-		return log.DebugLevel
-	}
 }
 
 type logFormatter struct {
