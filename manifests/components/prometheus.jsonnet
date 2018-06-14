@@ -291,7 +291,7 @@ local path_join(prefix, suffix) = (
             },
             containers_+: {
               default: kube.Container("alertmanager") {
-                image: "quay.io/prometheus/alertmanager:v0.14.0",
+                image: "bitnami/alertmanager:0.14.0",
                 args_+: {
                   "config.file": "/etc/alertmanager/config.yml",
                   "storage.path": "/alertmanager",
