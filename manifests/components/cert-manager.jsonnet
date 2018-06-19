@@ -72,11 +72,11 @@ local kube = import "kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             default: kube.Container("cert-manager") {
-              image: "quay.io/jetstack/cert-manager-controller:v0.3.0",
+              image: "bitnami/cert-manager:0.3.0",
               args_+: {
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
                 "leader-election-namespace": "$(POD_NAMESPACE)",
-                "default-issuer-name": "letsencrypt-prod",
+                "default-issuer-name": $.letsencryptProd.metadata.name,
                 "default-issuer-kind": "ClusterIssuer",
               },
               env_+: {
@@ -95,7 +95,7 @@ local kube = import "kube.libsonnet";
     },
   },
 
-  letsencryptStaging: $.ClusterIssuer($.p+"letsencrypt-staging") + $.namespace {
+  letsencryptStaging: $.ClusterIssuer($.p+"letsencrypt-staging") {
     local this = self,
     spec+: {
       acme+: {
