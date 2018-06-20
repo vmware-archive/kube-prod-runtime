@@ -9,9 +9,10 @@ local fluentd_es = import "fluentd-es.jsonnet";
 local elasticsearch = import "elasticsearch.jsonnet";
 local kibana = import "kibana.jsonnet";
 
-local az_dns_zone = std.extVar("DNS_SUFFIX");
-
 {
+  az_dns_zone:: error "DNS zone is undefined",
+  cert_manager_email:: error "Certificate Manager e-mail is undefined",
+
   edns: edns {
     azconf:: kube.Secret("external-dns-azure-conf") {
       // created by installer (see kubeprod/pkg/aks/platform.go)
@@ -42,7 +43,9 @@ local az_dns_zone = std.extVar("DNS_SUFFIX");
     },
   },
 
-  cert_manager: cert_manager,
+  cert_manager: cert_manager {
+    cert_manager_email:: $.cert_manager_email,
+  },
 
   nginx_ingress: nginx_ingress,
 
@@ -81,7 +84,7 @@ local az_dns_zone = std.extVar("DNS_SUFFIX");
 
   prometheus: prometheus {
     ingress+: {
-      host: "prometheus." + az_dns_zone,
+      host: "prometheus." + $.az_dns_zone,
     },
     config+: {
       scrape_configs_+: {
@@ -107,7 +110,7 @@ local az_dns_zone = std.extVar("DNS_SUFFIX");
     es:: $.elasticsearch,
 
     ingress+: {
-      host: "kibana." + az_dns_zone,
+      host: "kibana." + $.az_dns_zone,
     },
   },
 }

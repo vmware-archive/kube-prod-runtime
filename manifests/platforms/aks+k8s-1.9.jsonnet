@@ -1,6 +1,7 @@
-// Platform: Kubernetes 1.8.x on Azure AKS
+// Platform: Kubernetes 1.9.x on Azure AKS
 //
 
 (import "aks-common.libsonnet") {
-  // no changes
+  az_dns_zone:: "felipe.aztest.nami.run",
+  cert_manager_email:: "felipe@bitnami.com",
 }
