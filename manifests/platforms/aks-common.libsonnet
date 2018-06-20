@@ -10,7 +10,7 @@ local elasticsearch = import "elasticsearch.jsonnet";
 local kibana = import "kibana.jsonnet";
 
 {
-  az_dns_zone:: error "DNS zone is undefined",
+  external_dns_zone_name:: error "External DNS zone name is undefined",
   cert_manager_email:: error "Certificate Manager e-mail is undefined",
 
   edns: edns {
@@ -84,7 +84,7 @@ local kibana = import "kibana.jsonnet";
 
   prometheus: prometheus {
     ingress+: {
-      host: "prometheus." + $.az_dns_zone,
+      host: "prometheus." + $.external_dns_zone_name,
     },
     config+: {
       scrape_configs_+: {
@@ -110,7 +110,7 @@ local kibana = import "kibana.jsonnet";
     es:: $.elasticsearch,
 
     ingress+: {
-      host: "kibana." + $.az_dns_zone,
+      host: "kibana." + $.external_dns_zone_name,
     },
   },
 }

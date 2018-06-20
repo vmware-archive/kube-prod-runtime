@@ -2,5 +2,6 @@
 //
 
 (import "aks-common.libsonnet") {
-  // no changes
+  external_dns_zone_name:: "felipe.aztest.nami.run",
+  cert_manager_email:: "felipe@bitnami.com",
 }
