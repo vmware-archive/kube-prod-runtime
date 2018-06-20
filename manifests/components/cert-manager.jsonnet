@@ -10,7 +10,10 @@ local kube = import "kube.libsonnet";
   ClusterIssuer(name):: kube._Object("certmanager.k8s.io/v1alpha1", "ClusterIssuer", name) {
   },
 
-  certCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Certificate"),
+  certCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Certificate") {
+    spec+: { names+: { shortNames+: ["cert", "certs"] } },
+
+  },
 
   issuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Issuer"),
 
@@ -32,7 +35,7 @@ local kube = import "kube.libsonnet";
       },
       {
         apiGroups: [""],
-        resources: ["secrets", "endpoints", "services", "pods"],
+        resources: ["secrets", "configmaps", "services", "pods"],
         // FIXME: audit - the helm chart just has "*"
         verbs: ["get", "list", "watch", "create", "patch", "update", "delete"],
       },
@@ -69,9 +72,12 @@ local kube = import "kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             default: kube.Container("cert-manager") {
-              image: "quay.io/jetstack/cert-manager-controller:v0.2.4",
+              image: "bitnami/cert-manager:0.3.0",
               args_+: {
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
+                "leader-election-namespace": "$(POD_NAMESPACE)",
+                "default-issuer-name": $.letsencryptProd.metadata.name,
+                "default-issuer-kind": "ClusterIssuer",
               },
               env_+: {
                 POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
@@ -89,11 +95,11 @@ local kube = import "kube.libsonnet";
     },
   },
 
-  letsencryptStaging: $.ClusterIssuer($.p+"letsencrypt-staging") + $.namespace {
+  letsencryptStaging: $.ClusterIssuer($.p+"letsencrypt-staging") {
     local this = self,
     spec+: {
       acme+: {
-        server: "https://acme-staging.api.letsencrypt.org/directory",
+        server: "https://acme-staging-v02.api.letsencrypt.org/directory",
         email: std.extVar('EMAIL'),
         privateKeySecretRef: {name: this.metadata.name},
         http01: {},
@@ -105,32 +111,9 @@ local kube = import "kube.libsonnet";
     metadata+: {name: $.p+"letsencrypt-prod"},
     spec+: {
       acme+: {
-        server: "https://acme-v01.api.letsencrypt.org/directory",
+        server: "https://acme-v02.api.letsencrypt.org/directory",
       },
     },
   },
 
-  deployShim: kube.Deployment($.p+"cert-manager-ingress-shim") + $.namespace {
-    spec+: {
-      template+: {
-        spec+: {
-          serviceAccountName: $.sa.metadata.name,
-          containers_+: {
-            default: kube.Container("ingress-shim") {
-              image: "quay.io/jetstack/cert-manager-ingress-shim:v0.2.4",
-              args_+: {
-                // Used for Ingress with kubernetes.io/tls-acme=true
-                default_issuer_:: $.letsencryptProd,
-                "default-issuer-name": self.default_issuer_.metadata.name,
-                "default-issuer-kind": self.default_issuer_.kind,
-              },
-              resources: {
-                requests: {cpu: "10m", memory: "32Mi"},
-              },
-            },
-          },
-        },
-      },
-    },
-  },
 }
