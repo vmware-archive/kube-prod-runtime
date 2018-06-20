@@ -12,7 +12,7 @@
 def label = UUID.randomUUID().toString()
 
 podTemplate(
-label: "${label} linux x86",
+label: label,
 idleMinutes: 1,  // Allow some best-effort reuse between successive stages
 containers: [
   containerTemplate(
