@@ -2,7 +2,7 @@ local kube = import "kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "utils.libsonnet";
 
-local KIBANA_IMAGE = "docker.elastic.co/kibana/kibana:5.6.4";
+local KIBANA_IMAGE = "bitnami/kibana:5.6.10";
 
 local strip_trailing_slash(s) = (
   if std.endsWith(s, "/") then
