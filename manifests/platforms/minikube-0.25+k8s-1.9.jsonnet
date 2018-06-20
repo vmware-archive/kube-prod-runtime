@@ -6,5 +6,5 @@
 //
 
 (import "minikube-common.libsonnet") {
-  // no changes
+  cert_manager_email:: "felipe@bitnami.com",
 }
