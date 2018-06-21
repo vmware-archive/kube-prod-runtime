@@ -6,5 +6,5 @@
 //
 
 (import "minikube-common.libsonnet") {
-  // no changes
+  letsencrypt_contact_email:: std.extVar('EMAIL'),
 }
