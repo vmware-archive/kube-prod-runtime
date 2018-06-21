@@ -6,5 +6,5 @@
 //
 
 (import "minikube-common.libsonnet") {
-  cert_manager_email:: "felipe@bitnami.com",
+  letsencrypt_contact_email:: std.extVar('EMAIL'),
 }

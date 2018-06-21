@@ -2,6 +2,6 @@
 //
 
 (import "aks-common.libsonnet") {
-  external_dns_zone_name:: "felipe.aztest.nami.run",
-  cert_manager_email:: "felipe@bitnami.com",
+  external_dns_zone_name:: std.extVar('DNS_SUFFIX'),
+  letsencrypt_contact_email:: std.extVar('EMAIL'),
 }

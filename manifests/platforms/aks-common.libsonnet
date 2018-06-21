@@ -11,7 +11,7 @@ local kibana = import "kibana.jsonnet";
 
 {
   external_dns_zone_name:: error "External DNS zone name is undefined",
-  cert_manager_email:: error "Certificate Manager e-mail is undefined",
+  letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
   edns: edns {
     azconf:: kube.Secret("external-dns-azure-conf") {
@@ -44,7 +44,7 @@ local kibana = import "kibana.jsonnet";
   },
 
   cert_manager: cert_manager {
-    cert_manager_email:: $.cert_manager_email,
+    letsencrypt_contact_email:: $.letsencrypt_contact_email,
   },
 
   nginx_ingress: nginx_ingress,

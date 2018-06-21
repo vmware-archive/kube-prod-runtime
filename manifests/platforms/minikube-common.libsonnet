@@ -20,7 +20,7 @@ local cert_manager = import "cert-manager.jsonnet";
   //},
 
   cert_manager: cert_manager {
-    cert_manager_email:: $.cert_manager_email,
+    letsencrypt_contact_email:: $.letsencrypt_contact_email,
   },
 
 
