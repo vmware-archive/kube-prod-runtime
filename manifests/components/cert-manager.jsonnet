@@ -3,6 +3,7 @@ local kube = import "kube.libsonnet";
 {
   p:: "",
   namespace:: {metadata+: {namespace: "kube-system"}},
+  letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
   Issuer(name):: kube._Object("certmanager.k8s.io/v1alpha1", "Issuer", name) {
   },
@@ -100,7 +101,7 @@ local kube = import "kube.libsonnet";
     spec+: {
       acme+: {
         server: "https://acme-staging-v02.api.letsencrypt.org/directory",
-        email: std.extVar('EMAIL'),
+        email: $.letsencrypt_contact_email,
         privateKeySecretRef: {name: this.metadata.name},
         http01: {},
       },
