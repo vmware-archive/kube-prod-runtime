@@ -1,6 +1,6 @@
-local kube = import "kube.libsonnet";
+local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
-local utils = import "utils.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
 local path_join(prefix, suffix) = (
   if std.endsWith(prefix, "/") then prefix + suffix

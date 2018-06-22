@@ -1,6 +1,6 @@
-local kube = import "kube.libsonnet";
+local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
-local utils = import "utils.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
 local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
 

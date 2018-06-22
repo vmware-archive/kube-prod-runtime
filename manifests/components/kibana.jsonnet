@@ -1,6 +1,6 @@
-local kube = import "kube.libsonnet";
+local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
-local utils = import "utils.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
 local KIBANA_IMAGE = "bitnami/kibana:5.6.10-r9";
 
