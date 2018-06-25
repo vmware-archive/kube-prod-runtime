@@ -102,11 +102,7 @@ local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.4-r58";
                 // NB: wrapper script always adds a -Xms value, so can't
                 // just rely on -XX:+UseCGroupMemoryLimitForHeap
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
-                ES_JAVA_OPTS: std.join(" ", [
-                  "-Xms%dm" % heapsize, // ES asserts that these are equal
-                  "-Xmx%dm" % heapsize,
-                  "-XshowSettings:vm",
-                ]),
+                ELASTICSEARCH_HEAP_SIZE: "%dm" % heapsize,
               },
               readinessProbe: {
                 local probe = self,
