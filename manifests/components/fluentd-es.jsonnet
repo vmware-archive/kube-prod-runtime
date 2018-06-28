@@ -75,9 +75,10 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 limits: { memory: "500Mi" },
               },
               volumeMounts_+: {
-                // See TODO note at fluentd-es-config/output.conf re: voiding
-                // fluentd from using node's /var/log for buffering
-                varlog: { mountPath: "/var/log" },
+                varlog: {
+                  mountPath: "/var/log",
+                  readOnly: true,
+                },
                 varlogpos: { mountPath: FLUENTD_ES_LOG_POS_PATH },
                 varlogbuffers: { mountPath: FLUENTD_ES_LOG_BUFFERS_PATH },
                 varlibdockercontainers: {
@@ -86,15 +87,11 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 },
                 configvolume: {
                   mountPath: FLUENTD_ES_CONFIGD_PATH,
+                  readOnly: true,
                 },
               },
             },
           },
-          // Note: present in upstream to originally to cope with fluentd-es migration to DS, not applicable here
-          // nodeSelector: {
-          //  "beta.kubernetes.io/fluentd-ds-ready": "true",
-          // },
-          //
           // Note: from upstream, only for kube>=1.10?, may need to come from ../platforms
           // priorityClassName: "system-node-critical",
           serviceAccountName: $.serviceAccount.metadata.name,
