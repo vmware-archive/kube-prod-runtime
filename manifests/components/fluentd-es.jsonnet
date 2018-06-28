@@ -2,7 +2,7 @@ local kube = import "kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "utils.libsonnet";
 
-local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r21";
+local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
 local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
@@ -65,8 +65,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
             fluentd_es: kube.Container("fluentd-es") {
               image: FLUENTD_ES_IMAGE,
               env_+: {
-                // FLUENTD_OPT is currently unsupported in 1.2.2-r21
-                FLUENTD_OPT: "--no-supervisor -q",
+                FLUENTD_OPT: "-q",
                 BUFFER_DIR: "/var/log/fluentd-buffers",
                 ES_HOST: $.es.svc.host,
               },
