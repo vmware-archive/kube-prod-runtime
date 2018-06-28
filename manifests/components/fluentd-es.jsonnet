@@ -5,6 +5,7 @@ local utils = import "utils.libsonnet";
 local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r21";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
+local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
 {
   p:: "",
@@ -41,15 +42,22 @@ local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
         spec+: {
           initContainers_+: {
             // Required to have the proper permissions for the
-            // $FLUENTD_ES_LOG_POS_PATH directory
+            // $FLUENTD_ES_LOG_POS_PATH and $FLUENTD_ES_LOG_BUFFERS_PATH
+            // directories
             fluentd_es_init: kube.Container("fluentd-es-init") {
               image: "alpine:3.6",
-              command: ["/bin/chmod", "0775", FLUENTD_ES_LOG_POS_PATH],
+              command: [
+                "/bin/chmod",
+                "0775",
+                FLUENTD_ES_LOG_POS_PATH,
+                FLUENTD_ES_LOG_BUFFERS_PATH,
+                ],
               securityContext: {
                 privileged: true,
               },
               volumeMounts_+: {
                 varlogpos: { mountPath: FLUENTD_ES_LOG_POS_PATH },
+                varlogbuffers: { mountPath: FLUENTD_ES_LOG_BUFFERS_PATH },
               },
             },
           },
@@ -57,12 +65,8 @@ local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
             fluentd_es: kube.Container("fluentd-es") {
               image: FLUENTD_ES_IMAGE,
               env_+: {
-                FLUENTD_ARGS: "--no-supervisor -q",
-                // TODO: As this uses node's /var/log/ for fluentd
-                // pos and (possibly large) buffer files, consider
-                // using instead emptydir or dynamically provisioned
-                // local dir (requires localdir provisioner, kube >=
-                // 1.10)
+                // FLUENTD_OPT is currently unsupported in 1.2.2-r21
+                FLUENTD_OPT: "--no-supervisor -q",
                 BUFFER_DIR: "/var/log/fluentd-buffers",
                 ES_HOST: $.es.svc.host,
               },
@@ -75,6 +79,7 @@ local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
                 // fluentd from using node's /var/log for buffering
                 varlog: { mountPath: "/var/log" },
                 varlogpos: { mountPath: FLUENTD_ES_LOG_POS_PATH },
+                varlogbuffers: { mountPath: FLUENTD_ES_LOG_BUFFERS_PATH },
                 varlibdockercontainers: {
                   mountPath: "/var/lib/docker/containers",
                   readOnly: true,
@@ -95,9 +100,10 @@ local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
           serviceAccountName: $.serviceAccount.metadata.name,
           terminationGracePeriodSeconds: 30,
           volumes_+: {
-            varlog: kube.HostPathVolume("/var/log"),
-            varlogpos: kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH),
-            varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers"),
+            varlog: kube.HostPathVolume("/var/log", "Directory"),
+            varlogpos: kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH, "DirectoryOrCreate"),
+            varlogbuffers: kube.HostPathVolume(FLUENTD_ES_LOG_BUFFERS_PATH, "DirectoryOrCreate"),
+            varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers", "Directory"),
             configvolume: kube.ConfigMapVolume($.fluentd_es_config),
           },
         },
