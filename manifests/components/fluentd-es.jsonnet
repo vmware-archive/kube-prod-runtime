@@ -11,12 +11,20 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
   p:: "",
   namespace:: { metadata+: { namespace: "kube-system" } },
   criticalPod:: { metadata+: { annotations+: { "scheduler.alpha.kubernetes.io/critical-pod": "" } } },
-  config:: (import "fluentd-es-config.jsonnet"),
 
   es: error "elasticsearch is required",
 
   fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.namespace {
-    data+: $.config,
+    data+: {
+      // Verbatim from upstream:
+      "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
+      "forward.input.conf": (importstr "fluentd-es-config/forward.input.conf"),
+      "monitoring.conf": (importstr "fluentd-es-config/monitoring.conf"),
+      "system.conf": (importstr "fluentd-es-config/system.conf"),
+      "system.input.conf": (importstr "fluentd-es-config/system.input.conf"),
+      // Edited to be templated via env vars
+      "output.conf": (importstr "fluentd-es-config/output.conf"),
+    },
   },
 
   serviceAccount: kube.ServiceAccount($.p + "fluentd-es") + $.namespace,
@@ -40,30 +48,12 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     spec+: {
       template+: $.criticalPod {
         spec+: {
-          initContainers_+: {
-            // Required to have the proper permissions for the
-            // $FLUENTD_ES_LOG_POS_PATH and $FLUENTD_ES_LOG_BUFFERS_PATH
-            // directories
-            fluentd_es_init: kube.Container("fluentd-es-init") {
-              image: "alpine:3.6",
-              command: [
-                "/bin/chmod",
-                "0775",
-                FLUENTD_ES_LOG_POS_PATH,
-                FLUENTD_ES_LOG_BUFFERS_PATH,
-                ],
-              securityContext: {
-                privileged: true,
-              },
-              volumeMounts_+: {
-                varlogpos: { mountPath: FLUENTD_ES_LOG_POS_PATH },
-                varlogbuffers: { mountPath: FLUENTD_ES_LOG_BUFFERS_PATH },
-              },
-            },
-          },
           containers_+: {
             fluentd_es: kube.Container("fluentd-es") {
               image: FLUENTD_ES_IMAGE,
+              securityContext: {
+                runAsUser: 0,  // required to be able to read system-wide logs.
+              },
               env_+: {
                 FLUENTD_OPT: "-q",
                 BUFFER_DIR: "/var/log/fluentd-buffers",
