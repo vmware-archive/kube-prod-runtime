@@ -1,0 +1,17 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: echoheaders
+  labels:
+    name: echoheaders
+spec:
+  template:
+    metadata:
+      labels:
+        name: echoheaders
+    spec:
+      containers:
+        - name: echoheaders
+          image: k8s.gcr.io/echoserver:1.4
+          ports:
+            - containerPort: 8080
