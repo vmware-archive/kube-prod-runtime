@@ -35,9 +35,15 @@ local strip_trailing_slash(s) = (
                 },
               },
               env_+: {
-                KIBANA_ELASTICSEARCH_URL: $.es.svc.host,
-                KIBANA_ELASTICSEARCH_PORT_NUMBER: "9200",
-                KIBANA_PORT_NUMBER: "5601",
+                ELASTICSEARCH_URL: "http://%s:9200" % [$.es.svc.host],
+
+                local route = $.ingress.spec.rules[0].http.paths[0],
+                // Make sure we got the correct route
+                assert route.backend == $.svc.name_port,
+                SERVER_BASEPATH: strip_trailing_slash(route.path),
+                KIBANA_HOST: "0.0.0.0",
+                XPACK_MONITORING_ENABLED: "false",
+                XPACK_SECURITY_ENABLED: "false",
               },
               ports_+: {
                 ui: { containerPort: 5601 },
