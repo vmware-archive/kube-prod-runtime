@@ -2,7 +2,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.4-r58";
+local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
 
 {
   p:: "",
