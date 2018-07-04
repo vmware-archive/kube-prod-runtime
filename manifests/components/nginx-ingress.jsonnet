@@ -13,6 +13,10 @@ local kube = import "../lib/kube.libsonnet";
       //"hsts-include-subdomains": "false",
 
       "enable-vts-status": "true",
+
+      // TODO: move our oauth2-proxy path to something unlikely to clash with application URLs
+      noauth:: ["/.well-known/acme-challenge", "/oauth2"],
+      "no-auth-locations": std.join(",", std.set(self.noauth)),
     },
   },
 

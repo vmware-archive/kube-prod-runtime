@@ -34,7 +34,6 @@ local path_join(prefix, suffix) = (
       ],
     },
   },
-  ingressAuth: $.ingress.OauthIngress,
 
   config:: (import "prometheus-config.jsonnet") {
     alerting+: {

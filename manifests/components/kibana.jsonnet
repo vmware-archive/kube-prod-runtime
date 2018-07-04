@@ -69,5 +69,4 @@ local strip_trailing_slash(s) = (
       ],
     },
   },
-  ingressOauth: $.ingress.OauthIngress,
 }
