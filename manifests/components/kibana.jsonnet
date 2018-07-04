@@ -37,7 +37,7 @@ local strip_trailing_slash(s) = (
               env_+: {
                 ELASTICSEARCH_URL: "http://%s:9200" % [$.es.svc.host],
 
-                local route = $.ingress.spec.rules[0].http.paths[0],
+                local route = $.ingress.spec.rules[1].http.paths[0],
                 // Make sure we got the correct route
                 assert route.backend == $.svc.name_port,
                 SERVER_BASEPATH: strip_trailing_slash(route.path),
