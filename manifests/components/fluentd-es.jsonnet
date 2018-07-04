@@ -2,18 +2,29 @@ local kube = import "kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "utils.libsonnet";
 
-local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
+local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
+local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
+local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
+local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
 {
   p:: "",
   namespace:: { metadata+: { namespace: "kube-system" } },
   criticalPod:: { metadata+: { annotations+: { "scheduler.alpha.kubernetes.io/critical-pod": "" } } },
-  config:: (import "fluentd-es-config.jsonnet"),
 
   es: error "elasticsearch is required",
 
   fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.namespace {
-    data+: $.config,
+    data+: {
+      // Verbatim from upstream:
+      "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
+      "forward.input.conf": (importstr "fluentd-es-config/forward.input.conf"),
+      "monitoring.conf": (importstr "fluentd-es-config/monitoring.conf"),
+      "system.conf": (importstr "fluentd-es-config/system.conf"),
+      "system.input.conf": (importstr "fluentd-es-config/system.input.conf"),
+      // Edited to be templated via env vars
+      "output.conf": (importstr "fluentd-es-config/output.conf"),
+    },
   },
 
   serviceAccount: kube.ServiceAccount($.p + "fluentd-es") + $.namespace,
@@ -40,13 +51,11 @@ local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
           containers_+: {
             fluentd_es: kube.Container("fluentd-es") {
               image: FLUENTD_ES_IMAGE,
+              securityContext: {
+                runAsUser: 0,  // required to be able to read system-wide logs.
+              },
               env_+: {
-                FLUENTD_ARGS: "--no-supervisor -q",
-                // TODO: As this uses node's /var/log/ for fluentd
-                // pos and (possibly large) buffer files, consider
-                // using instead emptydir or dynamically provisioned
-                // local dir (requires localdir provisioner, kube >=
-                // 1.10)
+                FLUENTD_OPT: "-q",
                 BUFFER_DIR: "/var/log/fluentd-buffers",
                 ES_HOST: $.es.svc.host,
               },
@@ -55,31 +64,32 @@ local FLUENTD_ES_IMAGE = "k8s.gcr.io/fluentd-elasticsearch:v2.0.4";
                 limits: { memory: "500Mi" },
               },
               volumeMounts_+: {
-                // See TODO note at fluentd-es-config/output.conf re: voiding
-                // fluentd from using node's /var/log for buffering
-                varlog: { mountPath: "/var/log" },
+                varlog: {
+                  mountPath: "/var/log",
+                  readOnly: true,
+                },
+                varlogpos: { mountPath: FLUENTD_ES_LOG_POS_PATH },
+                varlogbuffers: { mountPath: FLUENTD_ES_LOG_BUFFERS_PATH },
                 varlibdockercontainers: {
                   mountPath: "/var/lib/docker/containers",
                   readOnly: true,
                 },
                 configvolume: {
-                  mountPath: "/etc/fluent/config.d",
+                  mountPath: FLUENTD_ES_CONFIGD_PATH,
+                  readOnly: true,
                 },
               },
             },
           },
-          // Note: present in upstream to originally to cope with fluentd-es migration to DS, not applicable here
-          // nodeSelector: {
-          //  "beta.kubernetes.io/fluentd-ds-ready": "true",
-          // },
-          //
           // Note: from upstream, only for kube>=1.10?, may need to come from ../platforms
           // priorityClassName: "system-node-critical",
           serviceAccountName: $.serviceAccount.metadata.name,
           terminationGracePeriodSeconds: 30,
           volumes_+: {
-            varlog: kube.HostPathVolume("/var/log"),
-            varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers"),
+            varlog: kube.HostPathVolume("/var/log", "Directory"),
+            varlogpos: kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH, "DirectoryOrCreate"),
+            varlogbuffers: kube.HostPathVolume(FLUENTD_ES_LOG_BUFFERS_PATH, "DirectoryOrCreate"),
+            varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers", "Directory"),
             configvolume: kube.ConfigMapVolume($.fluentd_es_config),
           },
         },
