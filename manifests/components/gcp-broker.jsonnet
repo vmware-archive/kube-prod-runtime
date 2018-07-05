@@ -1,4 +1,4 @@
-local kube = import "kube.libsonnet";
+local kube = import "../lib/kube.libsonnet";
 
 // See https://github.com/GoogleCloudPlatform/k8s-service-catalog
 
