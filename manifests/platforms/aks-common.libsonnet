@@ -1,13 +1,13 @@
-local kube = import "kube.libsonnet";
-local cert_manager = import "cert-manager.jsonnet";
-local edns = import "externaldns.jsonnet";
-local nginx_ingress = import "nginx-ingress.jsonnet";
-local prometheus = import "prometheus.jsonnet";
-local heapster = import "heapster.jsonnet";
-local oauth2_proxy = import "oauth2-proxy.jsonnet";
-local fluentd_es = import "fluentd-es.jsonnet";
-local elasticsearch = import "elasticsearch.jsonnet";
-local kibana = import "kibana.jsonnet";
+local kube = import "../lib/kube.libsonnet";
+local cert_manager = import "../components/cert-manager.jsonnet";
+local edns = import "../components/externaldns.jsonnet";
+local nginx_ingress = import "../components/nginx-ingress.jsonnet";
+local prometheus = import "../components/prometheus.jsonnet";
+local heapster = import "../components/heapster.jsonnet";
+local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
+local fluentd_es = import "../components/fluentd-es.jsonnet";
+local elasticsearch = import "../components/elasticsearch.jsonnet";
+local kibana = import "../components/kibana.jsonnet";
 
 {
   external_dns_zone_name:: error "External DNS zone name is undefined",

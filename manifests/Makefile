@@ -1,5 +1,5 @@
 KUBECFG = kubecfg
-KUBECFG_FLAGS = -J components -J lib -V EMAIL=foo@example.com -V DNS_SUFFIX=example.com
+KUBECFG_FLAGS = -V EMAIL=foo@example.com -V DNS_SUFFIX=example.com
 
 COMPONENTS := $(wildcard components/*.jsonnet)
 PLATFORMS := $(wildcard platforms/*.jsonnet)

@@ -1,6 +1,6 @@
-local etcd = import "etcd.jsonnet";
-local svc_cat = import "svc-cat.jsonnet";
-local cert_manager = import "cert-manager.jsonnet";
+local etcd = import "../components/etcd.jsonnet";
+local svc_cat = import "../components/svc-cat.jsonnet";
+local cert_manager = import "../components/cert-manager.jsonnet";
 
 {
   /*
