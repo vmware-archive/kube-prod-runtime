@@ -48,8 +48,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 	}
 
 	searchPaths := []string{
-		"components/",
-		"lib/",
 		"internal:///",
 	}
 	searchUrls := make([]*url.URL, len(searchPaths))
