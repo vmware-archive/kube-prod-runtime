@@ -20,6 +20,7 @@ local kibana = import "kibana.jsonnet";
     },
 
     deploy+: {
+      ownerId: $.external_dns_zone_name,
       spec+: {
         template+: {
           spec+: {

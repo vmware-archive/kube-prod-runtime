@@ -27,6 +27,8 @@ local kube = import "kube.libsonnet";
   sa: kube.ServiceAccount($.p+"external-dns") + $.namespace,
 
   deploy: kube.Deployment($.p+"external-dns") + $.namespace {
+    local this = self,
+    ownerId:: error "ownerId is required",
     spec+: {
       template+: {
         spec+: {
@@ -36,6 +38,7 @@ local kube = import "kube.libsonnet";
               image: "registry.opensource.zalan.do/teapot/external-dns:v0.5.0",
               args_+: {
                 sources_:: ["service", "ingress"],
+                "txt-owner-id": this.ownerId,
                 //"domain-filter": "example.com",
               },
               args+: ["--source=%s" % s for s in self.args_.sources_],
