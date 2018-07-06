@@ -10,6 +10,7 @@ local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
 
 {
+  cluster:: error "No cluster name defined",
   external_dns_zone_name:: error "External DNS zone name is undefined",
   letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
