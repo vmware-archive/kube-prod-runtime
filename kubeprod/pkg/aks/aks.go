@@ -112,12 +112,14 @@ func authorizer(resource, tenantID string) (autorest.Authorizer, error) {
 		return auth.NewAuthorizerFromFile(resource)
 	}
 
-	log.Debug("Trying to initialise Azure SDK from environment")
-	auther, err := auth.NewAuthorizerFromEnvironmentWithResource(resource)
-	if err == nil {
-		return auther, err
+	if os.Getenv("AZURE_TENANT_ID") != "" {
+		log.Debug("Trying to initialise Azure SDK from environment")
+		auther, err := auth.NewAuthorizerFromEnvironmentWithResource(resource)
+		if err == nil {
+			return auther, err
+		}
+		log.Debugf("Failed to initialise Azure SDK from environment: %v", err)
 	}
-	log.Debugf("Failed to initialise Azure SDK from environment: %v", err)
 
 	log.Debug("Trying to initialise Azure SDK from azure-cli credentials")
 	return NewAuthorizerFromCli(resource, tenantID)
