@@ -10,13 +10,29 @@ local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
 
 {
+  azure_subscription:: error "azure_subscription is required",
+  azure_tenant:: error "azure_tenant is required",
+  edns_resource_group:: error "resource_group_name is required",
+  edns_client_id:: error "edns_client_id is required",
+  edns_client_secret:: error "edns_client_secret is required",
+  oauth2_client_id:: error "oauth2_client_id is required",
+  oauth2_client_secret:: error "oauth2_client_secret is required",
+  oauth2_cookie_secret:: error "oauth2_cookie_secret is required",
   external_dns_zone_name:: error "External DNS zone name is undefined",
   letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
   edns: edns {
-    azconf:: kube.Secret("external-dns-azure-conf") {
-      // created by installer (see kubeprod/pkg/aks/platform.go)
+    azconf: kube.Secret("external-dns-azure-conf") {
       metadata+: {namespace: "kube-system"},
+      data_+: {
+        "azure.json": std.manifestJsonEx({
+            "tenantId": $.azure_tenant,
+            "subscriptionId": $.azure_subscription,
+            "aadClientId": $.edns_client_id,
+            "aadClientSecret": $.edns_client_secret,
+            "resourceGroup": $.edns_resource_group
+        }, "  "),
+      },
     },
 
     deploy+: {
@@ -53,11 +69,14 @@ local kibana = import "../components/kibana.jsonnet";
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
 
-    secret+:: {
+    secret+: {
       // created by installer (see kubeprod/pkg/aks/platform.go)
       metadata+: {namespace: "kube-system", name: "oauth2-proxy"},
       data_+: {
-        azure_tenant: error "azure_tenant is required",
+        azure_tenant: $.azure_tenant,
+        client_id: $.oauth2_client_id,
+        client_secret: $.oauth2_client_secret,
+        cookie_secret: $.oauth2_cookie_secret,
       },
     },
 
