@@ -8,7 +8,7 @@ import (
 )
 
 const (
-	clusterTemplate = `# Cluster-specific configuration for cluster 'k8s1'
+	clusterTemplate = `# Cluster-specific configuration
 
 local config = import "config.json";
 local aks = import "{{.ManifestsPath}}/platforms/aks+k8s-{{.KubernetesVersion}}.jsonnet";
@@ -18,10 +18,9 @@ aks + config {
 }
 `
 	configTemplate = `{
-	// Cluster-specific configuration
 	"cluster": "{{.ClusterName}}",
 	"external_dns_zone_name": "{{.DNS}}",
-	"letsencrypt_contact_email": "{{.Email}}",
+	"letsencrypt_contact_email": "{{.Email}}"
 }
 `
 )
@@ -37,33 +36,18 @@ type variables struct {
 // Executes the template inside the `templateData` variable performing
 // substitutions from the `v` dictionary and write the results to the
 // output file named as `pathName`.
-func writeTemplate(pathName string, templateData string, v variables) (err error) {
-
+func writeTemplate(pathName string, templateData string, v variables) error {
 	var f *os.File
-	f, err = os.Create(pathName)
+	f, err := os.Create(pathName)
 	if err != nil {
-		return
+		return err
 	}
-
-	defer func() {
-		cerr := f.Close()
-		if err == nil {
-			err = cerr
-		}
-	}()
-
+	defer f.Close()
 	w := bufio.NewWriter(f)
-
-	defer func() {
-		cerr := w.Flush()
-		if err == nil {
-			err = cerr
-		}
-	}()
-
+	defer w.Flush()
 	tmpl, err := template.New("template").Parse(templateData)
 	err = tmpl.ExecuteTemplate(w, "template", v)
-	return
+	return err
 }
 
 // Init does init
