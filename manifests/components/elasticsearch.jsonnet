@@ -43,6 +43,7 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
           },
         },
         spec+: {
+          serviceAccountName: $.serviceAccount.metadata.name,
           affinity: {
             podAntiAffinity: {
               preferredDuringSchedulingIgnoredDuringExecution: [
