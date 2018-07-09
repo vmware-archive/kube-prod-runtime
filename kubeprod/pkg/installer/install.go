@@ -68,12 +68,14 @@ func (c InstallCmd) Run(out io.Writer) error {
 		"EMAIL":      c.ContactEmail,
 		"DNS_SUFFIX": c.DnsSuffix,
 	}
+	// TODO(felipe): remove "extVars" as we should not be using any external
+	// variables at all.
 	objs, err := readObjs(importer, extvars, input)
 	if err != nil {
 		return err
 	}
 
-	objs, err = c.Platform.RunPreUpdate(objs)
+	objs, err = c.Platform.RunPreUpdate(c.ContactEmail, objs)
 	if err != nil {
 		return err
 	}

@@ -211,13 +211,14 @@ type OauthProxyConfig struct {
 }
 
 type AKSConfig struct {
-	DnsZone     string
-	TenantID    string
-	ExternalDNS ExternalDNSConfig
-	OauthProxy  OauthProxyConfig
+	DnsZone      string
+	ContactEmail string
+	TenantID     string
+	ExternalDNS  ExternalDNSConfig
+	OauthProxy   OauthProxyConfig
 }
 
-func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	ctx := context.TODO()
 	confChanged := false
 
@@ -227,6 +228,11 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 	}
 
 	env := azure.PublicCloud
+
+	if conf.ContactEmail == "" {
+		conf.ContactEmail = contactEmail
+		confChanged = true
+	}
 
 	if conf.DnsZone == "" {
 		domain, err := dnsZoneParam.get()
