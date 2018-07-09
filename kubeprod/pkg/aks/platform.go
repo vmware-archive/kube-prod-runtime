@@ -197,6 +197,26 @@ func marshalFile(path string, obj interface{}) error {
 	return f.Close()
 }
 
+type ExternalDNSConfig struct {
+	SubscriptionID  string
+	AADClientID     string
+	AADClientSecret string
+	ResourceGroup   string
+}
+
+type OauthProxyConfig struct {
+	CookieSecret string
+	ClientID     string
+	ClientSecret string
+}
+
+type AKSConfig struct {
+	DnsZone     string
+	TenantID    string
+	ExternalDNS ExternalDNSConfig
+	OauthProxy  OauthProxyConfig
+}
+
 func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
 	ctx := context.TODO()
 	confChanged := false
@@ -217,18 +237,23 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 		confChanged = true
 	}
 
+	if conf.TenantID == "" {
+		tenantID, err := tenantIDParam.get()
+		if err != nil {
+			return nil, err
+		}
+		conf.TenantID = tenantID
+		confChanged = true
+	}
+
 	logInspector := LoggingInspector{Logger: log.StandardLogger()}
 
 	authers := map[string]autorest.Authorizer{}
 	configClient := func(c *autorest.Client, resource string) error {
+		var err error
 		auther := authers[resource]
 		if auther == nil {
-			tenantID, err := tenantIDParam.get()
-			if err != nil {
-				return err
-			}
-
-			auther, err = authorizer(resource, tenantID)
+			auther, err = authorizer(resource, conf.TenantID)
 			if err != nil {
 				return err
 			}
@@ -239,7 +264,7 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 			c.RequestInspector = logInspector.WithInspection()
 			c.ResponseInspector = logInspector.ByInspecting()
 		}
-		if err := c.AddToUserAgent(userAgent); err != nil {
+		if err = c.AddToUserAgent(userAgent); err != nil {
 			return err
 		}
 		return nil
@@ -249,15 +274,6 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 		//
 		// externaldns setup
 		//
-
-		if conf.ExternalDNS.TenantID == "" {
-			tenantID, err := tenantIDParam.get()
-			if err != nil {
-				return nil, err
-			}
-			conf.ExternalDNS.TenantID = tenantID
-			confChanged = true
-		}
 
 		if conf.ExternalDNS.SubscriptionID == "" {
 			subID, err := subIDParam.get()
@@ -294,7 +310,6 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 		if err := configClient(&dnsClient.Client, env.ResourceManagerEndpoint); err != nil {
 			return nil, err
 		}
-
 		zone, err := dnsClient.CreateOrUpdate(ctx, conf.ExternalDNS.ResourceGroup, conf.DnsZone, dns.Zone{Location: to.StringPtr("global"), ZoneProperties: &dns.ZoneProperties{ZoneType: "Public"}}, "", "*")
 		if err != nil {
 			if strings.Contains(err.Error(), "PreconditionFailed") {
@@ -324,7 +339,7 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 			// begin: az ad sp create-for-rbac --role=Contributor --scopes=$rgid
 			log.Debugf("Creating AD service principal")
 
-			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
+			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 			if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
 				return nil, err
 			}
@@ -332,7 +347,7 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 			log.Debugf("Creating AD application ...")
 			app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 				AvailableToOtherTenants: to.BoolPtr(false),
-				DisplayName:             to.StringPtr("kubeprod"),
+				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod", conf.DnsZone)),
 				Homepage:                to.StringPtr("http://kubeprod.io"),
 				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
 			})
@@ -352,7 +367,7 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 				return nil, err
 			}
 
-			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
+			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 			if err := configClient(&spClient.Client, env.GraphEndpoint); err != nil {
 				return nil, err
 			}
@@ -428,17 +443,8 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 		confChanged = true
 	}
 
-	if conf.OauthProxy.AzureTenant == "" {
-		tenantID, err := tenantIDParam.get()
-		if err != nil {
-			return nil, err
-		}
-		conf.OauthProxy.AzureTenant = tenantID
-		confChanged = true
-	}
-
 	if conf.OauthProxy.ClientID == "" {
-		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.OauthProxy.AzureTenant)
+		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 		if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
 			return nil, err
 		}
@@ -452,7 +458,7 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 		// az ad app create ...
 		app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 			AvailableToOtherTenants: to.BoolPtr(false),
-			DisplayName:             to.StringPtr("Kubeprod cluster management"),
+			DisplayName:             to.StringPtr(fmt.Sprintf("Kubeprod cluster management for %s", conf.DnsZone)),
 			Homepage:                to.StringPtr("http://kubeprod.io"),
 			IdentifierUris:          &[]string{fmt.Sprintf("https://oauth.%s/oauth2", conf.DnsZone)},
 			ReplyUrls:               &replyUrls,
