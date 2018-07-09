@@ -18,7 +18,6 @@ aks + config {
 }
 `
 	configTemplate = `{
-	"cluster": "{{.ClusterName}}",
 	"external_dns_zone_name": "{{.DNS}}",
 	"letsencrypt_contact_email": "{{.Email}}"
 }
@@ -26,7 +25,6 @@ aks + config {
 )
 
 type variables struct {
-	ClusterName       string
 	ManifestsPath     string // path to the manifests/ directory (including trailing /)
 	Email             string // contact e-mail for Letsencrypt certificates
 	DNS               string // DNS domain
@@ -51,17 +49,16 @@ func writeTemplate(pathName string, templateData string, v variables) error {
 }
 
 // Init does init
-func Init(clusterName string, manifestsBase string, email string, dnsZone string, kubernetesVersion string) (err error) {
+func Init(manifestsBase string, email string, dnsZone string, kubernetesVersion string) (err error) {
 
 	v := variables{
-		ClusterName:       clusterName,
 		ManifestsPath:     path.Clean(manifestsBase),
 		Email:             email,
 		DNS:               dnsZone,
 		KubernetesVersion: kubernetesVersion,
 	}
 
-	err = writeTemplate("./"+clusterName+".json", clusterTemplate, v)
+	err = writeTemplate("./kube-system.jsonnet", clusterTemplate, v)
 	if err != nil {
 		return
 	}

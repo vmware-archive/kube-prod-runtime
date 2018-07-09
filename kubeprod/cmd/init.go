@@ -1,7 +1,6 @@
 package cmd
 
 import (
-	"errors"
 	"os"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
@@ -25,13 +24,6 @@ var initAksCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
 		flags := cmd.Flags()
-		clusterName, err := flags.GetString("context")
-		if err != nil {
-			return err
-		}
-		if len(clusterName) == 0 {
-			return errors.New("No Kubernetes --context specified in the command-line")
-		}
 		manifestsBase, err := flags.GetString(flagManifests)
 		if err != nil {
 			return err
@@ -48,7 +40,7 @@ var initAksCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		return aks.Init(clusterName, manifestsBase, email, dnsZone, kubernetesVersion)
+		return aks.Init(manifestsBase, email, dnsZone, kubernetesVersion)
 	},
 }
 
