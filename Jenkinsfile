@@ -9,38 +9,73 @@
 // - azure-credentials
 
 // Force using our pod
-def label = UUID.randomUUID().toString()
+//def label = UUID.randomUUID().toString()
+def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+
+def withGo(Closure body) {
+    container('go') {
+        withEnv([
+            "GOPATH+WS=${env.WORKSPACE}",
+            "PATH+GOBIN=${env.WORKSPACE}/bin",
+            "HOME=${env.WORKSPACE}",
+        ]) {
+            cache(maxCacheSize: 1000, caches: [
+                [$class: 'ArbitraryFileCache', path: "${env.HOME}/.cache/go-build"],
+            ]) {
+                body()
+            }
+        }
+    }
+}
 
 def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
-    container('go') {
-        withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubeconf", "HOME=${env.WORKSPACE}"]) {
-            stage("${platform} setup") {
-                setup()
-            }
+    timeout(120) {
+        // Regex of tests that are temporarily skipped.  Empty-string
+        // to run everything.  Include pointers to tracking issues.
+        def skip = ''
 
-            stage("${platform} install") {
-                dir('do-install') {
-                    unstash 'installer'
-                    unstash 'manifests'
+        withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubeconf"]) {
 
-                    // FIXME: we should have a better "test mode",
-                    // that uses letsencrypt-staging, fewer
-                    // replicas, etc.  My plan is to do that via
-                    // some sort of custom jsonnet overlay, since
-                    // power users will want similar flexibility.
+            setup()
 
-                    sh "./kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
+            withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
+                ansiColor('xterm') {
+                    sh "kubectl version; kubectl cluster-info"
                 }
             }
 
-            stage("${platform} test") {
-                sh 'go get github.com/onsi/ginkgo/ginkgo'
-                unstash 'src'
-                dir('tests') {
+            // install
+
+            unstash 'release'
+            unstash 'manifests'
+
+            // FIXME: we should have a better "test mode", that uses
+            // letsencrypt-staging, fewer replicas, etc.  My plan is
+            // to do that via some sort of custom jsonnet overlay,
+            // since power users will want similar flexibility.
+
+            sh "./release/kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
+
+            // Slight delay to let cluster settle (images need to be
+            // pulled, LBs setup, etc).
+            // TODO: remove/shorten/something.
+            sleep time: 4, unit: 'MINUTES'
+
+            // test
+
+            sh 'go get github.com/onsi/ginkgo/ginkgo'
+            unstash 'tests'
+            dir('tests') {
+                try {
                     ansiColor('xterm') {
-                        sh 'ginkgo --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 -- --junit junit'
-                        junit 'junit/*.xml'
+                        def dnszone = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test').toLowerCase()
+                        sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG}"
                     }
+                } catch (error) {
+                    input 'Paused for manual debugging'
+                        throw error
+                } finally {
+                    junit 'junit/*.xml'
                 }
             }
         }
@@ -51,65 +86,72 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
 podTemplate(
     label: label,
     idleMinutes: 1,  // Allow some best-effort reuse between successive stages
-    containers: [
-        containerTemplate(
-            name: 'go',
-            image: 'golang:1.10.1-stretch',
-            ttyEnabled: true, command: 'cat',
-            resourceLimitCpu: '2000m',
-            resourceLimitMemory: '2Gi',
-            resourceRequestCpu: '10m',     // rely on burst CPU
-            resourceRequestMemory: '1Gi',  // but actually need ram to avoid oom killer
-        ),
-        containerTemplate(
-            name: 'az',
-            image: 'microsoft/azure-cli:2.0.30',
-            ttyEnabled: true, command: 'cat',
-            resourceLimitCpu: '100m',
-            resourceLimitMemory: '500Mi',
-            resourceRequestCpu: '1m',
-            resourceRequestMemory: '100Mi',
-        ),
-    ]) {
+    yaml: """
+apiVersion: v1
+kind: Pod
+spec:
+  securityContext:
+    runAsUser: 1000
+    fsGroup: 1000
+  containers:
+  - name: go
+    image: golang:1.10.1-stretch
+    stdin: true
+    command: ['cat']
+    resources:
+      limits:
+        cpu: 2000m
+        memory: 2Gi
+      requests:
+        # rely on burst CPU
+        cpu: 10m
+        # but actually need ram to avoid oom killer
+        memory: 1Gi
+  - name: az
+    image: microsoft/azure-cli:2.0.30
+    stdin: true
+    command: ['cat']
+    resources:
+      limits:
+        cpu: 100m
+        memory: 500Mi
+      requests:
+        cpu: 1m
+        memory: 100Mi
+"""
+) {
 
     env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
     // Teach jenkins about the 'go' container env vars
     env.PATH = '/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
     env.GOPATH = '/go'
 
-    node(label) {
-        stage('Checkout') {
+    stage('Checkout') {
+        node(label) {
             checkout scm
-            stash includes: '**', name: 'src'
+            stash includes: '**', excludes: 'tests/**', name: 'src'
+            stash includes: 'tests/**', name: 'tests'
         }
     }
 
     parallel(
         installer: {
-            node(label) {
-                container('go') {
-                    stage('installer') {
-                        timeout(time: 30) {
-                            cache(maxCacheSize: 1000, caches: [
-                                [$class: 'ArbitraryFileCache', path: "${env.HOME}/.cache/go-build"],
-                            ]) {
-                                withEnv(["GOPATH+WS=${env.WORKSPACE}", "PATH+GOBIN=${env.WORKSPACE}/bin"]) {
-                                    dir('src/github.com/bitnami/kube-prod-runtime') {
-                                        unstash 'src'
+            stage('Build') {
+                node(label) {
+                    withGo() {
+                        dir('src/github.com/bitnami/kube-prod-runtime') {
+                            timeout(time: 30) {
+                                unstash 'src'
 
-                                        dir('kubeprod') {
-                                            sh 'go version'
-                                            sh 'make all'
-                                            sh 'make test'
-                                            sh 'make vet'
+                                dir('kubeprod') {
+                                    sh 'go version'
+                                    sh 'make all'
+                                    sh 'make test'
+                                    sh 'make vet'
 
-                                            sh 'make release VERSION=$BUILD_TAG'
-                                            dir('release') {
-                                                sh './kubeprod --help'
-                                                stash includes: 'kubeprod', name: 'installer'
-                                            }
-                                        }
-                                    }
+                                    sh 'make release VERSION=$BUILD_TAG'
+                                    sh './release/kubeprod --help'
+                                    stash includes: 'release/**', name: 'release'
                                 }
                             }
                         }
@@ -119,16 +161,13 @@ podTemplate(
         },
 
         manifests: {
-            node(label) {
-                container('go') {
-                    stage('manifests') {
-                        timeout(time: 30) {
-                            cache(maxCacheSize: 1000, caches: [
-                                [$class: 'ArbitraryFileCache', path: "${env.HOME}/.cache/go-build"],
-                            ]) {
+            stage('Manifests') {
+                node(label) {
+                    withGo() {
+                        dir('src/github.com/bitnami/kube-prod-runtime') {
+                            timeout(time: 30) {
                                 unstash 'src'
 
-                                sh 'apt-get -qy update && apt-get -qy install make'
                                 // TODO: use tool, once the next release is made
                                 sh 'go get github.com/ksonnet/kubecfg'
 
@@ -150,15 +189,19 @@ podTemplate(
         def kversion = x  // local bind required because closures
         def platform = "minikube-0.25+k8s-" + kversion[1..3]
         platforms[platform] = {
-            timeout(60) {
+            stage(platform) {
                 node(label) {
-                    runIntegrationTest(platform, "") {
-                        withEnv(["PATH+TOOL=${tool 'minikube'}:${tool 'kubectl'}"]) {
-                            cache(maxCacheSize: 1000, caches: [
-                                [$class: 'ArbitraryFileCache', path: "${env.HOME}/.minikube/cache"],
-                            ]) {
-                                sh 'apt-get -qy update && apt-get install -qy libvirt-clients libvirt-daemon-system virtualbox'
-                                sh "minikube start --kubernetes-version=${kversion}"
+                    withGo() {
+                        dir('src/github.com/bitnami/kube-prod-runtime') {
+                            runIntegrationTest(platform, "") {
+                                withEnv(["PATH+TOOL=${tool 'minikube'}:${tool 'kubectl'}"]) {
+                                    cache(maxCacheSize: 1000, caches: [
+                                        [$class: 'ArbitraryFileCache', path: "${env.HOME}/.minikube/cache"],
+                                    ]) {
+                                        sh 'sudo apt-get -qy update && sudo apt-get install -qy libvirt-clients libvirt-daemon-system virtualbox'
+                                        sh "minikube start --kubernetes-version=${kversion}"
+                                    }
+                                }
                             }
                         }
                     }
@@ -175,37 +218,35 @@ podTemplate(
         def kversion = x  // local bind required because closures
         def platform = "aks+k8s-" + kversion[0..2]
         platforms[platform] = {
-            timeout(60) {
-                // NB: `kubeprod` also uses az cli credentials and
-                // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                withCredentials([azureServicePrincipal('azure-cli-2018-04-06-01-39-19')]) {
-                    def resourceGroup = 'prod-runtime-rg'
-                    def dnszone = "${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test'
+            stage(platform) {
+                node(label) {
+                    withGo() {
+                        dir('src/github.com/bitnami/kube-prod-runtime') {
+                            // NB: `kubeprod` also uses az cli credentials and
+                            // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
+                            withCredentials([azureServicePrincipal('azure-cli-2018-04-06-01-39-19')]) {
+                                def resourceGroup = 'prod-runtime-rg'
+                                def dnszone = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test').toLowerCase()
 
-                    def clustername = "${env.BUILD_TAG}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
-                    def location = "eastus"
+                                def clustername = "${env.BUILD_TAG}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
+                                def location = "eastus"
 
-                    // This resource group is destroyed as part of "az aks delete", so reuse it here too for easier cleanup.
-                    // See https://docs.microsoft.com/en-us/azure/aks/faq#why-are-two-resource-groups-created-with-aks
-                    def clusterResourceGroup = "MC_${resourceGroup}_${clustername}_${location}"
-                    node(label) {
-                        container('go') {
-                            def aks
-                            try {
-                                runIntegrationTest(platform, "--dns-resource-group=${clusterResourceGroup} --dns-zone=${dnszone}") {
-                                    container('az') {
-                                        sh '''
+                                def aks
+                                try {
+                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnszone}") {
+                                        container('az') {
+                                            sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
 az account set -s $AZURE_SUBSCRIPTION_ID
 '''
-                                        // Usually, `az aks create` creates a new service
-                                        // principal, which is not removed by `az aks
-                                        // delete`. We reuse an existing principal here to
-                                        // a) avoid this leak b) avoid having to give the
-                                        // "outer" principal (above) the power to create
-                                        // new service principals.
-                                        withCredentials([azureServicePrincipal('azure-cli-2018-04-06-03-17-41')]) {
-                                            aks = readJSON(text: sh(script: """
+                                            // Usually, `az aks create` creates a new service
+                                            // principal, which is not removed by `az aks
+                                            // delete`. We reuse an existing principal here to
+                                            // a) avoid this leak b) avoid having to give the
+                                            // "outer" principal (above) the power to create
+                                            // new service principals.
+                                            withCredentials([azureServicePrincipal('azure-cli-2018-04-06-03-17-41')]) {
+                                                def output = sh(returnStdout: true, script: """
 az aks create                      \
  --resource-group ${resourceGroup} \
  --name ${clustername}             \
@@ -217,17 +258,20 @@ az aks create                      \
  --service-principal \$AZURE_CLIENT_ID \
  --client-secret \$AZURE_CLIENT_SECRET \
  --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
-""", returnStdout: true))
+""")
+                                                aks = readJSON(text: output)
+                                            }
+                                            sh "az aks get-credentials --name ${aks.name} --resource-group ${aks.resourceGroup} --admin --file \$KUBECONFIG"
                                         }
-                                        sh "az aks get-credentials --name ${aks.name} --resource-group ${aks.resourceGroup} --admin --file \$KUBECONFIG"
-                                    }
 
-                                    // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                    withCredentials([azureServicePrincipal('azure-cli-2018-04-06-03-17-41')]) {
+                                        // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
+                                        withCredentials([azureServicePrincipal('azure-cli-2018-04-06-03-17-41')]) {
 
-                                        // writeJSON doesn't work without approvals?
-                                        // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-                                        writeFile([file: 'kubeprod.json', text: """
+                                            // NB: writeJSON doesn't work without approvals(?)
+                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+
+                                            // TODO: The path to kubeprod.json should be passed to `kubeprod` in some way
+                                            writeFile([file: 'manifests/kubeprod.json', text: """
 {
   "dnsZone": "${dnszone}",
   "externalDns": {
@@ -235,7 +279,7 @@ az aks create                      \
     "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
     "aadClientId": "${AZURE_CLIENT_ID}",
     "aadClientSecret": "${AZURE_CLIENT_SECRET}",
-    "resourceGroup": "${clusterResourceGroup}"
+    "resourceGroup": "${resourceGroup}"
   },
   "oauthProxy": {
     "client_id": "${AZURE_CLIENT_ID}",
@@ -244,18 +288,20 @@ az aks create                      \
   }
 }
 """
-                                        ])
+                                            ])
+                                        }
                                     }
                                 }
-                            }
-                            finally {
-                                if (aks) {
-                                    container('az') {
-                                        sh '''
+                                finally {
+                                    if (aks) {
+                                        container('az') {
+                                            sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
 az account set -s $AZURE_SUBSCRIPTION_ID
 '''
-                                        sh "az aks delete --yes --name ${aks.name} --resource-group ${aks.resourceGroup} --no-wait"
+                                            sh "az network dns zone delete --yes --name ${dnszone} --resource-group ${resourceGroup} || :"
+                                            sh "az aks delete --yes --name ${aks.name} --resource-group ${aks.resourceGroup} --no-wait"
+                                        }
                                     }
                                 }
                             }

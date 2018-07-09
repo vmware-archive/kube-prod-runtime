@@ -10,13 +10,18 @@ local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
 
 {
-  external_dns_zone_name:: error "External DNS zone name is undefined",
-  letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
+  // TODO: change this so it isn't a crazy hard-coded path
+  config:: (import "../kubeprod.json"),
+
+  external_dns_zone_name:: $.config.dnsZone,
+  letsencrypt_contact_email:: std.extVar("EMAIL"),
 
   edns: edns {
-    azconf:: kube.Secret("external-dns-azure-conf") {
-      // created by installer (see kubeprod/pkg/aks/platform.go)
-      metadata+: {namespace: "kube-system"},
+    azconf: kube.Secret(edns.p+"external-dns-azure-conf") + edns.namespace {
+      data_+: {
+        azure:: $.config.externalDns,
+        "azure.json": std.manifestJson(self.azure),
+      },
     },
 
     deploy+: {
@@ -53,12 +58,8 @@ local kibana = import "../components/kibana.jsonnet";
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
 
-    secret+:: {
-      // created by installer (see kubeprod/pkg/aks/platform.go)
-      metadata+: {namespace: "kube-system", name: "oauth2-proxy"},
-      data_+: {
-        azure_tenant: error "azure_tenant is required",
-      },
+    secret+: {
+      data_+: $.config.oauthProxy,
     },
 
     deploy+: {

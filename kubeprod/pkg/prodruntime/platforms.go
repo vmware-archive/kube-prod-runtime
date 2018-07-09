@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	restclient "k8s.io/client-go/rest"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
@@ -13,7 +12,7 @@ import (
 type Platform struct {
 	Name        string
 	Description string
-	PreUpdate   func(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	PreUpdate   func(config interface{}) (interface{}, error)
 	PostUpdate  func(conf *restclient.Config) error
 }
 
@@ -52,11 +51,11 @@ func (p *Platform) ManifestURL(base *url.URL) (*url.URL, error) {
 	return base.Parse(fmt.Sprintf("platforms/%s.jsonnet", p.Name))
 }
 
-func (p *Platform) RunPreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func (p *Platform) RunPreUpdate(kubeprodConf interface{}) (interface{}, error) {
 	if p.PreUpdate == nil {
-		return objs, nil
+		return kubeprodConf, nil
 	}
-	return p.PreUpdate(objs)
+	return p.PreUpdate(kubeprodConf)
 }
 
 func (p *Platform) RunPostUpdate(conf *restclient.Config) error {

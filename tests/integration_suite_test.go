@@ -24,6 +24,7 @@ import (
 
 var junitDir = flag.String("junit", "", "Write junit results to dir if specified")
 var kubeconfig = flag.String("kubeconfig", "", "absolute path to the kubeconfig file")
+var description = flag.String("description", "kube-prod-runtime integration tests", "suite description")
 
 func clusterConfigOrDie() *rest.Config {
 	var config *rest.Config
@@ -79,5 +80,5 @@ func TestE2e(t *testing.T) {
 		myReporters = append(myReporters, junitReporter)
 	}
 
-	RunSpecsWithDefaultAndCustomReporters(t, "kube-prod-runtime integration tests", myReporters)
+	RunSpecsWithDefaultAndCustomReporters(t, *description, myReporters)
 }
