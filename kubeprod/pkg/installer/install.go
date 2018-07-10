@@ -8,10 +8,8 @@ import (
 	"path"
 
 	jsonnet "github.com/google/go-jsonnet"
-	"github.com/ksonnet/kubecfg/pkg/kubecfg"
 	"github.com/ksonnet/kubecfg/utils"
 	log "github.com/sirupsen/logrus"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -36,59 +34,13 @@ type InstallCmd struct {
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
-	var err error
 	log.Info("Installing platform ", c.Platform.Name)
-
-	update := kubecfg.UpdateCmd{
-		ClientPool:       c.ClientPool,
-		Discovery:        c.Discovery,
-		DefaultNamespace: metav1.NamespaceSystem,
-		Create:           true,
-		GcTag:            GcTag,
-	}
-
-	searchPaths := []string{
-		"internal:///",
-	}
-	searchUrls := make([]*url.URL, len(searchPaths))
-	for i, p := range searchPaths {
-		searchUrls[i], err = c.ManifestBase.Parse(p)
-		if err != nil {
-			return fmt.Errorf("unable to make URL from %q (relative to %q): %v", p, c.ManifestBase, err)
-		}
-	}
-	importer := utils.MakeUniversalImporter(searchUrls)
-
-	input, err := c.Platform.ManifestURL(c.ManifestBase)
+	_, err := c.Platform.RunPreUpdate(c.ContactEmail, nil)
 	if err != nil {
-		return err
+		fmt.Println("Kubernetes cluster is ready for deployment.")
+		fmt.Println("run: kubecfg update --validate=false <path/to/root/manifest>")
 	}
-
-	extvars := map[string]string{
-		"EMAIL":      c.ContactEmail,
-		"DNS_SUFFIX": c.DnsSuffix,
-	}
-	// TODO(felipe): remove "extVars" as we should not be using any external
-	// variables at all.
-	objs, err := readObjs(importer, extvars, input)
-	if err != nil {
-		return err
-	}
-
-	objs, err = c.Platform.RunPreUpdate(c.ContactEmail, objs)
-	if err != nil {
-		return err
-	}
-
-	if err := update.Run(objs); err != nil {
-		return err
-	}
-
-	if err := c.Platform.RunPostUpdate(c.Config); err != nil {
-		return err
-	}
-
-	return nil
+	return err
 }
 
 func evaluateJsonnet(importer jsonnet.Importer, extvars map[string]string, input *url.URL) (string, error) {

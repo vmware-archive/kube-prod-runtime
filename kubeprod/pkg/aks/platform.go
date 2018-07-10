@@ -353,7 +353,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 			log.Debugf("Creating AD application ...")
 			app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 				AvailableToOtherTenants: to.BoolPtr(false),
-				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod", conf.DnsZone)),
+				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-externaldns", conf.DnsZone)),
 				Homepage:                to.StringPtr("http://kubeprod.io"),
 				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
 			})
@@ -464,7 +464,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 		// az ad app create ...
 		app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 			AvailableToOtherTenants: to.BoolPtr(false),
-			DisplayName:             to.StringPtr(fmt.Sprintf("Kubeprod cluster management for %s", conf.DnsZone)),
+			DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-oauth2", conf.DnsZone)),
 			Homepage:                to.StringPtr("http://kubeprod.io"),
 			IdentifierUris:          &[]string{fmt.Sprintf("https://oauth.%s/oauth2", conf.DnsZone)},
 			ReplyUrls:               &replyUrls,
