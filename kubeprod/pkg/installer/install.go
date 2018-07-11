@@ -5,11 +5,14 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"path"
 
 	jsonnet "github.com/google/go-jsonnet"
+	"github.com/ksonnet/kubecfg/pkg/kubecfg"
 	"github.com/ksonnet/kubecfg/utils"
 	log "github.com/sirupsen/logrus"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
@@ -23,24 +26,84 @@ const GcTag = "bitnami.com/prod-runtime"
 
 // InstallCmd represents the show subcommand
 type InstallCmd struct {
-	Config     *restclient.Config
-	ClientPool dynamic.ClientPool
-	Discovery  discovery.DiscoveryInterface
-
-	Platform     *prodruntime.Platform
-	ManifestBase *url.URL
-	ContactEmail string
-	DnsSuffix    string
+	Config        *restclient.Config
+	ClientPool    dynamic.ClientPool
+	Discovery     discovery.DiscoveryInterface
+	Platform      *prodruntime.Platform
+	ManifestsPath string
+	ContactEmail  string
+	DnsSuffix     string
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
-	log.Info("Installing platform ", c.Platform.Name)
-	_, err := c.Platform.RunPreUpdate(c.ContactEmail, nil)
-	if err != nil {
-		fmt.Println("Kubernetes cluster is ready for deployment.")
-		fmt.Println("run: kubecfg update --validate=false <path/to/root/manifest>")
+	log.Info("Generating configuration for platform ", c.Platform.Name)
+	if err := c.Platform.RunGenerate(c.ManifestsPath, c.Platform.Name); err != nil {
+		return err
 	}
+	log.Info("Installing platform ", c.Platform.Name)
+	if err := c.Platform.RunPreUpdate(c.ContactEmail); err != nil {
+		return err
+	}
+	// TODO(felipe): Conditionalize this with a command-line flag so this
+	// step is optional
+	if true {
+		if err := c.Update(); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("Kubernetes cluster is ready for deployment.")
+		fmt.Println("run: kubecfg update --ignore-unknown kube-system.jsonnet")
+	}
+
+	err := c.Platform.RunPostUpdate(c.Config)
 	return err
+}
+
+func cwdURL() (*url.URL, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current working directory: %v", err)
+	}
+	if cwd[len(cwd)-1] != '/' {
+		cwd = cwd + "/"
+	}
+	return &url.URL{Scheme: "file", Path: cwd}, nil
+}
+
+func (c InstallCmd) Update() error {
+	log.Info("Updating platform ", c.Platform.Name)
+	searchUrls := []*url.URL{
+		&url.URL{Scheme: "internal", Path: "/"},
+	}
+	importer := utils.MakeUniversalImporter(searchUrls)
+	cwdURL, err := cwdURL()
+	if err != nil {
+		return err
+	}
+	input, err := cwdURL.Parse("kube-system.jsonnet")
+	if err != nil {
+		return err
+	}
+
+	update := kubecfg.UpdateCmd{
+		ClientPool:       c.ClientPool,
+		Discovery:        c.Discovery,
+		DefaultNamespace: metav1.NamespaceSystem,
+		Create:           true,
+		GcTag:            GcTag,
+	}
+
+	extvars := map[string]string{}
+	objs, err := readObjs(importer, extvars, input)
+	if err != nil {
+		return err
+	}
+	log.Info("Using root manifest ", input)
+	if err := update.Run(objs); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func evaluateJsonnet(importer jsonnet.Importer, extvars map[string]string, input *url.URL) (string, error) {

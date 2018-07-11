@@ -218,13 +218,18 @@ type AKSConfig struct {
 	OauthProxy   OauthProxyConfig
 }
 
-func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func Generate(manifestsPath string, platformName string) error {
+	err := WriteRootManifest(manifestsPath, platformName)
+	return err
+}
+
+func PreUpdate(contactEmail string) error {
 	ctx := context.TODO()
 	confChanged := false
 
 	var conf AKSConfig
 	if err := unmarshalFile("kubeprod.json", &conf); err != nil && !os.IsNotExist(err) {
-		return nil, err
+		return err
 	}
 
 	env := azure.PublicCloud
@@ -237,7 +242,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 	if conf.DnsZone == "" {
 		domain, err := dnsZoneParam.get()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.DnsZone = domain
 		confChanged = true
@@ -246,7 +251,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 	if conf.TenantID == "" {
 		tenantID, err := tenantIDParam.get()
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.TenantID = tenantID
 		confChanged = true
@@ -284,7 +289,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 		if conf.ExternalDNS.SubscriptionID == "" {
 			subID, err := subIDParam.get()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.SubscriptionID = subID
 			confChanged = true
@@ -293,7 +298,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 		if conf.ExternalDNS.AADClientSecret == "" {
 			secret, err := base64RandBytes(12)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.AADClientSecret = secret
 			confChanged = true
@@ -304,7 +309,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 			// See https://docs.microsoft.com/en-us/azure/aks/faq#why-are-two-resource-groups-created-with-aks
 			dnsResgrp, err := dnsResgrpParam.get()
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.ResourceGroup = dnsResgrp
 			confChanged = true
@@ -314,14 +319,14 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 
 		dnsClient := dns.NewZonesClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 		if err := configClient(&dnsClient.Client, env.ResourceManagerEndpoint); err != nil {
-			return nil, err
+			return err
 		}
 		zone, err := dnsClient.CreateOrUpdate(ctx, conf.ExternalDNS.ResourceGroup, conf.DnsZone, dns.Zone{Location: to.StringPtr("global"), ZoneProperties: &dns.ZoneProperties{ZoneType: "Public"}}, "", "*")
 		if err != nil {
 			if strings.Contains(err.Error(), "PreconditionFailed") {
 				log.Infof("Using existing Azure DNS zone %q", conf.DnsZone)
 			} else {
-				return nil, err
+				return err
 			}
 		} else {
 			log.Infof("Created Azure DNS zone %q", conf.DnsZone)
@@ -332,13 +337,13 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 		if conf.ExternalDNS.AADClientID == "" {
 			groupsClient := resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 			if err := configClient(&groupsClient.Client, env.ResourceManagerEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			// az group show --name $resgrp
 			grp, err := groupsClient.Get(ctx, conf.ExternalDNS.ResourceGroup)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			log.Debugf("Got grp %q -> %s", conf.ExternalDNS.ResourceGroup, *grp.ID)
 
@@ -347,7 +352,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 
 			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 			if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			log.Debugf("Creating AD application ...")
@@ -358,7 +363,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
@@ -370,12 +375,12 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 				}},
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 			if err := configClient(&spClient.Client, env.GraphEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			log.Debugf("Creating service principal...")
@@ -384,26 +389,26 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 				AccountEnabled: to.BoolPtr(true),
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			roleDefClient := authorization.NewRoleDefinitionsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 			if err := configClient(&roleDefClient.Client, env.ResourceManagerEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			roles, err := roleDefClient.List(ctx, *grp.ID, "roleName eq 'Contributor'")
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if len(roles.Values()) < 1 {
-				return nil, fmt.Errorf("No 'Contributor' role in resource group %q", conf.ExternalDNS.ResourceGroup)
+				return fmt.Errorf("No 'Contributor' role in resource group %q", conf.ExternalDNS.ResourceGroup)
 			}
 			contribRoleID := roles.Values()[0].ID
 
 			roleClient := authorization.NewRoleAssignmentsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 			if err := configClient(&roleClient.Client, env.ResourceManagerEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			_, err = createRoleAssignment(ctx, roleClient, *grp.ID, authorization.RoleAssignmentCreateParameters{
@@ -413,7 +418,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 				},
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 			// end: az ad sp create-for-rbac
 
@@ -434,7 +439,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 		// true or cookie_refresh != 0
 		secret, err := base64RandBytes(24)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.OauthProxy.CookieSecret = secret
 		confChanged = true
@@ -443,7 +448,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 	if conf.OauthProxy.ClientSecret == "" {
 		secret, err := base64RandBytes(18)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.OauthProxy.ClientSecret = secret
 		confChanged = true
@@ -452,7 +457,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 	if conf.OauthProxy.ClientID == "" {
 		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 		if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
-			return nil, err
+			return err
 		}
 
 		oauthHosts := []string{"prometheus", "kibana"}
@@ -479,7 +484,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 			}},
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
@@ -491,7 +496,7 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 			}},
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		conf.OauthProxy.ClientID = *app.AppID
@@ -503,11 +508,11 @@ func PreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstr
 		// text.  Wwe should consider SealedSecrets or
 		// similar.
 		if err := marshalFile("kubeprod.json", &conf); err != nil {
-			return nil, err
+			return err
 		}
 	}
 
-	return objs, nil
+	return nil
 }
 
 func toUnstructured(obj runtime.Object) (*unstructured.Unstructured, error) {

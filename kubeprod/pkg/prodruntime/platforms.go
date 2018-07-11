@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 
-	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	restclient "k8s.io/client-go/rest"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
@@ -13,7 +12,8 @@ import (
 type Platform struct {
 	Name        string
 	Description string
-	PreUpdate   func(contactEmail string, objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error)
+	Generate    func(manifestPath string, platformName string) error
+	PreUpdate   func(contactEmail string) error
 	PostUpdate  func(conf *restclient.Config) error
 }
 
@@ -29,11 +29,13 @@ var Platforms = []Platform{
 	{
 		Name:        "aks+k8s-1.9",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.9",
+		Generate:    aks.Generate,
 		PreUpdate:   aks.PreUpdate,
 	},
 	{
 		Name:        "aks+k8s-1.8",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.8",
+		Generate:    aks.Generate,
 		PreUpdate:   aks.PreUpdate,
 	},
 }
@@ -52,11 +54,18 @@ func (p *Platform) ManifestURL(base *url.URL) (*url.URL, error) {
 	return base.Parse(fmt.Sprintf("platforms/%s.jsonnet", p.Name))
 }
 
-func (p *Platform) RunPreUpdate(contactEmail string, objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
-	if p.PreUpdate == nil {
-		return objs, nil
+func (p *Platform) RunGenerate(manifestsPath string, platformName string) error {
+	if p.Generate == nil {
+		return nil
 	}
-	return p.PreUpdate(contactEmail, objs)
+	return p.Generate(manifestsPath, platformName)
+}
+
+func (p *Platform) RunPreUpdate(contactEmail string) error {
+	if p.PreUpdate == nil {
+		return nil
+	}
+	return p.PreUpdate(contactEmail)
 }
 
 func (p *Platform) RunPostUpdate(conf *restclient.Config) error {

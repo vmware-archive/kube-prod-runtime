@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
 	"os"
 
 	log "github.com/sirupsen/logrus"
@@ -28,17 +27,6 @@ func init() {
 	installCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
 }
 
-func cwdURL() (*url.URL, error) {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return nil, fmt.Errorf("failed to get current working directory: %v", err)
-	}
-	if cwd[len(cwd)-1] != '/' {
-		cwd = cwd + "/"
-	}
-	return &url.URL{Scheme: "file", Path: cwd}, nil
-}
-
 var installCmd = &cobra.Command{
 	Use:   "install",
 	Short: "Install Bitnami Production Runtime for Kubernetes",
@@ -48,11 +36,6 @@ var installCmd = &cobra.Command{
 		var err error
 
 		c := installer.InstallCmd{}
-
-		cwdUrl, err := cwdURL()
-		if err != nil {
-			return err
-		}
 		manifestBase, err := flags.GetString(flagManifests)
 		if err != nil {
 			return err
@@ -60,11 +43,7 @@ var installCmd = &cobra.Command{
 		if len(manifestBase) > 0 && manifestBase[len(manifestBase)-1] != '/' {
 			manifestBase = manifestBase + "/"
 		}
-		c.ManifestBase, err = cwdUrl.Parse(manifestBase)
-		if err != nil {
-			return err
-		}
-
+		c.ManifestsPath = manifestBase
 		platform, err := flags.GetString(flagPlatform)
 		if err != nil {
 			return err
