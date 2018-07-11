@@ -219,8 +219,7 @@ type AKSConfig struct {
 }
 
 func Generate(manifestsPath string, platformName string) error {
-	err := WriteRootManifest(manifestsPath, platformName)
-	return err
+	return WriteRootManifest(manifestsPath, platformName)
 }
 
 func PreUpdate(contactEmail string) error {
@@ -354,15 +353,18 @@ func PreUpdate(contactEmail string) error {
 			if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
 				return err
 			}
-
 			log.Debugf("Creating AD application ...")
+			identifierUris := fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)
 			app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 				AvailableToOtherTenants: to.BoolPtr(false),
 				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-externaldns", conf.DnsZone)),
 				Homepage:                to.StringPtr("http://kubeprod.io"),
-				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
+				IdentifierUris:          &[]string{identifierUris},
 			})
 			if err != nil {
+				if strings.Contains(err.Error(), "Another object with the same value for property identifierUris already exists.") {
+					log.Errorf("Another AD application with property identifierUris = %s already exists.", identifierUris)
+				}
 				return err
 			}
 
