@@ -347,7 +347,7 @@ func PreUpdate(contactEmail string) error {
 			log.Debugf("Got grp %q -> %s", conf.ExternalDNS.ResourceGroup, *grp.ID)
 
 			// begin: az ad sp create-for-rbac --role=Contributor --scopes=$rgid
-			log.Debugf("Creating AD service principal")
+			log.Debugf("Creating AD service principal ...")
 
 			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
 			if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
