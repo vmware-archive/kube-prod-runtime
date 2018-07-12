@@ -36,17 +36,18 @@ type InstallCmd struct {
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
-	log.Info("Generating configuration for platform ", c.Platform.Name)
-	if err := c.Platform.RunGenerate(c.ManifestsPath, c.Platform.Name); err != nil {
-		return err
-	}
 	log.Info("Installing platform ", c.Platform.Name)
 	if err := c.Platform.RunPreUpdate(c.ContactEmail); err != nil {
+		return err
+	}
+	log.Info("Generating configuration for platform ", c.Platform.Name)
+	if err := c.Platform.RunGenerate(c.ManifestsPath, c.Platform.Name); err != nil {
 		return err
 	}
 	// TODO(felipe): Conditionalize this with a command-line flag so this
 	// step is optional
 	if true {
+		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform.Name)
 		if err := c.Update(); err != nil {
 			return err
 		}
@@ -54,7 +55,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 		fmt.Println("Kubernetes cluster is ready for deployment.")
 		fmt.Println("run: kubecfg update --ignore-unknown kube-system.jsonnet")
 	}
-
 	err := c.Platform.RunPostUpdate(c.Config)
 	return err
 }
