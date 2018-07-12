@@ -28,7 +28,7 @@ local kube = import "../lib/kube.libsonnet";
         spec+: {
           containers_+: {
             proxy: kube.Container("oauth2-proxy") {
-              image: "a5huynh/oauth2_proxy:2.2.1",
+              image: "bitnami/oauth2-proxy:2.2.0-r4",
               args_+: {
                 "email-domain": "*",
                 "http-address": "0.0.0.0:4180",
@@ -36,7 +36,7 @@ local kube = import "../lib/kube.libsonnet";
                 "cookie-refresh": "3h",
                 "set-xauthrequest": true,
                 "tls-cert": "",
-                upstream: "file:///dev/null",
+                "upstream": "file:///dev/null",
               },
               env_+: {
                 OAUTH2_PROXY_CLIENT_ID: kube.SecretKeyRef($.secret, "client_id"),
