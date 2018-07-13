@@ -73,7 +73,6 @@ local kibana = import "../components/kibana.jsonnet";
       // created by installer (see kubeprod/pkg/aks/platform.go)
       metadata+: {namespace: "kube-system", name: "oauth2-proxy"},
       data_+: {
-        azure_tenant: $.azure_tenant,
         client_id: $.oauth2_client_id,
         client_secret: $.oauth2_client_secret,
         cookie_secret: $.oauth2_cookie_secret,
@@ -88,9 +87,7 @@ local kibana = import "../components/kibana.jsonnet";
               proxy+: {
                 args_+: {
                   provider: "azure",
-                },
-                env_+: {
-                  OAUTH2_PROXY_AZURE_TENANT: kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
+                  "azure-tenant": $.azure_tenant,
                 },
               },
             },
