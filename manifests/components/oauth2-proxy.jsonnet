@@ -6,7 +6,6 @@ local kube = import "../lib/kube.libsonnet";
 
   secret: kube.Secret($.p+"oauth2-proxy") + $.namespace {
     data_+: {
-      azure_tenant: error "azure_tenant is required",
       client_id: error "client_id is required",
       client_secret: error "client_secret is required",
       cookie_secret: error "cookie_secret is required",
