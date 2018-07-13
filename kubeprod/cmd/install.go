@@ -3,6 +3,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"regexp"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -26,6 +27,14 @@ func init() {
 	installCmd.PersistentFlags().String(flagManifests, DefaultManifestBase, "Base URL below which to find platform manifests")
 	installCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
 	installCmd.MarkPersistentFlagRequired(flagEmail)
+}
+
+func validatContacteEmail(contactEmail string) error {
+	emailRegexp := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
+	if !emailRegexp.MatchString(contactEmail) {
+		return fmt.Errorf("Invalid contact e-mail address: %s", contactEmail)
+	}
+	return nil
 }
 
 var installCmd = &cobra.Command{
@@ -61,7 +70,10 @@ var installCmd = &cobra.Command{
 			return err
 		}
 		if c.ContactEmail == "" {
-			log.Warning("Email address was not provided. Some services may not function correctly.")
+			log.Fatal("No Email address was provided via the --command line flag.")
+		}
+		if err := validatContacteEmail(c.ContactEmail); err != nil {
+			return err
 		}
 
 		c.DnsSuffix, err = flags.GetString(flagDnsSuffix)
