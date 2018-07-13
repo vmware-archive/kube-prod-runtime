@@ -25,6 +25,7 @@ func init() {
 	installCmd.MarkPersistentFlagRequired(flagPlatform)
 	installCmd.PersistentFlags().String(flagManifests, DefaultManifestBase, "Base URL below which to find platform manifests")
 	installCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
+	installCmd.MarkPersistentFlagRequired(flagEmail)
 }
 
 var installCmd = &cobra.Command{
