@@ -25,13 +25,14 @@ local kibana = import "../components/kibana.jsonnet";
     azconf: kube.Secret("external-dns-azure-conf") {
       metadata+: {namespace: "kube-system"},
       data_+: {
-        "azure.json": std.manifestJsonEx({
+        azure:: {
             "tenantId": $.azure_tenant,
             "subscriptionId": $.azure_subscription,
             "aadClientId": $.edns_client_id,
             "aadClientSecret": $.edns_client_secret,
             "resourceGroup": $.edns_resource_group
-        }, "  "),
+        },
+        "azure.json": std.manifestJsonEx(self.azure, "  "),
       },
     },
 
