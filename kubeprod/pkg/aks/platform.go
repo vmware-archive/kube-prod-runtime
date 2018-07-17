@@ -362,9 +362,6 @@ func PreUpdate(contactEmail string) error {
 				IdentifierUris:          &[]string{identifierUris},
 			})
 			if err != nil {
-				if strings.Contains(err.Error(), "Another object with the same value for property identifierUris already exists.") {
-					log.Errorf("Another AD application with property identifierUris = %s already exists.", identifierUris)
-				}
 				return err
 			}
 
