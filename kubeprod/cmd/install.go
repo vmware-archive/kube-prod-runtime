@@ -5,7 +5,6 @@ import (
 	"os"
 	"regexp"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/installer"
@@ -29,7 +28,7 @@ func init() {
 	installCmd.MarkPersistentFlagRequired(flagEmail)
 }
 
-func validatContacteEmail(contactEmail string) error {
+func validateContacteEmail(contactEmail string) error {
 	emailRegexp := regexp.MustCompile("^[a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$")
 	if !emailRegexp.MatchString(contactEmail) {
 		return fmt.Errorf("Invalid contact e-mail address: %s", contactEmail)
@@ -69,10 +68,7 @@ var installCmd = &cobra.Command{
 		if err != nil {
 			return err
 		}
-		if c.ContactEmail == "" {
-			log.Fatal("No Email address was provided via the --command line flag.")
-		}
-		if err := validatContacteEmail(c.ContactEmail); err != nil {
+		if err := validateContacteEmail(c.ContactEmail); err != nil {
 			return err
 		}
 
