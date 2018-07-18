@@ -16,6 +16,10 @@ import (
 const (
 	// AppID is the registered ID of the "Kubeprod Installer" app
 	AppID = "2dcc87f0-6e30-4dca-b572-20d971c63a89"
+	// AksConfigFile specifies the filename of the JSON configuration
+	AksConfigFile = "aksConfig.json"
+	// AksRootManifest specifies the filename of the root (cluster) manifest
+	AksRootManifest = "kube-system.jsonnet"
 )
 
 // NewAuthorizerFromCli snarfs credentials from azure-cli's

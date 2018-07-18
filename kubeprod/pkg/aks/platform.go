@@ -197,27 +197,6 @@ func marshalFile(path string, obj interface{}) error {
 	return f.Close()
 }
 
-type ExternalDNSConfig struct {
-	SubscriptionID  string
-	AADClientID     string
-	AADClientSecret string
-	ResourceGroup   string
-}
-
-type OauthProxyConfig struct {
-	CookieSecret string
-	ClientID     string
-	ClientSecret string
-}
-
-type AKSConfig struct {
-	DnsZone      string
-	ContactEmail string
-	TenantID     string
-	ExternalDNS  ExternalDNSConfig
-	OauthProxy   OauthProxyConfig
-}
-
 func Generate(manifestsPath string, platformName string) error {
 	return WriteRootManifest(manifestsPath, platformName)
 }
@@ -227,7 +206,7 @@ func PreUpdate(contactEmail string) error {
 	confChanged := false
 
 	var conf AKSConfig
-	if err := unmarshalFile("kubeprod.json", &conf); err != nil && !os.IsNotExist(err) {
+	if err := unmarshalFile(AksConfigFile, &conf); err != nil && !os.IsNotExist(err) {
 		return err
 	}
 
@@ -247,23 +226,24 @@ func PreUpdate(contactEmail string) error {
 		confChanged = true
 	}
 
-	if conf.TenantID == "" {
+	if conf.ExternalDNS.TenantID == "" || conf.OauthProxy.AzureTenant == "" {
 		tenantID, err := tenantIDParam.get()
 		if err != nil {
 			return err
 		}
-		conf.TenantID = tenantID
+		conf.ExternalDNS.TenantID = tenantID
+		conf.OauthProxy.AzureTenant = tenantID
 		confChanged = true
 	}
 
 	logInspector := LoggingInspector{Logger: log.StandardLogger()}
 
 	authers := map[string]autorest.Authorizer{}
-	configClient := func(c *autorest.Client, resource string) error {
+	configClient := func(c *autorest.Client, tenant string, resource string) error {
 		var err error
 		auther := authers[resource]
 		if auther == nil {
-			auther, err = authorizer(resource, conf.TenantID)
+			auther, err = authorizer(resource, tenant)
 			if err != nil {
 				return err
 			}
@@ -317,7 +297,7 @@ func PreUpdate(contactEmail string) error {
 		log.Debug("About to create Azure clients")
 
 		dnsClient := dns.NewZonesClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
-		if err := configClient(&dnsClient.Client, env.ResourceManagerEndpoint); err != nil {
+		if err := configClient(&dnsClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
 			return err
 		}
 		zone, err := dnsClient.CreateOrUpdate(ctx, conf.ExternalDNS.ResourceGroup, conf.DnsZone, dns.Zone{Location: to.StringPtr("global"), ZoneProperties: &dns.ZoneProperties{ZoneType: "Public"}}, "", "*")
@@ -335,7 +315,7 @@ func PreUpdate(contactEmail string) error {
 
 		if conf.ExternalDNS.AADClientID == "" {
 			groupsClient := resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
-			if err := configClient(&groupsClient.Client, env.ResourceManagerEndpoint); err != nil {
+			if err := configClient(&groupsClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
 				return err
 			}
 
@@ -349,8 +329,8 @@ func PreUpdate(contactEmail string) error {
 			// begin: az ad sp create-for-rbac --role=Contributor --scopes=$rgid
 			log.Debugf("Creating AD service principal ...")
 
-			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
-			if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
+			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
+			if err := configClient(&appClient.Client, conf.ExternalDNS.TenantID, env.GraphEndpoint); err != nil {
 				return err
 			}
 			log.Debugf("Creating AD application ...")
@@ -377,8 +357,8 @@ func PreUpdate(contactEmail string) error {
 				return err
 			}
 
-			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
-			if err := configClient(&spClient.Client, env.GraphEndpoint); err != nil {
+			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
+			if err := configClient(&spClient.Client, conf.ExternalDNS.TenantID, env.GraphEndpoint); err != nil {
 				return err
 			}
 
@@ -392,7 +372,7 @@ func PreUpdate(contactEmail string) error {
 			}
 
 			roleDefClient := authorization.NewRoleDefinitionsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
-			if err := configClient(&roleDefClient.Client, env.ResourceManagerEndpoint); err != nil {
+			if err := configClient(&roleDefClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
 				return err
 			}
 
@@ -406,7 +386,7 @@ func PreUpdate(contactEmail string) error {
 			contribRoleID := roles.Values()[0].ID
 
 			roleClient := authorization.NewRoleAssignmentsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
-			if err := configClient(&roleClient.Client, env.ResourceManagerEndpoint); err != nil {
+			if err := configClient(&roleClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
 				return err
 			}
 
@@ -454,8 +434,8 @@ func PreUpdate(contactEmail string) error {
 	}
 
 	if conf.OauthProxy.ClientID == "" {
-		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.TenantID)
-		if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
+		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.OauthProxy.AzureTenant)
+		if err := configClient(&appClient.Client, conf.OauthProxy.AzureTenant, env.GraphEndpoint); err != nil {
 			return err
 		}
 
@@ -506,7 +486,7 @@ func PreUpdate(contactEmail string) error {
 		// TODO: Warning! this file includes secrets in plain
 		// text.  Wwe should consider SealedSecrets or
 		// similar.
-		if err := marshalFile("kubeprod.json", &conf); err != nil {
+		if err := marshalFile(AksConfigFile, &conf); err != nil {
 			return err
 		}
 	}
