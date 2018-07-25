@@ -12,9 +12,19 @@ local kube = import "../lib/kube.libsonnet";
         verbs: ["get", "watch", "list"],
       },
       {
+        apiGroups: [""],
+        resources: ["pods"],
+        verbs: ["get","watch","list"],
+      },
+      {
         apiGroups: ["extensions"],
         resources: ["ingresses"],
         verbs: ["get", "watch", "list"],
+      },
+      {
+        apiGroups: [""],
+        resources: ["nodes"],
+        verbs: ["list"],
       },
     ],
   },
@@ -35,7 +45,7 @@ local kube = import "../lib/kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             edns: kube.Container("external-dns") {
-              image: "registry.opensource.zalan.do/teapot/external-dns:v0.5.0",
+              image: "bitnami/external-dns:0.5.4-r8",
               args_+: {
                 sources_:: ["service", "ingress"],
                 "txt-owner-id": this.ownerId,
