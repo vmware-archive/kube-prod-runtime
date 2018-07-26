@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strings"
 	"time"
@@ -26,7 +27,6 @@ import (
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -127,112 +127,33 @@ func prompt(question, def string) (string, error) {
 	return result, nil
 }
 
-// As azure-cli says:
-// "combining filters is unsupported, so we pick the best, and do limited maunal[sic] filtering"
-func filterRoleAssignments(iter authorization.RoleAssignmentListResultIterator, principalID, roleDefID string) ([]authorization.RoleAssignment, error) {
-	var ret []authorization.RoleAssignment
-	log.Debugf("filterRoleAssignments(%v, %v)", roleDefID, principalID)
-	for iter.NotDone() {
-		ra := iter.Value()
-		log.Debugf("Considering %#v", ra)
-		if *ra.Properties.RoleDefinitionID == roleDefID && *ra.Properties.PrincipalID == principalID {
-			log.Debug("hit!")
-			ret = append(ret, ra)
-		}
-
-		if err := iter.Next(); err != nil {
-			return nil, err
-		}
-	}
-	log.Debugf("Done, returning")
-	return ret, nil
-}
-
-func ensureApp(ctx context.Context, appClient graphrbac.ApplicationsClient, params graphrbac.ApplicationCreateParameters) (graphrbac.Application, error) {
-	if params.IdentifierUris == nil || len(*params.IdentifierUris) != 1 {
-		// The filter expression below only handles this case
-		panic("ensureApp() requires len(IdentifierUris) == 1")
-	}
-	identifierURI := (*params.IdentifierUris)[0]
-
-	appIter, err := appClient.ListComplete(ctx, fmt.Sprintf("identifierUris/any(s:s eq '%s')", identifierURI))
-	if err != nil {
-		return graphrbac.Application{}, err
-	}
-	if appIter.NotDone() {
-		app := appIter.Value()
-		log.Infof("Using existing AD application %s", *app.AppID)
-		return app, nil
-	}
-	// no results -> create new app
-	app, err := appClient.Create(ctx, params)
-	if err != nil {
-		return graphrbac.Application{}, err
-	}
-	log.Infof("Created new AD application %s", *app.AppID)
-	return app, nil
-}
-
-func ensureServicePrincipal(ctx context.Context, spClient graphrbac.ServicePrincipalsClient, params graphrbac.ServicePrincipalCreateParameters) (graphrbac.ServicePrincipal, error) {
-	spIter, err := spClient.ListComplete(ctx, fmt.Sprintf("appId eq '%s'", *params.AppID))
-	if err != nil {
-		return graphrbac.ServicePrincipal{}, err
-	}
-	if spIter.NotDone() {
-		sp := spIter.Value()
-		log.Infof("Using existing service principal %s", *sp.ObjectID)
-		return sp, nil
-	}
-	sp, err := spClient.Create(ctx, params)
-	if err != nil {
-		return graphrbac.ServicePrincipal{}, err
-	}
-	log.Infof("Created new service principal %s", *sp.ObjectID)
-	return sp, nil
-}
-
-func ensureRoleAssignment(ctx context.Context, roleClient authorization.RoleAssignmentsClient, scope string, params authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
-	roleAssigns, err := roleClient.ListComplete(ctx, fmt.Sprintf("principalId eq '%s'", *params.Properties.PrincipalID))
-	if err != nil {
-		return authorization.RoleAssignment{}, err
-	}
-	ras, err := filterRoleAssignments(roleAssigns, *params.Properties.PrincipalID, *params.Properties.RoleDefinitionID)
-	if err != nil {
-		return authorization.RoleAssignment{}, err
-	}
-	if len(ras) > 0 {
-		ra := ras[0]
-		log.Debugf("Using existing role assignment %s", *ra.ID)
-		return ra, nil
-	}
-
+func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssignmentsClient, scope string, params authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
 	uid, err := uuid.NewV4()
 	if err != nil {
 		return authorization.RoleAssignment{}, err
 	}
 
-	// Azure will throw PrincipalNotFound if used "too soon" after creation :(
-	var lastErr error
-	for retries := 0; retries < 30; retries++ {
-		log.Debugf("Creating role assignment %s (retry %d)...", uid, retries)
-		ra, lastErr := roleClient.Create(ctx, scope, uid.String(), params)
+	const maxTries = 30
 
-		if lastErr != nil {
+	// Azure will throw PrincipalNotFound if used "too soon" after creation :(
+	for retries := 0; ; retries++ {
+		log.Debugf("Creating role assignment %s (retry %d)...", uid, retries)
+
+		ra, err := roleClient.Create(ctx, scope, uid.String(), params)
+		if err != nil {
 			// Azure :(
-			if strings.Contains(lastErr.Error(), "PrincipalNotFound") {
-				log.Debugf("Azure returned %v, retrying", lastErr)
-				time.Sleep(5)
+			if strings.Contains(err.Error(), "PrincipalNotFound") && retries < maxTries {
+				log.Debugf("Azure returned %v, retrying", err)
+				time.Sleep(1)
 				continue
 			}
 
-			return authorization.RoleAssignment{}, lastErr
+			return authorization.RoleAssignment{}, err
 		}
 
 		log.Infof("Assigned role %s to sp %s within scope %s named %s", *params.Properties.RoleDefinitionID, *params.Properties.PrincipalID, scope, *ra.Name)
 		return ra, nil
 	}
-
-	return authorization.RoleAssignment{}, lastErr
 }
 
 func base64RandBytes(n uint) (string, error) {
@@ -243,33 +164,86 @@ func base64RandBytes(n uint) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf), nil
 }
 
-func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured, error) {
+func unmarshalFile(path string, into interface{}) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	buf, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(buf, into)
+}
+
+func marshalFile(path string, obj interface{}) error {
+	buf, err := json.Marshal(obj)
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	if _, err := f.Write(buf); err != nil {
+		return err
+	}
+
+	return f.Close()
+}
+
+func Generate(manifestsPath string, platformName string) error {
+	return WriteRootManifest(manifestsPath, platformName)
+}
+
+func PreUpdate(contactEmail string) error {
 	ctx := context.TODO()
+	confChanged := false
+
+	var conf AKSConfig
+	if err := unmarshalFile(AksConfigFile, &conf); err != nil && !os.IsNotExist(err) {
+		return err
+	}
 
 	env := azure.PublicCloud
 
-	subID, err := subIDParam.get()
-	if err != nil {
-		return objs, err
+	if conf.ContactEmail == "" {
+		conf.ContactEmail = contactEmail
+		confChanged = true
 	}
 
-	domain, err := dnsZoneParam.get()
-	if err != nil {
-		return objs, err
+	if conf.DnsZone == "" {
+		domain, err := dnsZoneParam.get()
+		if err != nil {
+			return err
+		}
+		conf.DnsZone = domain
+		confChanged = true
 	}
 
-	tenantID, err := tenantIDParam.get()
-	if err != nil {
-		return objs, err
+	if conf.ExternalDNS.TenantID == "" || conf.OauthProxy.AzureTenant == "" {
+		tenantID, err := tenantIDParam.get()
+		if err != nil {
+			return err
+		}
+		conf.ExternalDNS.TenantID = tenantID
+		conf.OauthProxy.AzureTenant = tenantID
+		confChanged = true
 	}
 
 	logInspector := LoggingInspector{Logger: log.StandardLogger()}
 
 	authers := map[string]autorest.Authorizer{}
-	configClient := func(c *autorest.Client, resource string) error {
+	configClient := func(c *autorest.Client, tenant string, resource string) error {
+		var err error
 		auther := authers[resource]
 		if auther == nil {
-			auther, err = authorizer(resource, tenantID)
+			auther, err = authorizer(resource, tenant)
 			if err != nil {
 				return err
 			}
@@ -280,191 +254,203 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 			c.RequestInspector = logInspector.WithInspection()
 			c.ResponseInspector = logInspector.ByInspecting()
 		}
-		if err := c.AddToUserAgent(userAgent); err != nil {
+		if err = c.AddToUserAgent(userAgent); err != nil {
 			return err
 		}
 		return nil
 	}
 
-	if domain != "" {
+	if conf.DnsZone != "" {
 		//
 		// externaldns setup
 		//
 
-		secret, err := base64RandBytes(12)
-		if err != nil {
-			return nil, err
+		if conf.ExternalDNS.SubscriptionID == "" {
+			subID, err := subIDParam.get()
+			if err != nil {
+				return err
+			}
+			conf.ExternalDNS.SubscriptionID = subID
+			confChanged = true
 		}
 
-		dnsResgrp, err := dnsResgrpParam.get()
-		if err != nil {
-			return objs, err
+		if conf.ExternalDNS.AADClientSecret == "" {
+			secret, err := base64RandBytes(12)
+			if err != nil {
+				return err
+			}
+			conf.ExternalDNS.AADClientSecret = secret
+			confChanged = true
+		}
+
+		if conf.ExternalDNS.ResourceGroup == "" {
+			// TODO: default to Azure resource group of AKS cluster.
+			// See https://docs.microsoft.com/en-us/azure/aks/faq#why-are-two-resource-groups-created-with-aks
+			dnsResgrp, err := dnsResgrpParam.get()
+			if err != nil {
+				return err
+			}
+			conf.ExternalDNS.ResourceGroup = dnsResgrp
+			confChanged = true
 		}
 
 		log.Debug("About to create Azure clients")
 
-		dnsClient := dns.NewZonesClientWithBaseURI(env.ResourceManagerEndpoint, subID)
-		if err := configClient(&dnsClient.Client, env.ResourceManagerEndpoint); err != nil {
-			return objs, err
+		dnsClient := dns.NewZonesClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
+		if err := configClient(&dnsClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
+			return err
 		}
-
-		zone, err := dnsClient.CreateOrUpdate(ctx, dnsResgrp, domain, dns.Zone{Location: to.StringPtr("global"), ZoneProperties: &dns.ZoneProperties{ZoneType: "Public"}}, "", "*")
+		zone, err := dnsClient.CreateOrUpdate(ctx, conf.ExternalDNS.ResourceGroup, conf.DnsZone, dns.Zone{Location: to.StringPtr("global"), ZoneProperties: &dns.ZoneProperties{ZoneType: "Public"}}, "", "*")
 		if err != nil {
 			if strings.Contains(err.Error(), "PreconditionFailed") {
-				log.Infof("Using existing Azure DNS zone %q", domain)
+				log.Infof("Using existing Azure DNS zone %q", conf.DnsZone)
 			} else {
-				return objs, err
+				return err
 			}
 		} else {
-			log.Infof("Created Azure DNS zone %q", domain)
+			log.Infof("Created Azure DNS zone %q", conf.DnsZone)
 			// TODO: we could do a DNS lookup to test if this was already the case
-			log.Infof("You will need to ensure glue records exist for %s pointing to NS %v", domain, *zone.NameServers)
+			log.Infof("You will need to ensure glue records exist for %s pointing to NS %v", conf.DnsZone, *zone.NameServers)
 		}
 
-		groupsClient := resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, subID)
-		if err := configClient(&groupsClient.Client, env.ResourceManagerEndpoint); err != nil {
-			return objs, err
+		if conf.ExternalDNS.AADClientID == "" {
+			groupsClient := resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
+			if err := configClient(&groupsClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
+				return err
+			}
+
+			// az group show --name $resgrp
+			grp, err := groupsClient.Get(ctx, conf.ExternalDNS.ResourceGroup)
+			if err != nil {
+				return err
+			}
+			log.Debugf("Got grp %q -> %s", conf.ExternalDNS.ResourceGroup, *grp.ID)
+
+			// begin: az ad sp create-for-rbac --role=Contributor --scopes=$rgid
+			log.Debugf("Creating AD service principal ...")
+
+			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
+			if err := configClient(&appClient.Client, conf.ExternalDNS.TenantID, env.GraphEndpoint); err != nil {
+				return err
+			}
+			log.Debugf("Creating AD application ...")
+			identifierUris := fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)
+			app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
+				AvailableToOtherTenants: to.BoolPtr(false),
+				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-externaldns", conf.DnsZone)),
+				Homepage:                to.StringPtr("http://kubeprod.io"),
+				IdentifierUris:          &[]string{identifierUris},
+			})
+			if err != nil {
+				return err
+			}
+
+			_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
+				Value: &[]graphrbac.PasswordCredential{{
+					StartDate: &date.Time{Time: time.Now()},
+					EndDate:   &date.Time{Time: time.Now().AddDate(10, 0, 0)}, // now + 10 years
+					KeyID:     nil,
+					Value:     to.StringPtr(conf.ExternalDNS.AADClientSecret),
+				}},
+			})
+			if err != nil {
+				return err
+			}
+
+			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
+			if err := configClient(&spClient.Client, conf.ExternalDNS.TenantID, env.GraphEndpoint); err != nil {
+				return err
+			}
+
+			log.Debugf("Creating service principal...")
+			sp, err := spClient.Create(ctx, graphrbac.ServicePrincipalCreateParameters{
+				AppID:          app.AppID,
+				AccountEnabled: to.BoolPtr(true),
+			})
+			if err != nil {
+				return err
+			}
+
+			roleDefClient := authorization.NewRoleDefinitionsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
+			if err := configClient(&roleDefClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
+				return err
+			}
+
+			roles, err := roleDefClient.List(ctx, *grp.ID, "roleName eq 'Contributor'")
+			if err != nil {
+				return err
+			}
+			if len(roles.Values()) < 1 {
+				return fmt.Errorf("No 'Contributor' role in resource group %q", conf.ExternalDNS.ResourceGroup)
+			}
+			contribRoleID := roles.Values()[0].ID
+
+			roleClient := authorization.NewRoleAssignmentsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
+			if err := configClient(&roleClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
+				return err
+			}
+
+			_, err = createRoleAssignment(ctx, roleClient, *grp.ID, authorization.RoleAssignmentCreateParameters{
+				Properties: &authorization.RoleAssignmentProperties{
+					PrincipalID:      sp.ObjectID,
+					RoleDefinitionID: contribRoleID,
+				},
+			})
+			if err != nil {
+				return err
+			}
+			// end: az ad sp create-for-rbac
+
+			conf.ExternalDNS.AADClientID = *app.AppID
+			confChanged = true
 		}
+	}
 
-		// az group show --name $resgrp
-		grp, err := groupsClient.Get(ctx, dnsResgrp)
-		if err != nil {
-			return objs, err
-		}
-		log.Debugf("Got grp %q -> %s", dnsResgrp, *grp.ID)
+	//
+	// oauth2-proxy setup
+	//
 
-		// begin: az ad sp create-for-rbac --role=Contributor --scopes=$rgid
-		log.Debugf("Creating AD service principal")
+	log.Debug("Starting oauth2-proxy setup")
 
-		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, tenantID)
-		if err := configClient(&appClient.Client, env.GraphEndpoint); err != nil {
-			return objs, err
-		}
-
-		log.Debugf("Creating AD application ...")
-		app, err := ensureApp(ctx, appClient, graphrbac.ApplicationCreateParameters{
-			AvailableToOtherTenants: to.BoolPtr(false),
-			DisplayName:             to.StringPtr("kubeprod"),
-			Homepage:                to.StringPtr("http://kubeprod.io"),
-			IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", domain)},
-		})
-		if err != nil {
-			return objs, err
-		}
-
-		_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
-			Value: &[]graphrbac.PasswordCredential{{
-				StartDate: &date.Time{Time: time.Now()},
-				EndDate:   &date.Time{Time: time.Now().AddDate(10, 0, 0)}, // now + 10 years
-				KeyID:     nil,
-				Value:     to.StringPtr(secret),
-			}},
-		})
-		if err != nil {
-			return objs, err
-		}
-
-		spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, tenantID)
-		if err := configClient(&spClient.Client, env.GraphEndpoint); err != nil {
-			return objs, err
-		}
-
-		log.Debugf("Creating service principal...")
-		sp, err := ensureServicePrincipal(ctx, spClient, graphrbac.ServicePrincipalCreateParameters{
-			AppID:          app.AppID,
-			AccountEnabled: to.BoolPtr(true),
-		})
-		if err != nil {
-			return objs, err
-		}
-
-		roleDefClient := authorization.NewRoleDefinitionsClientWithBaseURI(env.ResourceManagerEndpoint, subID)
-		if err := configClient(&roleDefClient.Client, env.ResourceManagerEndpoint); err != nil {
-			return objs, err
-		}
-
-		roles, err := roleDefClient.List(ctx, *grp.ID, "roleName eq 'Contributor'")
-		if err != nil {
-			return objs, err
-		}
-
-		contribRoleID := roles.Values()[0].ID
-
-		roleClient := authorization.NewRoleAssignmentsClientWithBaseURI(env.ResourceManagerEndpoint, subID)
-		if err := configClient(&roleClient.Client, env.ResourceManagerEndpoint); err != nil {
-			return objs, err
-		}
-
-		_, err = ensureRoleAssignment(ctx, roleClient, *grp.ID, authorization.RoleAssignmentCreateParameters{
-			Properties: &authorization.RoleAssignmentProperties{
-				PrincipalID:      sp.ObjectID,
-				RoleDefinitionID: contribRoleID,
-			},
-		})
-		if err != nil {
-			return objs, err
-		}
-
-		// end: az ad sp create-for-rbac
-
-		conf, err := json.Marshal(map[string]string{
-			"tenantId":        tenantID,
-			"subscriptionId":  subID,
-			"aadClientId":     *app.AppID,
-			"aadClientSecret": secret,
-			"resourceGroup":   dnsResgrp,
-		})
-		if err != nil {
-			return objs, err
-		}
-
-		ednsconf := &v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: metav1.NamespaceSystem,
-				Name:      "external-dns-azure-conf",
-			},
-			StringData: map[string]string{
-				"azure.json": string(conf),
-			},
-		}
-
-		obj, err := toUnstructured(ednsconf)
-		if err != nil {
-			return objs, err
-		}
-		objs = append(objs, obj)
-
-		//
-		// oauth2-proxy setup
-		//
-
-		log.Debug("Starting oauth2-proxy setup")
-
+	if conf.OauthProxy.CookieSecret == "" {
 		// I Quote: cookie_secret must be 16, 24, or 32 bytes
 		// to create an AES cipher when pass_access_token ==
 		// true or cookie_refresh != 0
-		cookieSecret, err := base64RandBytes(24)
+		secret, err := base64RandBytes(24)
 		if err != nil {
-			return nil, err
+			return err
 		}
+		conf.OauthProxy.CookieSecret = secret
+		confChanged = true
+	}
 
-		clientSecret, err := base64RandBytes(18)
+	if conf.OauthProxy.ClientSecret == "" {
+		secret, err := base64RandBytes(18)
 		if err != nil {
-			return nil, err
+			return err
+		}
+		conf.OauthProxy.ClientSecret = secret
+		confChanged = true
+	}
+
+	if conf.OauthProxy.ClientID == "" {
+		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.OauthProxy.AzureTenant)
+		if err := configClient(&appClient.Client, conf.OauthProxy.AzureTenant, env.GraphEndpoint); err != nil {
+			return err
 		}
 
 		oauthHosts := []string{"prometheus", "kibana"}
 		replyUrls := make([]string, len(oauthHosts))
 		for i, h := range oauthHosts {
-			replyUrls[i] = fmt.Sprintf("https://%s.%s/oauth2/callback", h, domain)
+			replyUrls[i] = fmt.Sprintf("https://%s.%s/oauth2/callback", h, conf.DnsZone)
 		}
 
 		// az ad app create ...
-		app, err = ensureApp(ctx, appClient, graphrbac.ApplicationCreateParameters{
+		app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 			AvailableToOtherTenants: to.BoolPtr(false),
-			DisplayName:             to.StringPtr("Kubeprod cluster management"),
+			DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-oauth2", conf.DnsZone)),
 			Homepage:                to.StringPtr("http://kubeprod.io"),
-			IdentifierUris:          &[]string{fmt.Sprintf("https://oauth.%s/oauth2", domain)},
+			IdentifierUris:          &[]string{fmt.Sprintf("https://oauth.%s/oauth2", conf.DnsZone)},
 			ReplyUrls:               &replyUrls,
 			RequiredResourceAccess: &[]graphrbac.RequiredResourceAccess{{
 				// "User.Read" for "Microsoft.Azure.ActiveDirectory"
@@ -477,7 +463,7 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 			}},
 		})
 		if err != nil {
-			return objs, err
+			return err
 		}
 
 		_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
@@ -485,34 +471,27 @@ func PreUpdate(objs []*unstructured.Unstructured) ([]*unstructured.Unstructured,
 				StartDate: &date.Time{Time: time.Now()},
 				EndDate:   &date.Time{Time: time.Now().AddDate(10, 0, 0)}, // now + 10 years
 				KeyID:     nil,
-				Value:     to.StringPtr(clientSecret),
+				Value:     to.StringPtr(conf.OauthProxy.ClientSecret),
 			}},
 		})
 		if err != nil {
-			return objs, err
+			return err
 		}
 
-		oauthProxyConf := &v1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: metav1.NamespaceSystem,
-				Name:      "oauth2-proxy",
-			},
-			StringData: map[string]string{
-				"client_id":     *app.AppID,
-				"client_secret": clientSecret,
-				"cookie_secret": cookieSecret,
-				"azure_tenant":  tenantID,
-			},
-		}
-
-		obj, err = toUnstructured(oauthProxyConf)
-		if err != nil {
-			return objs, err
-		}
-		objs = append(objs, obj)
+		conf.OauthProxy.ClientID = *app.AppID
+		confChanged = true
 	}
 
-	return objs, nil
+	if confChanged {
+		// TODO: Warning! this file includes secrets in plain
+		// text.  Wwe should consider SealedSecrets or
+		// similar.
+		if err := marshalFile(AksConfigFile, &conf); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func toUnstructured(obj runtime.Object) (*unstructured.Unstructured, error) {

@@ -10,17 +10,17 @@ local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
 
 {
-  external_dns_zone_name:: error "External DNS zone name is undefined",
-  letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
-
   edns: edns {
-    azconf:: kube.Secret("external-dns-azure-conf") {
-      // created by installer (see kubeprod/pkg/aks/platform.go)
+    azconf: kube.Secret("external-dns-azure-conf") {
       metadata+: {namespace: "kube-system"},
+      data_+: {
+        externalDns:: $.aksConfig.externalDns,
+        "azure.json": std.manifestJsonEx(self.externalDns, "  "),
+      },
     },
 
     deploy+: {
-      ownerId: $.external_dns_zone_name,
+      ownerId: $.aksConfig.dnsZone,
       spec+: {
         template+: {
           spec+: {
@@ -45,7 +45,7 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   cert_manager: cert_manager {
-    letsencrypt_contact_email:: $.letsencrypt_contact_email,
+    letsencrypt_contact_email:: $.aksConfig.contactEmail,
   },
 
   nginx_ingress: nginx_ingress,
@@ -53,11 +53,13 @@ local kibana = import "../components/kibana.jsonnet";
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
 
-    secret+:: {
+    secret+: {
       // created by installer (see kubeprod/pkg/aks/platform.go)
       metadata+: {namespace: "kube-system", name: "oauth2-proxy"},
       data_+: {
-        azure_tenant: error "azure_tenant is required",
+        client_id: $.aksConfig.oauthProxy.client_id,
+        client_secret: $.aksConfig.oauthProxy.client_secret,
+        cookie_secret: $.aksConfig.oauthProxy.cookie_secret,
       },
     },
 
@@ -69,9 +71,7 @@ local kibana = import "../components/kibana.jsonnet";
               proxy+: {
                 args_+: {
                   provider: "azure",
-                },
-                env_+: {
-                  OAUTH2_PROXY_AZURE_TENANT: kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
+                  "azure-tenant": $.aksConfig.oauthProxy.azure_tenant,
                 },
               },
             },
@@ -85,7 +85,7 @@ local kibana = import "../components/kibana.jsonnet";
 
   prometheus: prometheus {
     ingress+: {
-      host: "prometheus." + $.external_dns_zone_name,
+      host: "prometheus." + $.aksConfig.dnsZone,
     },
     config+: {
       scrape_configs_+: {
@@ -111,7 +111,7 @@ local kibana = import "../components/kibana.jsonnet";
     es:: $.elasticsearch,
 
     ingress+: {
-      host: "kibana." + $.external_dns_zone_name,
+      host: "kibana." + $.aksConfig.dnsZone,
     },
   },
 }

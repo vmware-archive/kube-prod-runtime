@@ -4,7 +4,7 @@ local kube = import "../lib/kube.libsonnet";
   p:: "",
   namespace:: {metadata+: {namespace: "kube-system"}},
 
-  secret:: kube.Secret($.p+"oauth2-proxy") + $.namespace {
+  secret: kube.Secret($.p+"oauth2-proxy") + $.namespace {
     data_+: {
       client_id: error "client_id is required",
       client_secret: error "client_secret is required",

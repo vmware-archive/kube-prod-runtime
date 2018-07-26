@@ -16,6 +16,10 @@ import (
 const (
 	// AppID is the registered ID of the "Kubeprod Installer" app
 	AppID = "2dcc87f0-6e30-4dca-b572-20d971c63a89"
+	// AksConfigFile specifies the filename of the JSON configuration
+	AksConfigFile = "aksConfig.json"
+	// AksRootManifest specifies the filename of the root (cluster) manifest
+	AksRootManifest = "kube-system.jsonnet"
 )
 
 // NewAuthorizerFromCli snarfs credentials from azure-cli's
@@ -112,12 +116,14 @@ func authorizer(resource, tenantID string) (autorest.Authorizer, error) {
 		return auth.NewAuthorizerFromFile(resource)
 	}
 
-	log.Debug("Trying to initialise Azure SDK from environment")
-	auther, err := auth.NewAuthorizerFromEnvironmentWithResource(resource)
-	if err == nil {
-		return auther, err
+	if os.Getenv("AZURE_TENANT_ID") != "" {
+		log.Debug("Trying to initialise Azure SDK from environment")
+		auther, err := auth.NewAuthorizerFromEnvironmentWithResource(resource)
+		if err == nil {
+			return auther, err
+		}
+		log.Debugf("Failed to initialise Azure SDK from environment: %v", err)
 	}
-	log.Debugf("Failed to initialise Azure SDK from environment: %v", err)
 
 	log.Debug("Trying to initialise Azure SDK from azure-cli credentials")
 	return NewAuthorizerFromCli(resource, tenantID)

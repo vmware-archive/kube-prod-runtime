@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"os"
 	"path"
 
 	jsonnet "github.com/google/go-jsonnet"
@@ -25,19 +26,64 @@ const GcTag = "bitnami.com/prod-runtime"
 
 // InstallCmd represents the show subcommand
 type InstallCmd struct {
-	Config     *restclient.Config
-	ClientPool dynamic.ClientPool
-	Discovery  discovery.DiscoveryInterface
-
-	Platform     *prodruntime.Platform
-	ManifestBase *url.URL
-	ContactEmail string
-	DnsSuffix    string
+	Config        *restclient.Config
+	ClientPool    dynamic.ClientPool
+	Discovery     discovery.DiscoveryInterface
+	Platform      *prodruntime.Platform
+	ManifestsPath string
+	ContactEmail  string
+	DnsSuffix     string
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
-	var err error
 	log.Info("Installing platform ", c.Platform.Name)
+	if err := c.Platform.RunPreUpdate(c.ContactEmail); err != nil {
+		return err
+	}
+	log.Info("Generating configuration for platform ", c.Platform.Name)
+	if err := c.Platform.RunGenerate(c.ManifestsPath, c.Platform.Name); err != nil {
+		return err
+	}
+	// TODO(felipe): Conditionalize this with a command-line flag so this
+	// step is optional
+	if true {
+		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform.Name)
+		if err := c.Update(); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("Kubernetes cluster is ready for deployment.")
+		fmt.Println("run: kubecfg update --ignore-unknown kube-system.jsonnet")
+	}
+	err := c.Platform.RunPostUpdate(c.Config)
+	return err
+}
+
+func cwdURL() (*url.URL, error) {
+	cwd, err := os.Getwd()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current working directory: %v", err)
+	}
+	if cwd[len(cwd)-1] != '/' {
+		cwd = cwd + "/"
+	}
+	return &url.URL{Scheme: "file", Path: cwd}, nil
+}
+
+func (c InstallCmd) Update() error {
+	log.Info("Updating platform ", c.Platform.Name)
+	searchUrls := []*url.URL{
+		&url.URL{Scheme: "internal", Path: "/"},
+	}
+	importer := utils.MakeUniversalImporter(searchUrls)
+	cwdURL, err := cwdURL()
+	if err != nil {
+		return err
+	}
+	input, err := cwdURL.Parse("kube-system.jsonnet")
+	if err != nil {
+		return err
+	}
 
 	update := kubecfg.UpdateCmd{
 		ClientPool:       c.ClientPool,
@@ -47,42 +93,13 @@ func (c InstallCmd) Run(out io.Writer) error {
 		GcTag:            GcTag,
 	}
 
-	searchPaths := []string{
-		"internal:///",
-	}
-	searchUrls := make([]*url.URL, len(searchPaths))
-	for i, p := range searchPaths {
-		searchUrls[i], err = c.ManifestBase.Parse(p)
-		if err != nil {
-			return fmt.Errorf("unable to make URL from %q (relative to %q): %v", p, c.ManifestBase, err)
-		}
-	}
-	importer := utils.MakeUniversalImporter(searchUrls)
-
-	input, err := c.Platform.ManifestURL(c.ManifestBase)
-	if err != nil {
-		return err
-	}
-
-	extvars := map[string]string{
-		"EMAIL":      c.ContactEmail,
-		"DNS_SUFFIX": c.DnsSuffix,
-	}
+	extvars := map[string]string{}
 	objs, err := readObjs(importer, extvars, input)
 	if err != nil {
 		return err
 	}
-
-	objs, err = c.Platform.RunPreUpdate(objs)
-	if err != nil {
-		return err
-	}
-
+	log.Info("Using root manifest ", input)
 	if err := update.Run(objs); err != nil {
-		return err
-	}
-
-	if err := c.Platform.RunPostUpdate(c.Config); err != nil {
 		return err
 	}
 

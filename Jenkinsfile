@@ -29,7 +29,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
           // some sort of custom jsonnet overlay, since
           // power users will want similar flexibility.
 
-          sh "./kubeprod -v install --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
+          sh "./kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
         }
       }
 
@@ -185,14 +185,6 @@ containers: [
             container('go') {
               def aks
               try {
-                // FIXME: this is disabled for now, until we can
-                // fix the Azure permissions issue that leads
-                // to:
-                //
-                //  Creating AD application ...
-                //  {"odata.error":{"code":"Authorization_RequestDenied","message":{"lang":"en","value":"Insufficient privileges to complete the operation."}}}
-                //  Error: graphrbac.ApplicationsClient#List: Failure responding to request: StatusCode=403 -- Original Error: autorest/azure: Service returned an error. Status=403 Code="Unknown" Message="Unknown service error"
-                if (false) {
                 runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnszone}") {
                   container('az') {
                     sh '''
@@ -224,11 +216,14 @@ containers: [
                     sh "az aks get-credentials --name ${aks.name} --resource-group ${aks.resourceGroup} --admin --file \$KUBECONFIG"
                   }
                 }
-                } // if (false)
               }
               finally {
                 if (aks) {
                   container('az') {
+                    sh '''
+                       az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
+                       az account set -s $AZURE_SUBSCRIPTION_ID
+                      '''
                     sh "az aks delete --yes --name ${aks.name} --resource-group ${aks.resourceGroup} --no-wait"
                   }
                 }
