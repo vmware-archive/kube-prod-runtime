@@ -4,7 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/url"
+	"os"
 	"path"
 
 	jsonnet "github.com/google/go-jsonnet"
@@ -22,6 +24,39 @@ import (
 )
 
 const GcTag = "bitnami.com/prod-runtime"
+
+func unmarshalFile(path string, into interface{}) error {
+	f, err := os.Open(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	buf, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(buf, into)
+}
+
+func marshalFile(path string, obj interface{}) error {
+	buf, err := json.MarshalIndent(obj, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+
+	if _, err := f.Write(buf); err != nil {
+		return err
+	}
+
+	return f.Close()
+}
 
 // InstallCmd represents the show subcommand
 type InstallCmd struct {
@@ -59,8 +94,35 @@ func (c InstallCmd) Run(out io.Writer) error {
 	}
 	importer := utils.MakeUniversalImporter(searchUrls)
 
+	// TODO: should be a command line flag or similar
+	// In particular, the (cluster-specific) config should not be
+	// stored along with the rest of the (generic) manifests.
+	confUrl, err := c.ManifestBase.Parse("kubeprod.json")
+	if err != nil {
+		return err
+	}
+	if confUrl.Scheme != "file" {
+		return fmt.Errorf("unable to handle non-file manifest URLs .. for now")
+	}
+
 	input, err := c.Platform.ManifestURL(c.ManifestBase)
 	if err != nil {
+		return err
+	}
+
+	var conf interface{}
+	if err := unmarshalFile(confUrl.Path, &conf); err == nil {
+		log.Debug("Reading existing cluster settings from %q", confUrl)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	if conf, err = c.Platform.RunPreUpdate(conf); err != nil {
+		return err
+	}
+
+	log.Infof("Writing cluster settings to %q", confUrl)
+	if err := marshalFile(confUrl.Path, conf); err != nil {
 		return err
 	}
 
@@ -69,11 +131,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 		"DNS_SUFFIX": c.DnsSuffix,
 	}
 	objs, err := readObjs(importer, extvars, input)
-	if err != nil {
-		return err
-	}
-
-	objs, err = c.Platform.RunPreUpdate(objs)
 	if err != nil {
 		return err
 	}
