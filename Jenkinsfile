@@ -84,6 +84,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
 
 
 podTemplate(
+    cloud: 'kubernetes-cluster',
     label: label,
     idleMinutes: 1,  // Allow some best-effort reuse between successive stages
     yaml: """
@@ -224,7 +225,7 @@ spec:
                         dir('src/github.com/bitnami/kube-prod-runtime') {
                             // NB: `kubeprod` also uses az cli credentials and
                             // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                            withCredentials([azureServicePrincipal('azure-cli-2018-04-06-01-39-19')]) {
+                            withCredentials([azureServicePrincipal('jenkins-bkpr-sp')]) {
                                 def resourceGroup = 'prod-runtime-rg'
                                 def dnszone = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test').toLowerCase()
 
@@ -245,9 +246,10 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                             // a) avoid this leak b) avoid having to give the
                                             // "outer" principal (above) the power to create
                                             // new service principals.
-                                            withCredentials([azureServicePrincipal('azure-cli-2018-04-06-03-17-41')]) {
+                                            withCredentials([azureServicePrincipal('jenkins-bkpr-sp')]) {
                                                 def output = sh(returnStdout: true, script: """
 az aks create                      \
+ --verbose                         \
  --resource-group ${resourceGroup} \
  --name ${clustername}             \
  --node-count 3                    \
@@ -265,7 +267,7 @@ az aks create                      \
                                         }
 
                                         // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                        withCredentials([azureServicePrincipal('azure-cli-2018-04-06-03-17-41')]) {
+                                        withCredentials([azureServicePrincipal('jenkins-bkpr-sp')]) {
 
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
