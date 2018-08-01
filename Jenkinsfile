@@ -225,8 +225,8 @@ spec:
                         dir('src/github.com/bitnami/kube-prod-runtime') {
                             // NB: `kubeprod` also uses az cli credentials and
                             // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                            withCredentials([azureServicePrincipal('jenkins-bkpr-sp')]) {
-                                def resourceGroup = 'prod-runtime-rg'
+                            withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                                def resourceGroup = 'jenkins-bkpr-rg'
                                 def dnszone = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test').toLowerCase()
 
                                 def clustername = "${env.BUILD_TAG}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
@@ -246,7 +246,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                             // a) avoid this leak b) avoid having to give the
                                             // "outer" principal (above) the power to create
                                             // new service principals.
-                                            withCredentials([azureServicePrincipal('jenkins-bkpr-sp')]) {
+                                            withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
                                                 def output = sh(returnStdout: true, script: """
 az aks create                      \
  --verbose                         \
@@ -267,7 +267,7 @@ az aks create                      \
                                         }
 
                                         // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                        withCredentials([azureServicePrincipal('jenkins-bkpr-sp')]) {
+                                        withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
 
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
