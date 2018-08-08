@@ -19,11 +19,7 @@ def withGo(Closure body) {
             "PATH+GOBIN=${env.WORKSPACE}/bin",
             "HOME=${env.WORKSPACE}",
         ]) {
-            cache(maxCacheSize: 1000, caches: [
-                [$class: 'ArbitraryFileCache', path: "${env.HOME}/.cache/go-build"],
-            ]) {
-                body()
-            }
+            body()
         }
     }
 }
