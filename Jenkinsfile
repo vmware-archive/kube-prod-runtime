@@ -50,7 +50,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
             // to do that via some sort of custom jsonnet overlay,
             // since power users will want similar flexibility.
 
-            sh "./release/kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
+            sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
 
             // Slight delay to let cluster settle (images need to be
             // pulled, LBs setup, etc).
