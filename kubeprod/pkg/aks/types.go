@@ -20,7 +20,8 @@ type OauthProxyConfig struct {
 // Local config required for AKS platforms
 type AKSConfig struct {
 	// TODO: Promote this to a proper (versioned) k8s Object
-	DnsZone     string                 `json:"dnsZone" mapstructure:"dnsZone"`
-	ExternalDNS ExternalDnsAzureConfig `json:"externalDns" mapstructure:"externalDns"`
-	OauthProxy  OauthProxyConfig       `json:"oauthProxy" mapstructure:"oauthProxy"`
+	DnsZone      string                 `json:"dnsZone" mapstructure:"dnsZone"`
+	ContactEmail string                 `json:"contactEmail" mapstructure:"contactEmail"`
+	ExternalDNS  ExternalDnsAzureConfig `json:"externalDns" mapstructure:"externalDns"`
+	OauthProxy   OauthProxyConfig       `json:"oauthProxy" mapstructure:"oauthProxy"`
 }

@@ -20,6 +20,7 @@ import (
 	azcli "github.com/Azure/go-autorest/autorest/azure/cli"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 	"github.com/golang/glog"
 	"github.com/mitchellh/mapstructure"
 	"github.com/satori/go.uuid"
@@ -158,7 +159,11 @@ func base64RandBytes(n uint) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf), nil
 }
 
-func PreUpdate(origConfig interface{}) (interface{}, error) {
+func Generate(manifestsPath string, platformName string) error {
+	return WriteRootManifest(manifestsPath, platformName)
+}
+
+func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error) {
 	ctx := context.TODO()
 
 	var conf AKSConfig
@@ -170,6 +175,13 @@ func PreUpdate(origConfig interface{}) (interface{}, error) {
 	//log.Debugf("Input config: %#v", conf)
 
 	env := azure.PublicCloud
+
+	if conf.ContactEmail == "" {
+		if err := tools.ValidateEmail(contactEmail); err != nil {
+			return nil, err
+		}
+		conf.ContactEmail = contactEmail
+	}
 
 	if conf.DnsZone == "" {
 		domain, err := dnsZoneParam.get()
@@ -286,7 +298,7 @@ func PreUpdate(origConfig interface{}) (interface{}, error) {
 			log.Debugf("Creating AD application ...")
 			app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 				AvailableToOtherTenants: to.BoolPtr(false),
-				DisplayName:             to.StringPtr("kubeprod"),
+				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-externaldns", conf.DnsZone)),
 				Homepage:                to.StringPtr("http://kubeprod.io"),
 				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
 			})
@@ -402,7 +414,7 @@ func PreUpdate(origConfig interface{}) (interface{}, error) {
 		// az ad app create ...
 		app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 			AvailableToOtherTenants: to.BoolPtr(false),
-			DisplayName:             to.StringPtr("Kubeprod cluster management"),
+			DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-oauth2", conf.DnsZone)),
 			Homepage:                to.StringPtr("http://kubeprod.io"),
 			IdentifierUris:          &[]string{fmt.Sprintf("https://oauth.%s/oauth2", conf.DnsZone)},
 			ReplyUrls:               &replyUrls,
