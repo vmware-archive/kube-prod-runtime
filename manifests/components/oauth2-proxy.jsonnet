@@ -28,7 +28,7 @@ local kube = import "../lib/kube.libsonnet";
         spec+: {
           containers_+: {
             proxy: kube.Container("oauth2-proxy") {
-              image: "bitnami/oauth2-proxy:2.2.0-r4",
+              image: "bitnami/oauth2-proxy:0.20180625.74543-debian-9-r6",
               args_+: {
                 "email-domain": "*",
                 "http-address": "0.0.0.0:4180",
