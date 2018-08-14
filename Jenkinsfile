@@ -268,10 +268,12 @@ az aks create                      \
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
 
-                                            // TODO: The path to kubeprod.json should be passed to `kubeprod` in some way
-                                            writeFile([file: 'manifests/kubeprod.json', text: """
+                                            // TODO: The path to kubeprod.json should be passed to `kubeprod` in some way.
+                                            // the default behavior is reading it from the cwd.
+                                            writeFile([file: 'kubeprod.json', text: """
 {
   "dnsZone": "${dnszone}",
+  "contactEmail": "foo@example.com",
   "externalDns": {
     "tenantId": "${AZURE_TENANT_ID}",
     "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
