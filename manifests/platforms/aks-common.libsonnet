@@ -10,7 +10,6 @@ local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
 
 {
-  // TODO: change this so it isn't a crazy hard-coded path
   config:: error "no kubeprod configuration",
 
   external_dns_zone_name:: $.config.dnsZone,
