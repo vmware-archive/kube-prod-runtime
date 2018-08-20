@@ -24,7 +24,7 @@ def withGo(Closure body) {
     }
 }
 
-def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
+def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, Closure setup) {
     timeout(120) {
         // Regex of tests that are temporarily skipped.  Empty-string
         // to run everything.  Include pointers to tracking issues.
@@ -35,10 +35,6 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
             setup()
 
             withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
-                def parentZone = 'tests.bkpr.run'
-                def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
-                def dnsZone = dnsPrefix + '.' + parentZone
-
                 sh "kubectl version; kubectl cluster-info"
 
                 unstash 'release'
@@ -79,7 +75,7 @@ done
                 dir('tests') {
                     try {
                         ansiColor('xterm') {
-                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG} --dns-suffix ${dnsZone}"
+                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
                         }
                     } catch (error) {
                         sh "kubectl --namespace kube-system get all"
@@ -206,7 +202,7 @@ spec:
                 node(label) {
                     withGo() {
                         dir('src/github.com/bitnami/kube-prod-runtime') {
-                            runIntegrationTest(platform, "") {
+                            runIntegrationTest(platform, "", "") {
                                 withEnv(["PATH+TOOL=${tool 'minikube'}:${tool 'kubectl'}"]) {
                                     cache(maxCacheSize: 1000, caches: [
                                         [$class: 'ArbitraryFileCache', path: "${env.HOME}/.minikube/cache"],
@@ -248,7 +244,7 @@ spec:
 
                                 def aks
                                 try {
-                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}") {
+                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
                                         container('az') {
                                             sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
