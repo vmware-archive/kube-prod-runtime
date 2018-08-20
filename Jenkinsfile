@@ -40,7 +40,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
                 unstash 'release'
                 unstash 'manifests'
 
-                sh "kubectl --namespace kube-system get all"
+                sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
                 // install
                 // FIXME: we should have a better "test mode", that uses
@@ -66,7 +66,7 @@ done
 '''
                     }
                 } catch (error) {
-                    sh "kubectl --namespace kube-system get all"
+                    sh "kubectl --namespace kube-system get po,deploy,svc,ing"
                     throw error
                 }
 
@@ -78,7 +78,7 @@ done
                             sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
                         }
                     } catch (error) {
-                        sh "kubectl --namespace kube-system get all"
+                        sh "kubectl --namespace kube-system get po,deploy,svc,ing"
                         input 'Paused for manual debugging'
                             throw error
                     } finally {
