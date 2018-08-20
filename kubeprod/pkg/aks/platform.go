@@ -20,7 +20,6 @@ import (
 	azcli "github.com/Azure/go-autorest/autorest/azure/cli"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
-	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 	"github.com/golang/glog"
 	"github.com/mitchellh/mapstructure"
 	"github.com/satori/go.uuid"
@@ -177,9 +176,6 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 	env := azure.PublicCloud
 
 	if conf.ContactEmail == "" {
-		if err := tools.ValidateEmail(contactEmail); err != nil {
-			return nil, err
-		}
 		conf.ContactEmail = contactEmail
 	}
 
