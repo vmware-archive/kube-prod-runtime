@@ -414,7 +414,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 		// az ad app create ...
 		app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 			AvailableToOtherTenants: to.BoolPtr(false),
-			DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-oauth2", conf.DnsZone)),
+			DisplayName:             to.StringPtr(fmt.Sprintf("Kubeprod cluster management for %s", conf.DnsZone)),
 			Homepage:                to.StringPtr("http://kubeprod.io"),
 			IdentifierUris:          &[]string{fmt.Sprintf("https://oauth.%s/oauth2", conf.DnsZone)},
 			ReplyUrls:               &replyUrls,
