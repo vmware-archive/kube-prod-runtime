@@ -35,43 +35,59 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
             setup()
 
             withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
-                ansiColor('xterm') {
-                    sh "kubectl version; kubectl cluster-info"
-                }
-            }
+                def parentZone = 'tests.bkpr.run'
+                def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
+                def dnsZone = dnsPrefix + '.' + parentZone
 
-            // install
+                sh "kubectl version; kubectl cluster-info"
 
-            unstash 'release'
-            unstash 'manifests'
+                unstash 'release'
+                unstash 'manifests'
 
-            // FIXME: we should have a better "test mode", that uses
-            // letsencrypt-staging, fewer replicas, etc.  My plan is
-            // to do that via some sort of custom jsonnet overlay,
-            // since power users will want similar flexibility.
+                sh "kubectl --namespace kube-system get all"
 
-            sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
+                // install
+                // FIXME: we should have a better "test mode", that uses
+                // letsencrypt-staging, fewer replicas, etc.  My plan is
+                // to do that via some sort of custom jsonnet overlay,
+                // since power users will want similar flexibility.
 
-            // Slight delay to let cluster settle (images need to be
-            // pulled, LBs setup, etc).
-            // TODO: remove/shorten/something.
-            sleep time: 4, unit: 'MINUTES'
+                sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --email=admin@${dnsZone} ${kubeprodArgs}"
 
-            // test
-
-            sh 'go get github.com/onsi/ginkgo/ginkgo'
-            unstash 'tests'
-            dir('tests') {
+                // Wait for deployments to rollout before we start the integration tests
                 try {
-                    ansiColor('xterm') {
-                        def dnszone = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test').toLowerCase()
-                        sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG}"
+                    timeout(time: 30, unit: 'MINUTES') {
+                        sh '''
+set +x
+for deploy in $(kubectl --namespace kube-system get deploy --output name)
+do
+  echo "Waiting for rollout of ${deploy}..."
+  while ! $(kubectl --namespace kube-system rollout status ${deploy} --watch=false | grep -q "successfully rolled out")
+  do
+    sleep 3
+  done
+done
+'''
                     }
                 } catch (error) {
-                    input 'Paused for manual debugging'
-                        throw error
-                } finally {
-                    junit 'junit/*.xml'
+                    sh "kubectl --namespace kube-system get all"
+                    throw error
+                }
+
+                sh 'go get github.com/onsi/ginkgo/ginkgo'
+                unstash 'tests'
+                dir('tests') {
+                    try {
+                        ansiColor('xterm') {
+                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG} --dns-suffix ${dnsZone}"
+                        }
+                    } catch (error) {
+                        sh "kubectl --namespace kube-system get all"
+                        input 'Paused for manual debugging'
+                            throw error
+                    } finally {
+                        junit 'junit/*.xml'
+                    }
                 }
             }
         }
@@ -223,19 +239,21 @@ spec:
                             // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
                             withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
                                 def resourceGroup = 'jenkins-bkpr-rg'
-                                def dnszone = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.' + "${env.BUILD_TAG}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '.test').toLowerCase()
-
-                                def clustername = "${env.BUILD_TAG}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
+                                def parentZone = 'tests.bkpr.run'
+                                def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
+                                def dnsZone = dnsPrefix + '.' + parentZone
+                                def clustername = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
                                 def location = "eastus"
 
                                 def aks
                                 try {
-                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnszone}") {
+                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone}") {
                                         container('az') {
                                             sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
 az account set -s $AZURE_SUBSCRIPTION_ID
 '''
+
                                             // Usually, `az aks create` creates a new service
                                             // principal, which is not removed by `az aks
                                             // delete`. We reuse an existing principal here to
@@ -259,12 +277,30 @@ az aks create                      \
 """)
                                                 aks = readJSON(text: output)
                                             }
+
                                             sh "az aks get-credentials --name ${aks.name} --resource-group ${aks.resourceGroup} --admin --file \$KUBECONFIG"
+
+                                            // create dns zone
+                                            sh "az network dns zone create --name ${dnsZone} --resource-group ${resourceGroup} --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
+
+                                            // update SOA record for quicker updates
+                                            sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${dnsZone} --expire-time 60 --retry-time 60 --refresh-time 60 --minimum-ttl 60"
+
+                                            // add fake MX record to bypass letsencrypt MX validation
+                                            sh "az network dns record-set mx add-record --resource-group ${resourceGroup} --zone-name ${dnsZone} --record-set-name @ --preference 1 --exchange aspmx.l.google.com."
+
+                                            // update glue records in parent zone
+                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            for (ns in readJSON(text: output)) {
+                                                sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${parentZone} --record-set-name ${dnsPrefix} --nsdname ${ns}"
+                                            }
+
+                                            // update TTL for NS record to 60 seconds
+                                            sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} --set ttl=60"
                                         }
 
                                         // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
                                         withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
-
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
 
@@ -272,8 +308,8 @@ az aks create                      \
                                             // the default behavior is reading it from the cwd.
                                             writeFile([file: 'kubeprod.json', text: """
 {
-  "dnsZone": "${dnszone}",
-  "contactEmail": "foo@example.com",
+  "dnsZone": "${dnsZone}",
+  "contactEmail": "admin@${dnsZone}",
   "externalDns": {
     "tenantId": "${AZURE_TENANT_ID}",
     "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
@@ -299,7 +335,8 @@ az aks create                      \
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
 az account set -s $AZURE_SUBSCRIPTION_ID
 '''
-                                            sh "az network dns zone delete --yes --name ${dnszone} --resource-group ${resourceGroup} || :"
+                                            sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} || :"
+                                            sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
                                             sh "az aks delete --yes --name ${aks.name} --resource-group ${aks.resourceGroup} --no-wait"
                                         }
                                     }

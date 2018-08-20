@@ -109,7 +109,7 @@ var _ = Describe("Ingress", func() {
 
 	BeforeEach(func() {
 		c = kubernetes.NewForConfigOrDie(clusterConfigOrDie())
-		ns = createNsOrDie(c.CoreV1(), "test-ingress-")
+		ns = createNsOrDie(c.CoreV1(), "test-ing-")
 
 		decoder := scheme.Codecs.UniversalDeserializer()
 
@@ -125,8 +125,10 @@ var _ = Describe("Ingress", func() {
 		}
 		ing.Spec.Rules[0].Host = fmt.Sprintf("%s.%s", ns, suffix)
 	})
+
 	AfterEach(func() {
-		deleteNsOrDie(c.CoreV1(), ns)
+		// disable namespace deletion due to timeout issue experienced on AKS, TODO: re-enable
+		// deleteNsOrDie(c.CoreV1(), ns)
 	})
 
 	JustBeforeEach(func() {
@@ -176,7 +178,7 @@ var _ = Describe("Ingress", func() {
 
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "5m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
@@ -224,7 +226,7 @@ var _ = Describe("Ingress", func() {
 			Eventually(func() (*http.Response, error) {
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "10m", "5s").
+			}, "15m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
