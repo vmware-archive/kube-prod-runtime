@@ -52,7 +52,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
                 // to do that via some sort of custom jsonnet overlay,
                 // since power users will want similar flexibility.
 
-                sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --email=admin@${dnsZone} ${kubeprodArgs}"
+                sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests ${kubeprodArgs}"
 
                 // Wait for deployments to rollout before we start the integration tests
                 try {
@@ -242,12 +242,13 @@ spec:
                                 def parentZone = 'tests.bkpr.run'
                                 def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
                                 def dnsZone = dnsPrefix + '.' + parentZone
+                                def adminEmail = "admin@${dnsZone}"
                                 def clustername = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
                                 def location = "eastus"
 
                                 def aks
                                 try {
-                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone}") {
+                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}") {
                                         container('az') {
                                             sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
@@ -309,7 +310,7 @@ az aks create                      \
                                             writeFile([file: 'kubeprod.json', text: """
 {
   "dnsZone": "${dnsZone}",
-  "contactEmail": "admin@${dnsZone}",
+  "contactEmail": "${adminEmail}",
   "externalDns": {
     "tenantId": "${AZURE_TENANT_ID}",
     "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
