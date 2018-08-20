@@ -2,7 +2,9 @@ package aks
 
 import (
 	"bufio"
+	"fmt"
 	"os"
+	"syscall"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
@@ -26,13 +28,13 @@ func WriteRootManifest(manifestsBase string, platform string) error {
 		"ManifestsPath": manifestsBase,
 		"Platform":      platform,
 	}
-	if _, err := os.Stat(AksRootManifest); err == nil {
-		log.Warning("Will not overwrite already existing output file: ", AksRootManifest)
-		return nil
-	}
-	f, err := os.Create(AksRootManifest)
+	f, err := os.OpenFile(AksRootManifest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
 	if err != nil {
-		return err
+		if e, ok := err.(*os.PathError); ok && e.Err == syscall.EEXIST {
+			log.Warning("Will not overwrite already existing output file: ", AksRootManifest)
+		} else {
+			return fmt.Errorf("unable to write to %q: %v", AksRootManifest, err)
+		}
 	}
 	defer f.Close()
 	w := bufio.NewWriter(f)
