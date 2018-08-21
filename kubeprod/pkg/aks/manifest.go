@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"syscall"
 	"text/template"
 
 	log "github.com/sirupsen/logrus"
@@ -30,7 +29,7 @@ func WriteRootManifest(manifestsBase string, platform string) error {
 	}
 	f, err := os.OpenFile(AksRootManifest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
 	if err != nil {
-		if e, ok := err.(*os.PathError); ok && e.Err == syscall.EEXIST {
+		if os.IsExist(err) {
 			log.Warning("Will not overwrite already existing output file: ", AksRootManifest)
 		} else {
 			return fmt.Errorf("unable to write to %q: %v", AksRootManifest, err)
