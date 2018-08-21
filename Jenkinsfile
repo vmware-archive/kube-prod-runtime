@@ -242,8 +242,8 @@ spec:
                                 def parentZone = 'tests.bkpr.run'
                                 def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
-                                def adminEmail = "admin@${dnsZone}"
-                                def clustername = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
+                                def clusterName = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
+                                def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
 
                                 def aks
@@ -266,7 +266,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
 az aks create                      \
  --verbose                         \
  --resource-group ${resourceGroup} \
- --name ${clustername}             \
+ --name ${clusterName}             \
  --node-count 2                    \
  --node-vm-size Standard_DS2_v2    \
  --location ${location}            \
@@ -286,9 +286,6 @@ az aks create                      \
 
                                             // update SOA record for quicker updates
                                             sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${dnsZone} --expire-time 60 --retry-time 60 --refresh-time 60 --minimum-ttl 60"
-
-                                            // add fake MX record to bypass letsencrypt MX validation
-                                            sh "az network dns record-set mx add-record --resource-group ${resourceGroup} --zone-name ${dnsZone} --record-set-name @ --preference 1 --exchange aspmx.l.google.com."
 
                                             // update glue records in parent zone
                                             def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
