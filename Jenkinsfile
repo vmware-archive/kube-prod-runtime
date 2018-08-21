@@ -239,10 +239,10 @@ spec:
                             // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
                             withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
                                 def resourceGroup = 'jenkins-bkpr-rg'
+                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-${platform}-" + UUID.randomUUID().toString().take(5)).replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+                                def dnsPrefix = "${clusterName}"
                                 def parentZone = 'tests.bkpr.run'
-                                def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
-                                def clusterName = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
 
