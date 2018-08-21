@@ -267,7 +267,7 @@ az aks create                      \
  --verbose                         \
  --resource-group ${resourceGroup} \
  --name ${clustername}             \
- --node-count 3                    \
+ --node-count 2                    \
  --node-vm-size Standard_DS2_v2    \
  --location ${location}            \
  --kubernetes-version ${kversion}  \
