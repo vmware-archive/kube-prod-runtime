@@ -241,7 +241,7 @@ spec:
                                 def resourceGroup = 'jenkins-bkpr-rg'
                                 def parentZone = 'tests.bkpr.run'
                                 def dnsPrefix = ("${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-') + '-' + "${env.BRANCH_NAME}-${env.BUILD_NUMBER}".replaceAll(/[^a-zA-Z0-9-]/, '-')).toLowerCase()
-                                def dnsZone = dnsPrefix + '.' + parentZone
+                                def dnsZone = "${dnsPrefix}.${parentZone}"
                                 def adminEmail = "admin@${dnsZone}"
                                 def clustername = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}-${platform}".replaceAll(/[^a-zA-Z0-9-]/, '-')
                                 def location = "eastus"
