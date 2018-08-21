@@ -50,7 +50,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, Closure setup) {
             // to do that via some sort of custom jsonnet overlay,
             // since power users will want similar flexibility.
 
-            sh "./release/kubeprod -v=1 install --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
+            sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --email=foo@example.com ${kubeprodArgs}"
 
             // Slight delay to let cluster settle (images need to be
             // pulled, LBs setup, etc).
@@ -268,10 +268,12 @@ az aks create                      \
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
 
-                                            // TODO: The path to kubeprod.json should be passed to `kubeprod` in some way
-                                            writeFile([file: 'manifests/kubeprod.json', text: """
+                                            // TODO: The path to kubeprod.json should be passed to `kubeprod` in some way.
+                                            // the default behavior is reading it from the cwd.
+                                            writeFile([file: 'kubeprod.json', text: """
 {
   "dnsZone": "${dnszone}",
+  "contactEmail": "foo@example.com",
   "externalDns": {
     "tenantId": "${AZURE_TENANT_ID}",
     "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",

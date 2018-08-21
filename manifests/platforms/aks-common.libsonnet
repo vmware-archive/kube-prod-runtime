@@ -10,11 +10,10 @@ local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
 
 {
-  // TODO: change this so it isn't a crazy hard-coded path
-  config:: (import "../kubeprod.json"),
+  config:: error "no kubeprod configuration",
 
   external_dns_zone_name:: $.config.dnsZone,
-  letsencrypt_contact_email:: std.extVar("EMAIL"),
+  letsencrypt_contact_email:: $.config.contactEmail,
 
   edns: edns {
     azconf: kube.Secret(edns.p+"external-dns-azure-conf") + edns.namespace {

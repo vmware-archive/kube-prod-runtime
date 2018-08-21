@@ -21,6 +21,7 @@ import (
 	restclient "k8s.io/client-go/rest"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
 const GcTag = "bitnami.com/prod-runtime"
@@ -74,14 +75,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 	var err error
 	log.Info("Installing platform ", c.Platform.Name)
 
-	update := kubecfg.UpdateCmd{
-		ClientPool:       c.ClientPool,
-		Discovery:        c.Discovery,
-		DefaultNamespace: metav1.NamespaceSystem,
-		Create:           true,
-		GcTag:            GcTag,
-	}
-
 	searchPaths := []string{
 		"internal:///",
 	}
@@ -92,7 +85,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 			return fmt.Errorf("unable to make URL from %q (relative to %q): %v", p, c.ManifestBase, err)
 		}
 	}
-	importer := utils.MakeUniversalImporter(searchUrls)
 
 	// TODO: should be a command line flag or similar
 	// In particular, the (cluster-specific) config should not be
@@ -105,41 +97,75 @@ func (c InstallCmd) Run(out io.Writer) error {
 		return fmt.Errorf("unable to handle non-file manifest URLs .. for now")
 	}
 
-	input, err := c.Platform.ManifestURL(c.ManifestBase)
-	if err != nil {
-		return err
-	}
-
 	var conf interface{}
-	if err := unmarshalFile(confUrl.Path, &conf); err == nil {
+	if err := unmarshalFile("./kubeprod.json", &conf); err == nil {
 		log.Debug("Reading existing cluster settings from %q", confUrl)
 	} else if !os.IsNotExist(err) {
 		return err
 	}
 
-	if conf, err = c.Platform.RunPreUpdate(conf); err != nil {
+	if conf, err = c.Platform.RunPreUpdate(conf, c.ContactEmail); err != nil {
 		return err
 	}
 
-	log.Infof("Writing cluster settings to %q", confUrl)
-	if err := marshalFile(confUrl.Path, conf); err != nil {
+	log.Infof("Writing cluster settings to ./kubeprod.json")
+	if err := marshalFile("./kubeprod.json", conf); err != nil {
 		return err
 	}
 
-	extvars := map[string]string{
-		"EMAIL":      c.ContactEmail,
-		"DNS_SUFFIX": c.DnsSuffix,
+	log.Info("Generating root manifest for platform ", c.Platform.Name)
+	if err := c.Platform.RunGenerate(c.ManifestBase.Path, c.Platform.Name); err != nil {
+		return err
 	}
-	objs, err := readObjs(importer, extvars, input)
+
+	// TODO(felipe): Conditionalize this with a command-line flag so this
+	// step is optional
+	if true {
+		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform.Name)
+		if err := c.Update(); err != nil {
+			return err
+		}
+
+		if err := c.Platform.RunPostUpdate(c.Config); err != nil {
+			return err
+		}
+	} else {
+		fmt.Println("Kubernetes cluster is ready for deployment.")
+		fmt.Println("run: kubecfg update --ignore-unknown kube-system.jsonnet")
+	}
+	return nil
+}
+
+func (c InstallCmd) Update() error {
+	log.Info("Updating platform ", c.Platform.Name)
+	searchUrls := []*url.URL{
+		&url.URL{Scheme: "internal", Path: "/"},
+	}
+	importer := utils.MakeUniversalImporter(searchUrls)
+	cwdURL, err := tools.CwdURL()
+	if err != nil {
+		return err
+	}
+	input, err := cwdURL.Parse("kube-system.jsonnet")
 	if err != nil {
 		return err
 	}
 
-	if err := update.Run(objs); err != nil {
-		return err
+	update := kubecfg.UpdateCmd{
+		ClientPool:       c.ClientPool,
+		Discovery:        c.Discovery,
+		DefaultNamespace: metav1.NamespaceSystem,
+		Create:           true,
+		GcTag:            GcTag,
 	}
 
-	if err := c.Platform.RunPostUpdate(c.Config); err != nil {
+	extvars := map[string]string{}
+	objs, err := readObjs(importer, extvars, input)
+	if err != nil {
+		return err
+	}
+	log.Info("Using root manifest ", input)
+	if err := update.Run(objs); err != nil {
 		return err
 	}
 
