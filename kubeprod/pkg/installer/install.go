@@ -114,7 +114,7 @@ func (c InstallCmd) Run(out io.Writer) error {
 	}
 
 	log.Info("Generating root manifest for platform ", c.Platform.Name)
-	if err := c.Platform.RunGenerate(c.ManifestBase.Path, c.Platform.Name); err != nil {
+	if err := prodruntime.WriteRootManifest(c.ManifestBase.Path, c.Platform.Name); err != nil {
 		return err
 	}
 

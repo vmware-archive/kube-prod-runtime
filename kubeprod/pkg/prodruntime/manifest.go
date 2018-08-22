@@ -1,4 +1,4 @@
-package aks
+package prodruntime
 
 import (
 	"bufio"
@@ -9,13 +9,16 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-const clusterTemplate = `# Cluster-specific configuration
-
+const (
+	clusterTemplate = `# Cluster-specific configuration
 (import "{{.ManifestsPath}}platforms/{{.Platform}}.jsonnet") {
-	config:: import "{{.AksConfig}}",
+	config:: import "{{.ConfigFilePath}}",
 	// Place your overrides here
-}
-`
+}`
+
+	// RootManifest specifies the filename of the root (cluster) manifest
+	RootManifest = "kube-system.jsonnet"
+)
 
 // WriteRootManifest executes the template from the `clusterTemplate`
 // variable and writes the result as the root (cluster) manifest in
@@ -23,16 +26,16 @@ const clusterTemplate = `# Cluster-specific configuration
 func WriteRootManifest(manifestsBase string, platform string) error {
 	// If the output file already exists do not overwrite it.
 	v := map[string]string{
-		"AksConfig":     "./kubeprod.json",
-		"ManifestsPath": manifestsBase,
-		"Platform":      platform,
+		"ConfigFilePath": "kubeprod.json",
+		"ManifestsPath":  manifestsBase,
+		"Platform":       platform,
 	}
-	f, err := os.OpenFile(AksRootManifest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
+	f, err := os.OpenFile(RootManifest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
 	if err != nil {
 		if os.IsExist(err) {
-			log.Warning("Will not overwrite already existing output file: ", AksRootManifest)
+			log.Warning("Will not overwrite already existing output file: ", RootManifest)
 		} else {
-			return fmt.Errorf("unable to write to %q: %v", AksRootManifest, err)
+			return fmt.Errorf("unable to write to %q: %v", RootManifest, err)
 		}
 	}
 	defer f.Close()

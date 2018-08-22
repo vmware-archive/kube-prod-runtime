@@ -12,7 +12,6 @@ import (
 type Platform struct {
 	Name        string
 	Description string
-	Generate    func(manifestPath string, platformName string) error
 	PreUpdate   func(config interface{}, contactEmail string) (interface{}, error)
 	PostUpdate  func(conf *restclient.Config) error
 }
@@ -29,13 +28,11 @@ var Platforms = []Platform{
 	{
 		Name:        "aks+k8s-1.9",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.9",
-		Generate:    aks.Generate,
 		PreUpdate:   aks.PreUpdate,
 	},
 	{
 		Name:        "aks+k8s-1.8",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.8",
-		Generate:    aks.Generate,
 		PreUpdate:   aks.PreUpdate,
 	},
 }
@@ -52,13 +49,6 @@ func FindPlatform(name string) *Platform {
 
 func (p *Platform) ManifestURL(base *url.URL) (*url.URL, error) {
 	return base.Parse(fmt.Sprintf("platforms/%s.jsonnet", p.Name))
-}
-
-func (p *Platform) RunGenerate(manifestsPath string, platformName string) error {
-	if p.Generate == nil {
-		return nil
-	}
-	return p.Generate(manifestsPath, platformName)
 }
 
 func (p *Platform) RunPreUpdate(kubeprodConf interface{}, contactEmail string) (interface{}, error) {
