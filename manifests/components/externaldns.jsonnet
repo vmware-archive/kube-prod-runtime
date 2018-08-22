@@ -49,7 +49,7 @@ local kube = import "../lib/kube.libsonnet";
               args_+: {
                 sources_:: ["service", "ingress"],
                 "txt-owner-id": this.ownerId,
-                //"domain-filter": "example.com",
+                "domain-filter": this.ownerId,
               },
               args+: ["--source=%s" % s for s in self.args_.sources_],
             },
