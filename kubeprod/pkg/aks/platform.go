@@ -158,10 +158,6 @@ func base64RandBytes(n uint) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf), nil
 }
 
-func Generate(manifestsPath string, platformName string) error {
-	return WriteRootManifest(manifestsPath, platformName)
-}
-
 func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error) {
 	ctx := context.TODO()
 
