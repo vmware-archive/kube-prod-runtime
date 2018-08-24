@@ -2,7 +2,8 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local KIBANA_IMAGE = "docker.elastic.co/kibana/kibana:5.6.4";
+local KIBANA_IMAGE = "bitnami/kibana:6.3.2-r8";
+
 
 local strip_trailing_slash(s) = (
   if std.endsWith(s, "/") then
@@ -35,7 +36,7 @@ local strip_trailing_slash(s) = (
                 },
               },
               env_+: {
-                ELASTICSEARCH_URL: "http://%s:9200" % [$.es.svc.host],
+                KIBANA_ELASTICSEARCH_URL: $.es.svc.host,
 
                 local route = $.ingress.spec.rules[1].http.paths[0],
                 // Make sure we got the correct route

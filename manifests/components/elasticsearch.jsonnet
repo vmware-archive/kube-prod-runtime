@@ -2,11 +2,30 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
+local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:6.3.2-r26";
+
+// Mount point for the data volume (used by multiple containers, like the
+// elasticsearch container and the elasticsearch-fs init container)
+local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
 
 {
   p:: "",
+  min_master_nodes:: 2,
   namespace:: { metadata+: { namespace: "kube-system" } },
+
+  // ElasticSearch additional (custom) configuration
+  elasticsearch_config:: {
+    // Used for discovery of ElasticSearch nodes via a Kubernetes
+    // headless (without a ClusterIP) service.
+    "discovery.zen.ping.unicast.hosts": $.svc.metadata.name,
+    // Verify quorum requirements.
+    assert ($.sts.spec.replicas >= $.min_master_nodes &&
+            $.sts.spec.replicas < $.min_master_nodes * 2) :
+    "Not enough quorum, verify min_master_nodes vs replicas",
+    // TODO: offer a dynamically sized pool of non-master nodes.
+    // Autoscaler will require custom HPA metrics in practice.
+    "discovery.zen.minimum_master_nodes": $.min_master_nodes,
+  },
 
   serviceAccount: kube.ServiceAccount($.p + "elasticsearch") + $.namespace,
 
@@ -28,6 +47,13 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
   disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.namespace {
     target_pod: $.sts.spec.template,
     spec+: { maxUnavailable: 1 },
+  },
+
+  // ConfigMap for ElasticSearch additional (custom) configuration
+  config: kube.ConfigMap($.p+"elasticsearch-logging") + $.namespace {
+    data+: {
+      "elasticsearch_custom.yml": kubecfg.manifestYaml($.elasticsearch_config),
+    },
   },
 
   sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.namespace {
@@ -65,6 +91,7 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
             },
           },
           default_container: "elasticsearch",
+          volumes_+: { config: kube.ConfigMapVolume($.config) },
           containers_+: {
             elasticsearch: kube.Container("elasticsearch") {
               local container = self,
@@ -82,32 +109,18 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
                 transport: { containerPort: 9300 },
               },
               volumeMounts_+: {
-                datadir: { mountPath: "/data" },
+                // Persistence for ElasticSearch data
+                datadir: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
+                // ElasticSearch additional (custom) configuration
+                config: {
+                  mountPath: "/bitnami/elasticsearch/conf/elasticsearch_custom.yml",
+                  subPath: "elasticsearch_custom.yml",
+                  readOnly: true,
+                },
               },
               env_+: {
-                // These two below are used by elasticsearch_logging_discovery
-                NAMESPACE: kube.FieldRef("metadata.namespace"),
-                ELASTICSEARCH_SERVICE_NAME: $.svc.metadata.name,
-
-                // Verify quorum requirements
-                min_master_nodes:: 2,
-                assert ($.sts.spec.replicas >= self.min_master_nodes &&
-                        $.sts.spec.replicas < self.min_master_nodes * 2) :
-                "Not enough quorum, verify min_master_nodes vs replicas",
-                MINIMUM_MASTER_NODES: std.toString(self.min_master_nodes),
-
-                // TODO: offer a dynamically sized pool of
-                // non-master nodes.  Autoscaler will require custom
-                // HPA metrics in practice.
-
-                // NB: wrapper script always adds a -Xms value, so can't
-                // just rely on -XX:+UseCGroupMemoryLimitForHeap
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
-                ES_JAVA_OPTS: std.join(" ", [
-                  "-Xms%dm" % heapsize, // ES asserts that these are equal
-                  "-Xmx%dm" % heapsize,
-                  "-XshowSettings:vm",
-                ]),
+                ELASTICSEARCH_HEAP_SIZE: "%dm" % heapsize,
               },
               readinessProbe: {
                 local probe = self,
@@ -147,6 +160,17 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
             },
           },
           initContainers_+: {
+            // Fix permissions for the data volume
+            elasticsearch_fs: kube.Container("elasticsearch-fs") {
+              image: "busybox",
+              command: ["chown", "-R", "1001:1001", ELASTICSEARCH_DATA_MOUNTPOINT],
+              volumeMounts_+: {
+                datadir: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
+              },
+              securityContext: {
+                privileged: true,
+              },
+            },
             elasticsearch_init: kube.Container("elasticsearch-init") {
               image: "alpine:3.6",
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
@@ -168,6 +192,15 @@ local ELASTICSEARCH_IMAGE = "k8s.gcr.io/elasticsearch:v5.6.4";
 
   svc: kube.Service($.p + "elasticsearch-logging") + $.namespace {
     target_pod: $.sts.spec.template,
-    spec+: {clusterIP: "None"}, // headless
+    metadata+: {
+      annotations+: {
+        "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
+      },
+    },
+    spec+: {
+      clusterIP: "None",  // headless
+      publishNotReadyAddresses: true,
+      sessionAffinity: "None",
+    },
   },
 }
