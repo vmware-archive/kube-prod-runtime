@@ -8,6 +8,9 @@ local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:6.3.2-r26";
 // elasticsearch container and the elasticsearch-fs init container)
 local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
 
+// Mount point for the custom Java security properties configuration file
+local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.custom";
+
 {
   p:: "",
   min_master_nodes:: 2,
@@ -56,6 +59,13 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
     },
   },
 
+  // ConfigMap for additional Java security properties
+  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.namespace {
+    data+: {
+      "java.security": (importstr "elasticsearch-config/java.security"),
+    },
+  },
+
   sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.namespace {
     local this = self,
     spec+: {
@@ -91,7 +101,13 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
             },
           },
           default_container: "elasticsearch",
-          volumes_+: { config: kube.ConfigMapVolume($.config) },
+          volumes_+: {
+            config: kube.ConfigMapVolume($.config),
+            java_security: kube.ConfigMapVolume($.java_security),
+            },
+          securityContext: {
+            fsGroup: 1001,
+          },
           containers_+: {
             elasticsearch: kube.Container("elasticsearch") {
               local container = self,
@@ -117,16 +133,22 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
                   subPath: "elasticsearch_custom.yml",
                   readOnly: true,
                 },
+                java_security: {
+                  mountPath: JAVA_SECURITY_MOUNTPOINT,
+                  subPath: "java.security",
+                  readOnly: true,
+                },
               },
               env_+: {
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ELASTICSEARCH_HEAP_SIZE: "%dm" % heapsize,
+                ES_JAVA_OPTS: "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
               },
               readinessProbe: {
-                local probe = self,
                 // don't allow rolling updates to kill containers until the cluster is green
                 // ...meaning it's not allocating replicas or relocating any shards
                 // FIXME: great idea in theory, breaks bootstrapping.
+                //local probe = self,
                 //httpGet: { path: "/_cluster/health?local=true&wait_for_status=green&timeout=%ds" % probe.timeoutSeconds, port: "db" },
                 httpGet: { path: "/_nodes/_local/version", port: "db" },
                 timeoutSeconds: 5,
@@ -160,17 +182,6 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
             },
           },
           initContainers_+: {
-            // Fix permissions for the data volume
-            elasticsearch_fs: kube.Container("elasticsearch-fs") {
-              image: "busybox",
-              command: ["chown", "-R", "1001:1001", ELASTICSEARCH_DATA_MOUNTPOINT],
-              volumeMounts_+: {
-                datadir: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
-              },
-              securityContext: {
-                privileged: true,
-              },
-            },
             elasticsearch_init: kube.Container("elasticsearch-init") {
               image: "alpine:3.6",
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
@@ -194,11 +205,19 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
     target_pod: $.sts.spec.template,
     metadata+: {
       annotations+: {
+        // From: https://github.com/kubernetes/dns/blob/master/docs/specification.md
+        // An endpoint is considered ready if its address is in the addresses field
+        // of the EndpointSubset object, or the corresponding service has the following
+        // annotation set to true.
         "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
       },
     },
     spec+: {
       clusterIP: "None",  // headless
+      // Publish endpoints resolved by the service even if they are not yet ready.
+      // This allows ElasticSearch to discover IPv4 addresses for all nodes from
+      // the StatefulSet for master discovery, even if they haven't come up and are
+      // yet ready.
       publishNotReadyAddresses: true,
       sessionAffinity: "None",
     },
