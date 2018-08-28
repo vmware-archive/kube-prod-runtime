@@ -8,10 +8,10 @@
 // - jobcacher
 // - azure-credentials
 
+import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 // Force using our pod
-//def label = UUID.randomUUID().toString()
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
 def withGo(Closure body) {
@@ -25,6 +25,15 @@ def withGo(Closure body) {
         }
     }
 }
+
+// Clean a string, suitable for use in a GCP "label".
+// "It must only contain lowercase letters ([a-z]), numeric characters ([0-9]), underscores (_) and dashes (-). International characters are allowed."
+// .. and "must be less than 63 bytes"
+@NonCPS
+String gcpLabel(String s) {
+    s.replaceAll(/[^a-zA-Z0-9_-]+/, '-').toLowerCase().take(62)
+}
+
 
 def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure setup) {
     timeout(120) {
@@ -51,7 +60,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 // to do that via some sort of custom jsonnet overlay,
                 // since power users will want similar flexibility.
 
-                sh "./bin/kubeprod -v=1 install aks --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
 
                 // Wait for deployments to rollout before we start the integration tests
                 try {
@@ -97,6 +106,41 @@ podTemplate(
     cloud: 'kubernetes-cluster',
     label: label,
     idleMinutes: 1,  // Allow some best-effort reuse between successive stages
+    containers: [
+        containerTemplate(
+            name: 'go',
+            image: 'golang:1.10.1-stretch',
+            ttyEnabled: true,
+            command: 'cat',
+            // Rely on burst CPU, but actually need RAM to avoid OOM killer
+            resourceLmitCpu: '2000m',
+            resourceLimitMemory: '2Gi',
+            resourceRequestCpu: '10m',
+            resourceRequestMemory: '1Gi',
+        ),
+        // Note nested podTemplate doesn't work, so use "fat slaves" for now :(
+        // -> https://issues.jenkins-ci.org/browse/JENKINS-42184
+        containerTemplate(
+            name: 'gcloud',
+            image: 'google/cloud-sdk:218.0.0',
+            ttyEnabled: true,
+            command: 'cat',
+            resourceRequestCpu: '1m',
+            resourceRequestMemory: '100Mi',
+            resourceLimitCpu: '100m',
+            resourceLimitMemory: '500Mi',
+        ),
+        containerTemplate(
+            name: 'az',
+            image: 'microsoft/azure-cli:2.0.45',
+            ttyEnabled: true,
+            command: 'cat',
+            resourceRequestCpu: '1m',
+            resourceRequestMemory: '100Mi',
+            resourceLimitCpu: '100m',
+            resourceLimitMemory: '500Mi',
+        ),
+    ],
     yaml: """
 apiVersion: v1
 kind: Pod
@@ -104,31 +148,6 @@ spec:
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
-  containers:
-  - name: go
-    image: golang:1.10.1-stretch
-    stdin: true
-    command: ['cat']
-    resources:
-      limits:
-        cpu: 2000m
-        memory: 2Gi
-      requests:
-        # rely on burst CPU
-        cpu: 10m
-        # but actually need ram to avoid oom killer
-        memory: 1Gi
-  - name: az
-    image: microsoft/azure-cli:2.0.45
-    stdin: true
-    command: ['cat']
-    resources:
-      limits:
-        cpu: 100m
-        memory: 500Mi
-      requests:
-        cpu: 1m
-        memory: 100Mi
 """
 ) {
 
@@ -232,7 +251,7 @@ spec:
                                 def location = "eastus"
 
                                 try {
-                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                    runIntegrationTest(platform, "aks --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
                                         container('az') {
                                             sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
@@ -325,6 +344,98 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                         sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} || :"
                                         sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
                                         sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // See:
+    //  gcloud container get-server-config
+    def gkeKversions = ["1.9.7-gke.6", "1.10.7-gke.6"]
+    for (x in gkeKversions) {
+        def kversion = x  // local bind required because closures
+        def platform = "gke+k8s-" + kversion
+        platforms[platform] = {
+            stage(platform) {
+                node(label) {
+                    withCredentials([
+                        file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
+                        usernamePassword(credentialsId: 'gke-oauthproxy-client', usernameVariable: 'OAUTH_CLIENT_ID', passwordVariable: 'OAUTH_CLIENT_SECRET'),
+                    ]) {
+                        withEnv(["CLOUDSDK_CORE_DISABLE_PROMPTS=1"]) {
+                            withGo() {
+                                dir('src/github.com/bitnami/kube-prod-runtime') {
+                                    def project = 'bkprtesting'
+                                    def zone = 'us-east1-d'
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-${platform}-" + UUID.randomUUID().toString().take(5)).replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+                                    def dnsPrefix = "${clusterName}"
+                                    def parentZone = 'tests.bkpr.run'
+                                    def adminEmail = "${clusterName}@${parentZone}"
+                                    def dnsZone = "${dnsPrefix}.${parentZone}"
+
+                                    try {
+                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                            container('gcloud') {
+                                                sh """
+gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}
+
+gcloud container clusters create ${clusterName} \
+ --cluster-version ${kversion} \
+ --project ${project} \
+ --create-subnetwork '' \
+ --enable-ip-alias \
+ --num-nodes 3 \
+ --zone ${zone} \
+ --enable-autorepair \
+ --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
+
+gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}
+
+user=\$(gcloud info --format='value(config.account)')
+kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$user
+"""
+                                            }
+
+                                            // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
+                                            def saCreds = JsonOutput.toJson(readFile(env.GOOGLE_APPLICATION_CREDENTIALS))
+
+                                            // NB: writeJSON doesn't work without approvals(?)
+                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+                                            writeFile([file: 'kubeprod-autogen.json', text: """
+{
+  "dnsZone": "${dnsZone}",
+  "externalDns": {
+    "credentials": "${saCreds}"
+  },
+  "oauthProxy": {
+    "client_id": "${OAUTH_CLIENT_ID}",
+    "client_secret": "${OAUTH_CLIENT_SECRET}"
+  }
+}
+"""
+                                            ])
+
+                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
+(import "manifests/platforms/${platform}.jsonnet") {
+  config:: import "kubeprod-autogen.json",
+  letsencrypt_environment: "staging"
+}
+"""
+                                            ])
+                                        }
+                                    }
+                                    finally {
+                                        container('gcloud') {
+                                            sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
+
+                                            sh "gcloud dns managed-zones delete ${dnsZone} --project ${project} || :"
+                                            sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --async || :"
+                                        }
                                     }
                                 }
                             }
