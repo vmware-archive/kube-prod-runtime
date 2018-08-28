@@ -156,10 +156,10 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               env_+: {
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ES_JAVA_OPTS: std.join(" ", [
-                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
-                   "-Xms%dm" % heapsize, // ES asserts that these are equal
-                   "-Xmx%dm" % heapsize,
-                   "-XshowSettings:vm",
+                  "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
+                  "-Xms%dm" % heapsize, // ES asserts that these are equal
+                  "-Xmx%dm" % heapsize,
+                  "-XshowSettings:vm",
                  ]),
               },
               readinessProbe: {
