@@ -1,12 +1,8 @@
 package aks
 
 import (
-	"bufio"
 	"context"
-	"crypto/rand"
-	"encoding/base64"
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -24,6 +20,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
 const (
@@ -43,27 +40,6 @@ func init() {
 	}
 
 	prodruntime.Platforms = append(prodruntime.Platforms, platforms...)
-}
-
-func prompt(question, def string) (string, error) {
-	w := bufio.NewWriter(os.Stdout)
-	fmt.Fprintf(w, "%s", question)
-	if def != "" {
-		fmt.Fprintf(w, " [%s]", def)
-	}
-	fmt.Fprintf(w, "? ")
-	_ = w.Flush()
-
-	r := bufio.NewReader(os.Stdin)
-	result, err := r.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	result = strings.TrimSpace(result)
-	if result == "" {
-		result = def
-	}
-	return result, nil
 }
 
 func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssignmentsClient, scope string, params authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
@@ -93,14 +69,6 @@ func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssi
 		log.Infof("Assigned role %s to sp %s within scope %s named %s", *params.Properties.RoleDefinitionID, *params.Properties.PrincipalID, scope, *ra.Name)
 		return ra, nil
 	}
-}
-
-func base64RandBytes(n uint) (string, error) {
-	buf := make([]byte, n)
-	if _, err := rand.Read(buf); err != nil {
-		return "", err
-	}
-	return base64.StdEncoding.EncodeToString(buf), nil
 }
 
 func config(cmd *cobra.Command, conf *AKSConfig) error {
@@ -174,7 +142,7 @@ func config(cmd *cobra.Command, conf *AKSConfig) error {
 		}
 
 		if conf.ExternalDNS.AADClientSecret == "" {
-			secret, err := base64RandBytes(12)
+			secret, err := tools.Base64RandBytes(12)
 			if err != nil {
 				return err
 			}
@@ -313,7 +281,7 @@ func config(cmd *cobra.Command, conf *AKSConfig) error {
 		// I Quote: cookie_secret must be 16, 24, or 32 bytes
 		// to create an AES cipher when pass_access_token ==
 		// true or cookie_refresh != 0
-		secret, err := base64RandBytes(24)
+		secret, err := tools.Base64RandBytes(24)
 		if err != nil {
 			return err
 		}
@@ -321,7 +289,7 @@ func config(cmd *cobra.Command, conf *AKSConfig) error {
 	}
 
 	if conf.OauthProxy.ClientSecret == "" {
-		secret, err := base64RandBytes(18)
+		secret, err := tools.Base64RandBytes(18)
 		if err != nil {
 			return err
 		}

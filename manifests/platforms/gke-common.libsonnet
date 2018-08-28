@@ -11,6 +11,9 @@ local kibana = import "../components/kibana.jsonnet";
 {
   config:: error "no kubeprod configuration",
 
+  // Shared metadata for all components
+  kubeprod: kube.Namespace("kubeprod"),
+
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
