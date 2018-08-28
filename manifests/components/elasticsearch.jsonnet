@@ -155,8 +155,12 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               },
               env_+: {
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
-                ES_JAVA_OPTS: "-Djava.security.properties=%s -Xms%dm -Xmx%dm" % [
-                  JAVA_SECURITY_MOUNTPOINT, heapsize, heapsize],
+                ES_JAVA_OPTS: std.join(" ", [
+                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
+                   "-Xms%dm" % heapsize, // ES asserts that these are equal
+                   "-Xmx%dm" % heapsize,
+                   "-XshowSettings:vm",
+                 ]),
               },
               readinessProbe: {
                 // don't allow rolling updates to kill containers until the cluster is green
