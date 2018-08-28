@@ -14,6 +14,9 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/opt/bitnami/elasticsearch-prod/data";
 // Mount point for the custom Java security properties configuration file
 local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.custom";
 
+local ELASTICSEARCH_HTTP_PORT = 9200;
+local ELASTICSEARCH_TRANSPORT_PORT = 9300;
+
 {
   p:: "",
   min_master_nodes:: 2,
@@ -22,13 +25,13 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
   // ElasticSearch additional (custom) configuration
   elasticsearch_config:: {
     "cluster.name": "elasticsearch-cluster",
-    "http.port": "9200",
-    "transport.tcp.port": "9300",
+    "http.port": ELASTICSEARCH_HTTP_PORT,
+    "transport.tcp.port": ELASTICSEARCH_TRANSPORT_PORT,
     "network.host": "0.0.0.0",
     "network.bind_host": "0.0.0.0",
-    "node.master": "true",
-    "node.data": "true",
-    "node.ingest": "false",
+    "node.master": true,
+    "node.data": true,
+    "node.ingest": false,
     // Used for discovery of ElasticSearch nodes via a Kubernetes
     // headless (without a ClusterIP) service.
     "discovery.zen.ping.unicast.hosts": $.svc.metadata.name,
@@ -132,8 +135,8 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
                 },
               },
               ports_+: {
-                db: { containerPort: 9200 },
-                transport: { containerPort: 9300 },
+                db: { containerPort: ELASTICSEARCH_HTTP_PORT },
+                transport: { containerPort: ELASTICSEARCH_TRANSPORT_PORT },
               },
               volumeMounts_+: {
                 // Persistence for ElasticSearch data
@@ -178,7 +181,7 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
               image: "justwatch/elasticsearch_exporter:1.0.1",
               command: ["elasticsearch_exporter"],
               args_+: {
-                "es.uri": "http://localhost:9200/",
+                "es.uri": "http://localhost:%s/" % ELASTICSEARCH_HTTP_PORT,
                 "es.all": "false",
                 "es.timeout": "20s",
                 "web.listen-address": ":9102",
