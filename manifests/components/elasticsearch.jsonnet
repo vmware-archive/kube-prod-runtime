@@ -160,7 +160,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                   "-Xms%dm" % heapsize, // ES asserts that these are equal
                   "-Xmx%dm" % heapsize,
                   "-XshowSettings:vm",
-                 ]),
+                ]),
               },
               readinessProbe: {
                 // don't allow rolling updates to kill containers until the cluster is green
