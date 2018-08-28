@@ -53,7 +53,9 @@ local kube = import "../lib/kube.libsonnet";
               readinessProbe: {
                 httpGet: {path: "/ping", port: "http"},
               },
-              livenessProbe: self.readinessProbe,
+              livenessProbe: self.readinessProbe {
+                initialDelaySeconds: 30,
+              },
               resources+: {
                 requests+: {cpu: "10m"},
               },
