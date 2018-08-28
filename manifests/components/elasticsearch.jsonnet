@@ -2,11 +2,14 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:6.3.2-r26";
+local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch-prod:6.3.2-r26";
+
+// Mount point for configuration files
+local ELASTICSEARCH_CONFIG_MOUNTPOINT = "/opt/bitnami/elasticsearch-prod/config";
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
-local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
+local ELASTICSEARCH_DATA_MOUNTPOINT = "/opt/bitnami/elasticsearch-prod/data";
 
 // Mount point for the custom Java security properties configuration file
 local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.custom";
@@ -18,6 +21,14 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
 
   // ElasticSearch additional (custom) configuration
   elasticsearch_config:: {
+    "cluster.name": "elasticsearch-cluster",
+    "http.port": "9200",
+    "transport.tcp.port": "9300",
+    "network.host": "0.0.0.0",
+    "network.bind_host": "0.0.0.0",
+    "node.master": "true",
+    "node.data": "true",
+    "node.ingest": "false",
     // Used for discovery of ElasticSearch nodes via a Kubernetes
     // headless (without a ClusterIP) service.
     "discovery.zen.ping.unicast.hosts": $.svc.metadata.name,
@@ -55,7 +66,7 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
   // ConfigMap for ElasticSearch additional (custom) configuration
   config: kube.ConfigMap($.p+"elasticsearch-logging") + $.namespace {
     data+: {
-      "elasticsearch_custom.yml": kubecfg.manifestYaml($.elasticsearch_config),
+      "elasticsearch.yml": kubecfg.manifestYaml($.elasticsearch_config),
     },
   },
 
@@ -129,8 +140,8 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
                 datadir: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
                 // ElasticSearch additional (custom) configuration
                 config: {
-                  mountPath: "/bitnami/elasticsearch/conf/elasticsearch_custom.yml",
-                  subPath: "elasticsearch_custom.yml",
+                  mountPath: "%s/elasticsearch.yml" % ELASTICSEARCH_CONFIG_MOUNTPOINT,
+                  subPath: "elasticsearch.yml",
                   readOnly: true,
                 },
                 java_security: {
@@ -141,8 +152,8 @@ local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.c
               },
               env_+: {
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
-                ELASTICSEARCH_HEAP_SIZE: "%dm" % heapsize,
-                ES_JAVA_OPTS: "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
+                ES_JAVA_OPTS: "-Djava.security.properties=%s -Xms%dm -Xmx%dm" % [
+                  JAVA_SECURITY_MOUNTPOINT, heapsize, heapsize],
               },
               readinessProbe: {
                 // don't allow rolling updates to kill containers until the cluster is green
