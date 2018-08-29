@@ -1,0 +1,16 @@
+#
+# This is an alternate "security properties file".
+#
+# An alternate java.security properties file may be specified
+# from the command line via the system property
+#
+#    -Djava.security.properties=<URL>
+#
+
+# The JVM defaults to caching positive hostname resolutions indefinitely.
+# Elasticsearch nodes rely on DNS (Kubernetes headless service), where DNS
+# resolutions vary with time (e.g., for node-to-node discovery). This
+# behaviour can be modified by adding networkaddress.cache.ttl=<timeout>
+# to an alternate Java security properties file.
+# https://www.elastic.co/guide/en/elasticsearch/reference/6.3/networkaddress-cache-ttl.html
+networkaddress.cache.ttl=60
