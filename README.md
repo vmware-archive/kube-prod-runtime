@@ -22,7 +22,7 @@ BKPR is available for GKE and AKS clusters.
 * [Fluentd](https://www.fluentd.org/). A data collector for unified logging layer
 ### DNS and TLS certificates
 * [ExternalDNS](https://github.com/kubernetes-incubator/external-dns). ExternalDNS synchronizes exposed Kubernetes Services and Ingresses with DNS providers
-* [cert-manager](https://github.com/jetstack/cert-manager). A Kubernetes add-on to automate the management and issuance of TLS certificates from various issuing sources
+* [cert-manager](https://github.com/bitnami/bitnami-docker-cert-manager). A Kubernetes add-on to automate the management and issuance of TLS certificates from various issuing sources
 ### Others
 * [OAuth2 Proxy](https://github.com/bitnami/bitnami-docker-oauth2-proxy). A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group
 * [nginx-ingress](https://github.com/kubernetes/ingress-nginx). A Controller to satisfy requests for Ingress objects
