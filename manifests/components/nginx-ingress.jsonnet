@@ -1,5 +1,7 @@
 local kube = import "../lib/kube.libsonnet";
 
+local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.18.0-r5";
+
 {
   p:: "",
   namespace:: {metadata+: {namespace: "kube-system"}},
@@ -181,12 +183,11 @@ local kube = import "../lib/kube.libsonnet";
           terminationGracePeriodSeconds: 60,
           containers_+: {
             default: kube.Container("nginx") {
-              image: "quay.io/kubernetes-ingress-controller/nginx-ingress-controller:0.13.0",
+              image: NGNIX_INGRESS_IMAGE,
               env_+: {
                 POD_NAME: kube.FieldRef("metadata.name"),
                 POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
               },
-              command: ["/nginx-ingress-controller"],
               args_+: {
                 local fqname(o) = "%s/%s" % [o.metadata.namespace, o.metadata.name],
                 "default-backend-service": fqname($.default.svc),
