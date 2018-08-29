@@ -127,6 +127,9 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               local container = self,
               image: ELASTICSEARCH_IMAGE,
               // This can massively vary depending on the logging volume
+              securityContext: {
+                runAsUser: 1001,
+              },
               resources: {
                 requests: { cpu: "100m", memory: "1200Mi" },
                 limits: {
