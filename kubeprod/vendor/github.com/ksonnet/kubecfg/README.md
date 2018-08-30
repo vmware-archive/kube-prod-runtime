@@ -11,9 +11,6 @@ services, and then manage those templates as files in version control.
 The more complex your infrastructure is, the more you will gain from
 using kubecfg.
 
-Status: Basic functionality works, and the tool is usable.  The focus
-now is on clearer error reporting and advanced features.
-
 Yes, Google employees will recognise this as being very similar to a
 similarly-named internal tool ;)
 
@@ -22,6 +19,9 @@ similarly-named internal tool ;)
 Pre-compiled executables exist for some platforms on
 the [Github releases](https://github.com/ksonnet/kubecfg/releases)
 page.
+
+On macOS, it can also be installed via [Homebrew](https://brew.sh/):
+`brew install kubecfg`
 
 To build from source:
 
@@ -57,6 +57,8 @@ To build from source:
 - Best-effort sorts objects before updating, so that dependencies are
   pushed to the server before objects that refer to them.
 - Additional jsonnet builtin functions. See `lib/kubecfg.libsonnet`.
+- Optional "garbage collection" of objects removed from config (see
+  `--gc-tag`).
 
 ## Infrastructure-as-code Philosophy
 

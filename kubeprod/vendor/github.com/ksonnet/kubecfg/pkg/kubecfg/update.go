@@ -25,7 +25,20 @@ const (
 	// AnnotationGcTag annotation that triggers
 	// garbage collection. Objects with value equal to
 	// command-line flag that are *not* in config will be deleted.
-	AnnotationGcTag = "kubecfg.ksonnet.io/garbage-collect-tag"
+	//
+	// NB: this is in phase1 of a migration to use a label instead.
+	// At this stage, both label+migration are written, but the
+	// annotation (only) is still used to trigger GC. [gctag-migration]
+	AnnotationGcTag = LabelGcTag
+
+	// LabelGcTag label that triggers garbage collection. Objects
+	// with value equal to command-line flag that are *not* in
+	// config will be deleted.
+	//
+	// NB: this is in phase1 of a migration from an annotation.
+	// At this stage, both label+migration are written, but the
+	// annotation (only) is still used to trigger GC. [gctag-migration]
+	LabelGcTag = "kubecfg.ksonnet.io/garbage-collect-tag"
 
 	// AnnotationGcStrategy controls gc logic.  Current values:
 	// `auto` (default if absent) - do garbage collection
@@ -67,7 +80,9 @@ func (c UpdateCmd) Run(apiObjects []*unstructured.Unstructured) error {
 
 	for _, obj := range apiObjects {
 		if c.GcTag != "" {
+			// [gctag-migration]: Remove annotation in phase2
 			utils.SetMetaDataAnnotation(obj, AnnotationGcTag, c.GcTag)
+			utils.SetMetaDataLabel(obj, LabelGcTag, c.GcTag)
 		}
 
 		desc := fmt.Sprintf("%s %s", utils.ResourceNameFor(c.Discovery, obj), utils.FqName(obj))
@@ -117,9 +132,11 @@ func (c UpdateCmd) Run(apiObjects []*unstructured.Unstructured) error {
 	if c.GcTag != "" && !c.SkipGc {
 		version, err := utils.FetchVersion(c.Discovery)
 		if err != nil {
-			return err
+			version = utils.GetDefaultVersion()
+			log.Warnf("Unable to parse server version. Received %v. Using default %s", err, version.String())
 		}
 
+		// [gctag-migration]: Add LabelGcTag==c.GcTag to ListOptions.LabelSelector in phase2
 		err = walkObjects(c.ClientPool, c.Discovery, metav1.ListOptions{}, func(o runtime.Object) error {
 			meta, err := meta.Accessor(o)
 			if err != nil {
@@ -254,6 +271,7 @@ func eligibleForGc(obj metav1.Object, gcTag string) bool {
 		strategy = GcStrategyAuto
 	}
 
+	// [gctag-migration]: Check *label* == tag instead in phase2
 	return a[AnnotationGcTag] == gcTag &&
 		strategy == GcStrategyAuto
 }

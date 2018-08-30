@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/emicklei/go-restful-swagger12"
 	"github.com/googleapis/gnostic/OpenAPIv2"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/meta"
@@ -30,6 +29,7 @@ import (
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/rest"
+	"k8s.io/kubernetes/pkg/kubectl/cmd/util/openapi"
 )
 
 type memcachedDiscoveryClient struct {
@@ -37,7 +37,7 @@ type memcachedDiscoveryClient struct {
 	lock            sync.RWMutex
 	servergroups    *metav1.APIGroupList
 	serverresources map[string]*metav1.APIResourceList
-	schemas         map[string]*swagger.ApiDeclaration
+	schemas         map[string]openapi.Resources
 	schema          *openapi_v2.Document
 }
 
@@ -59,7 +59,7 @@ func (c *memcachedDiscoveryClient) Invalidate() {
 
 	c.servergroups = nil
 	c.serverresources = make(map[string]*metav1.APIResourceList)
-	c.schemas = make(map[string]*swagger.ApiDeclaration)
+	c.schemas = make(map[string]openapi.Resources)
 }
 
 func (c *memcachedDiscoveryClient) RESTClient() rest.Interface {
@@ -104,25 +104,6 @@ func (c *memcachedDiscoveryClient) ServerPreferredNamespacedResources() ([]*meta
 
 func (c *memcachedDiscoveryClient) ServerVersion() (*version.Info, error) {
 	return c.cl.ServerVersion()
-}
-
-func (c *memcachedDiscoveryClient) SwaggerSchema(version schema.GroupVersion) (*swagger.ApiDeclaration, error) {
-	key := version.String()
-
-	c.lock.Lock()
-	defer c.lock.Unlock()
-
-	if c.schemas[key] != nil {
-		return c.schemas[key], nil
-	}
-
-	schema, err := c.cl.SwaggerSchema(version)
-	if err != nil {
-		return nil, err
-	}
-
-	c.schemas[key] = schema
-	return schema, nil
 }
 
 func (c *memcachedDiscoveryClient) OpenAPISchema() (*openapi_v2.Document, error) {

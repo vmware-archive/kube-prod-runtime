@@ -96,15 +96,34 @@ func yamlReader(r io.ReadCloser) ([]runtime.Object, error) {
 	return ret, nil
 }
 
-func jsonWalk(obj interface{}) ([]interface{}, error) {
+type walkContext struct {
+	parent *walkContext
+	label  string
+}
+
+func (c *walkContext) String() string {
+	parent := ""
+	if c.parent != nil {
+		parent = c.parent.String()
+	}
+	return parent + c.label
+}
+
+func jsonWalk(parentCtx *walkContext, obj interface{}) ([]interface{}, error) {
 	switch o := obj.(type) {
+	case nil:
+		return []interface{}{}, nil
 	case map[string]interface{}:
 		if o["kind"] != nil && o["apiVersion"] != nil {
 			return []interface{}{o}, nil
 		}
 		ret := []interface{}{}
-		for _, v := range o {
-			children, err := jsonWalk(v)
+		for k, v := range o {
+			ctx := walkContext{
+				parent: parentCtx,
+				label:  "." + k,
+			}
+			children, err := jsonWalk(&ctx, v)
 			if err != nil {
 				return nil, err
 			}
@@ -113,8 +132,12 @@ func jsonWalk(obj interface{}) ([]interface{}, error) {
 		return ret, nil
 	case []interface{}:
 		ret := make([]interface{}, 0, len(o))
-		for _, v := range o {
-			children, err := jsonWalk(v)
+		for i, v := range o {
+			ctx := walkContext{
+				parent: parentCtx,
+				label:  fmt.Sprintf("[%d]", i),
+			}
+			children, err := jsonWalk(&ctx, v)
 			if err != nil {
 				return nil, err
 			}
@@ -122,7 +145,7 @@ func jsonWalk(obj interface{}) ([]interface{}, error) {
 		}
 		return ret, nil
 	default:
-		return nil, fmt.Errorf("Unexpected object structure: %T", o)
+		return nil, fmt.Errorf("Looking for kubernetes object at %s, but instead found %T", parentCtx, o)
 	}
 }
 
@@ -152,23 +175,31 @@ func jsonnetReader(vm *jsonnet.VM, path string) ([]runtime.Object, error) {
 		return nil, err
 	}
 
-	objs, err := jsonWalk(top)
+	objs, err := jsonWalk(&walkContext{label: "<top>"}, top)
 	if err != nil {
 		return nil, err
 	}
 
 	ret := make([]runtime.Object, 0, len(objs))
 	for _, v := range objs {
-		// TODO: Going to json and back is a bit horrible
-		data, err := json.Marshal(v)
-		if err != nil {
-			return nil, err
+		obj := &unstructured.Unstructured{Object: v.(map[string]interface{})}
+		if obj.IsList() {
+			// TODO: Use obj.ToList with newer apimachinery
+			list := &unstructured.UnstructuredList{
+				Object: obj.Object,
+			}
+			err := obj.EachListItem(func(item runtime.Object) error {
+				castItem := item.(*unstructured.Unstructured)
+				list.Items = append(list.Items, *castItem)
+				return nil
+			})
+			if err != nil {
+				return nil, err
+			}
+			ret = append(ret, list)
+		} else {
+			ret = append(ret, obj)
 		}
-		obj, _, err := unstructured.UnstructuredJSONScheme.Decode(data, nil, nil)
-		if err != nil {
-			return nil, err
-		}
-		ret = append(ret, obj)
 	}
 
 	return ret, nil

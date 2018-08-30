@@ -21,8 +21,13 @@ import (
 	"github.com/ksonnet/kubecfg/pkg/kubecfg"
 )
 
+const (
+	flagIgnoreUnknown = "ignore-unknown"
+)
+
 func init() {
 	RootCmd.AddCommand(validateCmd)
+	validateCmd.PersistentFlags().Bool(flagIgnoreUnknown, true, "Don't fail if the schema for a given resource type is not found")
 }
 
 var validateCmd = &cobra.Command{
@@ -30,11 +35,17 @@ var validateCmd = &cobra.Command{
 	Short: "Compare generated manifest against server OpenAPI spec",
 	Args:  cobra.ArbitraryArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		flags := cmd.Flags()
 		var err error
 
 		c := kubecfg.ValidateCmd{}
 
 		_, c.Discovery, err = restClientPool(cmd)
+		if err != nil {
+			return err
+		}
+
+		c.IgnoreUnknown, err = flags.GetBool(flagIgnoreUnknown)
 		if err != nil {
 			return err
 		}

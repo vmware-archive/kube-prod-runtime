@@ -16,16 +16,13 @@
 package utils
 
 import (
-	"errors"
-	"fmt"
 	"sort"
 
-	"github.com/emicklei/go-restful-swagger12"
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/discovery"
+	"k8s.io/kube-openapi/pkg/util/proto"
 )
 
 var (
@@ -33,102 +30,50 @@ var (
 	gkCrd = schema.GroupKind{Group: "apiextensions", Kind: "CustomResourceDefinition"}
 )
 
-// Heh: Swagger. Walk. :P
-func swaggerWalk(api *swagger.ApiDeclaration, typeName string, seen sets.String, visitor func(string) error) error {
-	if !versionRegexp.MatchString(typeName) {
-		return nil
+// a podSpecVisitor traverses a schema tree and records whether the schema
+// contains a PodSpec resource.
+type podSpecVisitor bool
+
+func (v *podSpecVisitor) VisitKind(k *proto.Kind) {
+	if k.GetPath().String() == "io.k8s.api.core.v1.PodSpec" {
+		*v = true
+		return
 	}
-
-	// Prevent possible schema loops
-	if seen.Has(typeName) {
-		return nil
-	}
-	seen.Insert(typeName)
-
-	if err := visitor(typeName); err != nil {
-		return err
-	}
-
-	// is an API object of some sort
-	models := api.Models
-	model, ok := models.At(typeName)
-	if !ok {
-		return fmt.Errorf("type %q not found in schema", typeName)
-	}
-
-	properties := model.Properties
-	for _, namedproperty := range properties.List {
-		details := namedproperty.Property
-		var fieldType string
-		if details.Type != nil {
-			fieldType = *details.Type
-		} else if details.Ref != nil {
-			fieldType = *details.Ref
-		} else {
-			return fmt.Errorf("type of field %q in %q undefined in schema", namedproperty.Name, typeName)
-		}
-
-		if fieldType == "array" {
-			if details.Items.Ref != nil {
-				fieldType = *details.Items.Ref
-			} else if details.Items.Type != nil {
-				fieldType = *details.Items.Type
-			} else {
-				return fmt.Errorf("array type of %q undefined in schema", fieldType)
-			}
-		}
-
-		if err := swaggerWalk(api, fieldType, seen, visitor); err != nil {
-			return err
+	for _, f := range k.Fields {
+		f.Accept(v)
+		if *v == true {
+			return
 		}
 	}
-
-	return nil
 }
 
-var podSpecCache = map[string]bool{}
+func (v *podSpecVisitor) VisitReference(s proto.Reference)  { s.SubSchema().Accept(v) }
+func (v *podSpecVisitor) VisitArray(s *proto.Array)         { s.SubType.Accept(v) }
+func (v *podSpecVisitor) VisitMap(s *proto.Map)             { s.SubType.Accept(v) }
+func (v *podSpecVisitor) VisitPrimitive(p *proto.Primitive) {}
 
-func containsPodSpec(disco discovery.SwaggerSchemaInterface, gvk schema.GroupVersionKind) bool {
-	if result, ok := podSpecCache[gvk.String()]; ok {
-		return result
+var podSpecCache = map[string]podSpecVisitor{}
+
+func containsPodSpec(disco discovery.OpenAPISchemaInterface, gvk schema.GroupVersionKind) bool {
+	result, ok := podSpecCache[gvk.String()]
+	if ok {
+		return bool(result)
 	}
 
-	swagger, err := disco.SwaggerSchema(gvk.GroupVersion())
+	oapi, err := NewOpenAPISchemaFor(disco, gvk)
 	if err != nil {
-		// Indeterminate result.
-		log.Debugf("Unable to fetch schema for %s (%v), assuming not a PodSpec", gvk, err)
+		log.Debugf("error fetching schema for %s: %v", gvk, err)
 		return false
 	}
 
-	foundErr := errors.New("Found") // not really an error ...
-	visitor := func(typeName string) error {
-		if typeName == "v1.PodSpec" {
-			return foundErr
-		}
-		return nil
-	}
-
-	var result bool
-
-	typeName := fmt.Sprintf("%s.%s", gvk.Version, gvk.Kind)
-	err = swaggerWalk(swagger, typeName, sets.NewString(), visitor)
-	switch err {
-	case nil:
-		result = false
-	case foundErr:
-		result = true
-	default:
-		// Indeterminate result, but repeatable so may as well cache it
-		log.Debugf("Error walking swagger schema for %q: %v", typeName, err)
-		result = false
-	}
-
+	oapi.schema.Accept(&result)
 	podSpecCache[gvk.String()] = result
-	return result
+
+	return bool(result)
 }
 
 // Arbitrary numbers used to do a simple topological sort of resources.
-func depTier(disco ServerResourcesSwaggerSchema, o schema.ObjectKind) (int, error) {
+func depTier(disco ServerResourcesOpenAPISchema, o schema.ObjectKind) (int, error) {
 	gvk := o.GroupVersionKind()
 	if gk := gvk.GroupKind(); gk == gkTpr || gk == gkCrd {
 		// Special case: these create other types
@@ -154,16 +99,16 @@ func depTier(disco ServerResourcesSwaggerSchema, o schema.ObjectKind) (int, erro
 }
 
 // A subset of discovery.DiscoveryInterface
-type ServerResourcesSwaggerSchema interface {
+type ServerResourcesOpenAPISchema interface {
 	discovery.ServerResourcesInterface
-	discovery.SwaggerSchemaInterface
+	discovery.OpenAPISchemaInterface
 }
 
 // DependencyOrder is a `sort.Interface` that *best-effort* sorts the
 // objects so that known dependencies appear earlier in the list.  The
 // idea is to prevent *some* of the "crash-restart" loops when
 // creating inter-dependent resources.
-func DependencyOrder(disco ServerResourcesSwaggerSchema, list []*unstructured.Unstructured) (sort.Interface, error) {
+func DependencyOrder(disco ServerResourcesOpenAPISchema, list []*unstructured.Unstructured) (sort.Interface, error) {
 	sortKeys := make([]int, len(list))
 	for i, item := range list {
 		var err error

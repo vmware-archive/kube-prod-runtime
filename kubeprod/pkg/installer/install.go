@@ -24,7 +24,7 @@ import (
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
-const GcTag = "bitnami.com/prod-runtime"
+const GcTag = "kube_prod_runtime"
 
 func unmarshalFile(path string, into interface{}) error {
 	f, err := os.Open(path)
