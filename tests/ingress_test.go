@@ -93,7 +93,7 @@ func statusCode(resp *http.Response) int {
 }
 
 func isPrivateIP(ip string) bool {
-	ok, _ := regexp.MatchString(`^(192\.168\.)|(172\.(1[6-9]|2[0-9]|3[01])\.)|(^10\.)`, ip)
+	ok, _ := regexp.MatchString(`^(192\.168\.)|(172\.(1[6-9]|2[0-9]|3[01])\.)|(^10\.)|(^127\.)`, ip)
 	return ok
 }
 
