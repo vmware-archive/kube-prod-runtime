@@ -181,7 +181,11 @@ var _ = Describe("Ingress", func() {
 
 				for _, lbIng := range ing2.Status.LoadBalancer.Ingress {
 					if lbIng.Hostname != "" {
-						lbAddr = lbIng.Hostname
+						addrs, err := net.LookupHost(lbIng.Hostname)
+						if err != nil {
+							return "", err
+						}
+						lbAddr = addrs[0]
 					} else if lbIng.IP != "" && lbAddr == "" {
 						lbAddr = lbIng.IP
 					}
