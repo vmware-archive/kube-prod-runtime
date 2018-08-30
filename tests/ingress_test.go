@@ -93,8 +93,27 @@ func statusCode(resp *http.Response) int {
 }
 
 func isPrivateIP(ip string) bool {
-	ok, _ := regexp.MatchString(`^(192\.168\.)|(172\.(1[6-9]|2[0-9]|3[01])\.)|(^10\.)|(^127\.)`, ip)
-	return ok
+	var privateBlocks []*net.IPNet
+
+	for _, cidr := range []string{
+		"127.0.0.0/8",    // IPv4 loopback
+		"10.0.0.0/8",     // RFC1918
+		"172.16.0.0/12",  // RFC1918
+		"192.168.0.0/16", // RFC1918
+		"::1/128",        // IPv6 loopback
+		"fe80::/10",      // IPv6 link-local
+	} {
+		_, block, _ := net.ParseCIDR(cidr)
+		privateBlocks = append(privateBlocks, block)
+	}
+
+	IP := net.ParseIP(ip)
+	for _, block := range privateBlocks {
+		if block.Contains(IP) {
+			return true
+		}
+	}
+	return false
 }
 
 func getURL(client *http.Client, url string) (*http.Response, error) {
