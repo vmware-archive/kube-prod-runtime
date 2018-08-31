@@ -185,7 +185,7 @@ spec:
 
                                     // Set the default LetsEncrypt issuer to staging in tests to avoid LE ratelimits
                                     // A better way to do this would be to override the default jsonnet config
-                                    sh 'sed -i "s/\"default-issuer-name\": .*,/\"default-issuer-name\": $.letsencryptStaging.metadata.name,/" components/cert-manager.jsonnet'
+                                    sh 'sed -i \'s/"default-issuer-name": .*,/"default-issuer-name": \$.letsencryptStaging.metadata.name,/\' components/cert-manager.jsonnet'
                                 }
                                 stash includes: 'manifests/**', excludes: 'manifests/Makefile', name: 'manifests'
                             }
