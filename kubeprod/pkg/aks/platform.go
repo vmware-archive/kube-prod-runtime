@@ -5,7 +5,6 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"flag"
 	"fmt"
 	"os"
 	"strings"
@@ -17,87 +16,33 @@ import (
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
-	azcli "github.com/Azure/go-autorest/autorest/azure/cli"
 	"github.com/Azure/go-autorest/autorest/date"
 	"github.com/Azure/go-autorest/autorest/to"
 	"github.com/golang/glog"
-	"github.com/mitchellh/mapstructure"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/cobra"
+
+	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
 )
 
 const (
 	userAgent = "Bitnami/kubeprod" // TODO: version
 )
 
-var (
-	subIDParam     = paramNew("subscription-id", "Azure subscription ID")
-	tenantIDParam  = paramNew("tenant-id", "Azure tenant ID")
-	dnsZoneParam   = paramNew("dns-zone", "External DNS zone for public endpoints")
-	dnsResgrpParam = paramNew("dns-resource-group", "Resource group of external DNS zone")
-)
-
 func init() {
-	if err := initParams(); err != nil {
-		log.Debugf("Unable to initialize azure-cli defaults: %v", err)
-	}
-}
-
-func initParams() error {
-	path, err := azcli.ProfilePath()
-	if err != nil {
-		return fmt.Errorf("Unable to find azure-cli profile: %v", err)
-	}
-	profile, err := azcli.LoadProfile(path)
-	if err != nil {
-		return fmt.Errorf("Unable to load azure-cli profile: %v", err)
+	var platforms = []prodruntime.Platform{
+		{
+			Name:        "aks+k8s-1.9",
+			Description: "Azure Container Service (AKS) with Kubernetes 1.9",
+		},
+		{
+			Name:        "aks+k8s-1.8",
+			Description: "Azure Container Service (AKS) with Kubernetes 1.8",
+		},
 	}
 
-	for _, s := range profile.Subscriptions {
-		if s.IsDefault {
-			subIDParam.setDefault(s.ID)
-			tenantIDParam.setDefault(s.TenantID)
-		}
-	}
-	return nil
-}
-
-type param struct {
-	envvar, flag string
-}
-
-func paramNew(name, desc string) param {
-	flag.String(name, "", desc)
-	return param{
-		flag:   name,
-		envvar: "AZURE_" + strings.ToUpper(strings.Replace(name, "-", "_", -1)),
-	}
-}
-
-func (p *param) setDefault(def string) {
-	if f := flag.Lookup(p.flag); f != nil {
-		f.DefValue = def
-	}
-}
-
-func (p *param) get() (string, error) {
-	ret := os.Getenv(p.envvar)
-	if ret != "" {
-		return ret, nil
-	}
-	if f := flag.Lookup(p.flag); f != nil {
-		if f.Value.String() == "" {
-			res, err := prompt(f.Usage, f.DefValue)
-			if err != nil {
-				return "", err
-			}
-			if err := f.Value.Set(res); err != nil {
-				return "", err
-			}
-		}
-		return f.Value.String(), nil
-	}
-	return "", fmt.Errorf("No value for %s", p.flag)
+	prodruntime.Platforms = append(prodruntime.Platforms, platforms...)
 }
 
 func prompt(question, def string) (string, error) {
@@ -158,13 +103,9 @@ func base64RandBytes(n uint) (string, error) {
 	return base64.StdEncoding.EncodeToString(buf), nil
 }
 
-func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error) {
+func config(cmd *cobra.Command, conf *AKSConfig) error {
 	ctx := context.TODO()
-
-	var conf AKSConfig
-	if err := mapstructure.Decode(origConfig, &conf); err != nil {
-		return nil, err
-	}
+	flags := cmd.Flags()
 
 	// Leaks secrets to log!
 	//log.Debugf("Input config: %#v", conf)
@@ -172,13 +113,17 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 	env := azure.PublicCloud
 
 	if conf.ContactEmail == "" {
-		conf.ContactEmail = contactEmail
+		email, err := flags.GetString(flagEmail)
+		if err != nil {
+			return err
+		}
+		conf.ContactEmail = email
 	}
 
 	if conf.DnsZone == "" {
-		domain, err := dnsZoneParam.get()
+		domain, err := flags.GetString(flagDNSSuffix)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.DnsZone = domain
 	}
@@ -213,17 +158,17 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 		//
 
 		if conf.ExternalDNS.TenantID == "" {
-			tenantID, err := tenantIDParam.get()
+			tenantID, err := flags.GetString(flagTenantID)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.TenantID = tenantID
 		}
 
 		if conf.ExternalDNS.SubscriptionID == "" {
-			subID, err := subIDParam.get()
+			subID, err := flags.GetString(flagSubID)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.SubscriptionID = subID
 		}
@@ -231,7 +176,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 		if conf.ExternalDNS.AADClientSecret == "" {
 			secret, err := base64RandBytes(12)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.AADClientSecret = secret
 		}
@@ -239,9 +184,9 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 		if conf.ExternalDNS.ResourceGroup == "" {
 			// TODO: default to Azure resource group of AKS cluster.
 			// See https://docs.microsoft.com/en-us/azure/aks/faq#why-are-two-resource-groups-created-with-aks
-			dnsResgrp, err := dnsResgrpParam.get()
+			dnsResgrp, err := flags.GetString(flagDNSResgrp)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			conf.ExternalDNS.ResourceGroup = dnsResgrp
 		}
@@ -250,7 +195,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 
 		dnsClient := dns.NewZonesClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 		if err := configClient(&dnsClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
-			return nil, err
+			return err
 		}
 
 		zone, err := dnsClient.CreateOrUpdate(ctx, conf.ExternalDNS.ResourceGroup, conf.DnsZone, dns.Zone{Location: to.StringPtr("global"), ZoneProperties: &dns.ZoneProperties{ZoneType: "Public"}}, "", "*")
@@ -258,7 +203,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 			if strings.Contains(err.Error(), "PreconditionFailed") {
 				log.Infof("Using existing Azure DNS zone %q", conf.DnsZone)
 			} else {
-				return nil, err
+				return err
 			}
 		} else {
 			log.Infof("Created Azure DNS zone %q", conf.DnsZone)
@@ -269,13 +214,13 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 		if conf.ExternalDNS.AADClientID == "" {
 			groupsClient := resources.NewGroupsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 			if err := configClient(&groupsClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			// az group show --name $resgrp
 			grp, err := groupsClient.Get(ctx, conf.ExternalDNS.ResourceGroup)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			log.Debugf("Got grp %q -> %s", conf.ExternalDNS.ResourceGroup, *grp.ID)
 
@@ -284,7 +229,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 
 			appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
 			if err := configClient(&appClient.Client, conf.ExternalDNS.TenantID, env.GraphEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			log.Debugf("Creating AD application ...")
@@ -295,7 +240,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
@@ -307,12 +252,12 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 				}},
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			spClient := graphrbac.NewServicePrincipalsClientWithBaseURI(env.GraphEndpoint, conf.ExternalDNS.TenantID)
 			if err := configClient(&spClient.Client, conf.ExternalDNS.TenantID, env.GraphEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			log.Debugf("Creating service principal...")
@@ -321,26 +266,26 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 				AccountEnabled: to.BoolPtr(true),
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 
 			roleDefClient := authorization.NewRoleDefinitionsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 			if err := configClient(&roleDefClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			roles, err := roleDefClient.List(ctx, *grp.ID, "roleName eq 'Contributor'")
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if len(roles.Values()) < 1 {
-				return nil, fmt.Errorf("No 'Contributor' role in resource group %q", conf.ExternalDNS.ResourceGroup)
+				return fmt.Errorf("No 'Contributor' role in resource group %q", conf.ExternalDNS.ResourceGroup)
 			}
 			contribRoleID := roles.Values()[0].ID
 
 			roleClient := authorization.NewRoleAssignmentsClientWithBaseURI(env.ResourceManagerEndpoint, conf.ExternalDNS.SubscriptionID)
 			if err := configClient(&roleClient.Client, conf.ExternalDNS.TenantID, env.ResourceManagerEndpoint); err != nil {
-				return nil, err
+				return err
 			}
 
 			_, err = createRoleAssignment(ctx, roleClient, *grp.ID, authorization.RoleAssignmentCreateParameters{
@@ -350,7 +295,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 				},
 			})
 			if err != nil {
-				return nil, err
+				return err
 			}
 			// end: az ad sp create-for-rbac
 
@@ -370,7 +315,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 		// true or cookie_refresh != 0
 		secret, err := base64RandBytes(24)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.OauthProxy.CookieSecret = secret
 	}
@@ -378,15 +323,15 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 	if conf.OauthProxy.ClientSecret == "" {
 		secret, err := base64RandBytes(18)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.OauthProxy.ClientSecret = secret
 	}
 
 	if conf.OauthProxy.AzureTenant == "" {
-		tenantID, err := tenantIDParam.get()
+		tenantID, err := flags.GetString(flagTenantID)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		conf.OauthProxy.AzureTenant = tenantID
 	}
@@ -394,7 +339,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 	if conf.OauthProxy.ClientID == "" {
 		appClient := graphrbac.NewApplicationsClientWithBaseURI(env.GraphEndpoint, conf.OauthProxy.AzureTenant)
 		if err := configClient(&appClient.Client, conf.OauthProxy.AzureTenant, env.GraphEndpoint); err != nil {
-			return nil, err
+			return err
 		}
 
 		oauthHosts := []string{"prometheus", "kibana"}
@@ -421,7 +366,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 			}},
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		_, err = appClient.UpdatePasswordCredentials(ctx, *app.ObjectID, graphrbac.PasswordCredentialsUpdateParameters{
@@ -433,11 +378,11 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 			}},
 		})
 		if err != nil {
-			return nil, err
+			return err
 		}
 
 		conf.OauthProxy.ClientID = *app.AppID
 	}
 
-	return conf, nil
+	return nil
 }
