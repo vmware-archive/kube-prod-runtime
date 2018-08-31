@@ -92,6 +92,30 @@ func statusCode(resp *http.Response) int {
 	return resp.StatusCode
 }
 
+func isPrivateIP(ip string) bool {
+	var privateBlocks []*net.IPNet
+
+	for _, cidr := range []string{
+		"127.0.0.0/8",    // IPv4 loopback
+		"10.0.0.0/8",     // RFC1918
+		"172.16.0.0/12",  // RFC1918
+		"192.168.0.0/16", // RFC1918
+		"::1/128",        // IPv6 loopback
+		"fe80::/10",      // IPv6 link-local
+	} {
+		_, block, _ := net.ParseCIDR(cidr)
+		privateBlocks = append(privateBlocks, block)
+	}
+
+	IP := net.ParseIP(ip)
+	for _, block := range privateBlocks {
+		if block.Contains(IP) {
+			return true
+		}
+	}
+	return false
+}
+
 func getURL(client *http.Client, url string) (*http.Response, error) {
 	resp, err := client.Get(url)
 	fmt.Fprintf(GinkgoWriter, "GET %v -> %v, %v\n", url, resp, err)
@@ -144,6 +168,37 @@ var _ = Describe("Ingress", func() {
 	})
 
 	Context("basic", func() {
+		It("Ingress LB should have a public IP", func() {
+			Eventually(func() (string, error) {
+				var lbAddr string
+				var err error
+				ing2, err := c.ExtensionsV1beta1().Ingresses(ns).Get(ing.Name, metav1.GetOptions{})
+				if err != nil {
+					return "", err
+				}
+
+				fmt.Fprintf(GinkgoWriter, "%s/%s: Ingress.Status.LB.Ingress is %v\n", ing2.Namespace, ing2.Name, ing2.Status.LoadBalancer.Ingress)
+
+				for _, lbIng := range ing2.Status.LoadBalancer.Ingress {
+					if lbIng.Hostname != "" {
+						addrs, err := net.LookupHost(lbIng.Hostname)
+						if err != nil {
+							return "", err
+						}
+						lbAddr = addrs[0]
+					} else if lbIng.IP != "" && lbAddr == "" {
+						lbAddr = lbIng.IP
+					}
+				}
+				if lbAddr == "" {
+					return "", fmt.Errorf("ingress Status.LoadBalancer.Ingress is empty")
+				}
+
+				return lbAddr, nil
+			}, "10m", "5s").
+				ShouldNot(WithTransform(isPrivateIP, BeTrue()))
+		})
+
 		It("should be reachable via http URL", func() {
 			url := fmt.Sprintf("http://%s", ing.Spec.Rules[0].Host)
 			var resp *http.Response
@@ -195,9 +250,7 @@ var _ = Describe("Ingress", func() {
 			// work in all cases except where the test is
 			// being run "close" to the target cluster.
 			// Will probably need to revisit for minikube :(
-			Expect(realIP).NotTo(MatchRegexp(`^192\.168\.`))
-			Expect(realIP).NotTo(MatchRegexp(`^172\.(1[6-9]|2[0-9]|3[01])\.`))
-			Expect(realIP).NotTo(MatchRegexp(`^10\.`))
+			Expect(string(realIP)).NotTo(WithTransform(isPrivateIP, BeTrue()))
 		})
 	})
 
@@ -243,9 +296,7 @@ var _ = Describe("Ingress", func() {
 			// work in all cases except where the test is
 			// being run "close" to the target cluster.
 			// Will probably need to revisit for minikube :(
-			Expect(realIP).NotTo(MatchRegexp(`^192\.168\.`))
-			Expect(realIP).NotTo(MatchRegexp(`^172\.(1[6-9]|2[0-9]|3[01])\.`))
-			Expect(realIP).NotTo(MatchRegexp(`^10\.`))
+			Expect(string(realIP)).NotTo(WithTransform(isPrivateIP, BeTrue()))
 		})
 	})
 })
