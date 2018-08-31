@@ -41,7 +41,8 @@ type DeleteCmd struct {
 func (c DeleteCmd) Run(apiObjects []*unstructured.Unstructured) error {
 	version, err := utils.FetchVersion(c.Discovery)
 	if err != nil {
-		return err
+		version = utils.GetDefaultVersion()
+		log.Warnf("Unable to parse server version. Received %v. Using default %s", err, version.String())
 	}
 
 	log.Infof("Fetching schemas for %d resources", len(apiObjects))
@@ -79,7 +80,7 @@ func (c DeleteCmd) Run(apiObjects []*unstructured.Unstructured) error {
 			return fmt.Errorf("Error deleting %s: %s", desc, err)
 		}
 
-		log.Debugf("Deleted object: ", obj)
+		log.Debug("Deleted object: ", obj)
 	}
 
 	return nil

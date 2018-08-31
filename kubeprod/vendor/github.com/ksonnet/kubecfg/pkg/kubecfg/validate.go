@@ -18,6 +18,7 @@ package kubecfg
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	log "github.com/sirupsen/logrus"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -31,7 +32,8 @@ import (
 
 // ValidateCmd represents the validate subcommand
 type ValidateCmd struct {
-	Discovery discovery.DiscoveryInterface
+	Discovery     discovery.DiscoveryInterface
+	IgnoreUnknown bool
 }
 
 func (c ValidateCmd) Run(apiObjects []*unstructured.Unstructured, out io.Writer) error {
@@ -61,20 +63,23 @@ func (c ValidateCmd) Run(apiObjects []*unstructured.Unstructured, out io.Writer)
 		log.Info("Validating ", desc)
 
 		gvk := obj.GroupVersionKind()
-		gv := gvk.GroupVersion()
 
 		var allErrs []error
 
-		schema, err := utils.NewSwaggerSchemaFor(c.Discovery, gv)
+		schema, err := utils.NewOpenAPISchemaFor(c.Discovery, gvk)
 		if err != nil {
-			if errors.IsNotFound(err) && gvkExists(gvk) {
+			isNotFound := errors.IsNotFound(err) ||
+				strings.Contains(err.Error(), "is not supported by the server")
+			if isNotFound && (c.IgnoreUnknown || gvkExists(gvk)) {
 				log.Infof(" No schema found for %s, skipping validation", gvk)
 				continue
 			}
 			allErrs = append(allErrs, fmt.Errorf("Unable to fetch schema: %v", err))
 		} else {
 			// Validate obj
-			allErrs = append(allErrs, schema.Validate(obj)...)
+			for _, err := range schema.Validate(obj) {
+				allErrs = append(allErrs, err)
+			}
 		}
 
 		for _, err := range allErrs {

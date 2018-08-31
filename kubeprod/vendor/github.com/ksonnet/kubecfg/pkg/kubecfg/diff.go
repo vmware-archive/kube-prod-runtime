@@ -51,7 +51,7 @@ func (c DiffCmd) Run(apiObjects []*unstructured.Unstructured, out io.Writer) err
 	diffFound := false
 	for _, obj := range apiObjects {
 		desc := fmt.Sprintf("%s %s", utils.ResourceNameFor(c.Discovery, obj), utils.FqName(obj))
-		log.Debugf("Fetching ", desc)
+		log.Debug("Fetching ", desc)
 
 		client, err := utils.ClientForResource(c.ClientPool, c.Discovery, obj, c.DefaultNamespace)
 		if err != nil {
@@ -114,6 +114,8 @@ func isEmptyValue(i interface{}) bool {
 	case bool:
 		return !v
 	case float64:
+		return v == 0
+	case int64:
 		return v == 0
 	case string:
 		return v == ""
