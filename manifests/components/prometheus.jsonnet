@@ -7,6 +7,18 @@ local path_join(prefix, suffix) = (
   else prefix + "/" + suffix
 );
 
+local PROMETHEUS_IMAGE = "bitnami/prometheus:2.3.2-r41";
+local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
+local CONFIGMAP_RELOADER_IMAGE = "jimmidyson/configmap-reload:v0.2.2";
+local PROMETHEUS_PORT = 9090;
+
+// Builds the `webhook-url` used by a container to trigger a reload
+// after a ConfigMap change
+local get_cm_web_hook_url = function(port, path) (
+  local new_path = utils.trimUrl(path);
+  "http://localhost:%s%s/-/reload" % [port, new_path]
+);
+
 // TODO: add blackbox-exporter
 
 {
@@ -172,7 +184,7 @@ local path_join(prefix, suffix) = (
           metadata+: {
             annotations+: {
               "prometheus.io/scrape": "true",
-              "prometheus.io/port": "9090",
+              "prometheus.io/port": std.toString(PROMETHEUS_PORT),
               "prometheus.io/path": path_join($.ingress.prom_path, "metrics"),
             },
           },
@@ -183,26 +195,28 @@ local path_join(prefix, suffix) = (
               config: kube.ConfigMapVolume(prom.config),
             },
             securityContext+: {
-              fsGroup: 65534, // nobody:nogroup
+              fsGroup: 1001,
             },
             containers_+: {
               default: kube.Container("prometheus") {
                 local this = self,
-                image: "prom/prometheus:v2.1.0",
+                image: PROMETHEUS_IMAGE,
+                securityContext+: {
+                  runAsUser: 1001,
+                },
                 args_+: {
                   //"log.level": "debug",  // default is info
 
                   "web.external-url": $.ingress.prom_url,
 
                   "config.file": this.volumeMounts_.config.mountPath + "/prometheus.yml",
-                  "storage.tsdb.path": this.volumeMounts_.data.mountPath,
                   retention_days:: 366/2,
                   "storage.tsdb.retention": "%dd" % self.retention_days,
 
                   // These are unmodified upstream console files. May
                   // want to ship in config instead.
-                  "web.console.libraries": "/etc/prometheus/console_libraries",
-                  "web.console.templates": "/etc/prometheus/consoles",
+                  "web.console.libraries": "/opt/bitnami/prometheus/conf/console_libraries",
+                  "web.console.templates": "/opt/bitnami/prometheus/conf/consoles",
                 },
                 args+: [
                   // Enable /-/reload hook.  TODO: move to SIGHUP when
@@ -210,11 +224,11 @@ local path_join(prefix, suffix) = (
                   "--web.enable-lifecycle",
                 ],
                 ports_+: {
-                  web: {containerPort: 9090},
+                  web: {containerPort: PROMETHEUS_PORT},
                 },
                 volumeMounts_+: {
-                  config: {mountPath: "/etc/prometheus-config", readOnly: true},
-                  data: {mountPath: "/prometheus"},
+                  config: {mountPath: PROMETHEUS_CONF_MOUNTPOINT, readOnly: true},
+                  data: {mountPath: "/opt/bitnami/prometheus/data"},
                 },
                 resources: {
                   requests: {cpu: "500m", memory: "500Mi"},
@@ -234,10 +248,10 @@ local path_join(prefix, suffix) = (
                 },
               },
               config_reload: kube.Container("configmap-reload") {
-                image: "jimmidyson/configmap-reload:v0.2.2",
+                image: CONFIGMAP_RELOADER_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
-                  "webhook-url": "http://localhost:9090%s/-/reload" % $.ingress.prom_path,
+                  "webhook-url": get_cm_web_hook_url(PROMETHEUS_PORT, $.ingress.prom_path),
                   "webhook-method": "POST",
                 },
                 volumeMounts_+: {
@@ -316,10 +330,10 @@ local path_join(prefix, suffix) = (
                 },
               },
               config_reload: kube.Container("configmap-reload") {
-                image: "jimmidyson/configmap-reload:v0.2.2",
+                image: CONFIGMAP_RELOADER_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
-                  "webhook-url": "http://localhost:9093%s/-/reload" % $.ingress.am_path,
+                  "webhook-url": get_cm_web_hook_url(9093, $.ingress.am_path),
                   "webhook-method": "POST",
                 },
                 volumeMounts_+: {

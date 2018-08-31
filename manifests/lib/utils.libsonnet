@@ -3,6 +3,13 @@
 local kube = import "kube.libsonnet";
 
 {
+  trimUrl(str):: (
+    if std.endsWith(str, "/") then
+      std.substr(str, 1, std.length(str) - 1)
+    else
+      str
+  ),
+
   toJson(x):: (
     if std.type(x) == "string" then std.escapeStringJson(x)
     else std.toString(x)
