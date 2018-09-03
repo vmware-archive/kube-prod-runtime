@@ -195,7 +195,7 @@ var _ = Describe("Ingress", func() {
 				}
 
 				return lbAddr, nil
-			}, "10m", "5s").
+			}, "20m", "5s").
 				ShouldNot(WithTransform(isPrivateIP, BeTrue()))
 		})
 
@@ -233,7 +233,7 @@ var _ = Describe("Ingress", func() {
 
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "10m", "5s").
+			}, "20m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
@@ -279,7 +279,7 @@ var _ = Describe("Ingress", func() {
 			Eventually(func() (*http.Response, error) {
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "15m", "5s").
+			}, "20m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()

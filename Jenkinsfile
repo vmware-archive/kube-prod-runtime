@@ -117,7 +117,7 @@ spec:
         # but actually need ram to avoid oom killer
         memory: 1Gi
   - name: az
-    image: microsoft/azure-cli:2.0.30
+    image: microsoft/azure-cli:2.0.45
     stdin: true
     command: ['cat']
     resources:
@@ -226,7 +226,7 @@ spec:
     // See:
     //  az aks get-versions -l centralus
     //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-    def aksKversions = ["1.8.7", "1.9.6"]
+    def aksKversions = ["1.8.14", "1.9.10"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
         def platform = "aks+k8s-" + kversion[0..2]
