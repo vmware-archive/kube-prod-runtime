@@ -14,6 +14,7 @@ local kibana = import "../components/kibana.jsonnet";
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
+  letsencrypt_instance:: "prod",
 
   edns: edns {
     azconf: kube.Secret(edns.p+"external-dns-azure-conf") + edns.namespace {
@@ -50,6 +51,7 @@ local kibana = import "../components/kibana.jsonnet";
 
   cert_manager: cert_manager {
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
+    letsencrypt_instance:: $.letsencrypt_instance,
   },
 
   nginx_ingress: nginx_ingress,
