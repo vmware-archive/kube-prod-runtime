@@ -117,7 +117,7 @@ spec:
         # but actually need ram to avoid oom killer
         memory: 1Gi
   - name: az
-    image: microsoft/azure-cli:2.0.30
+    image: microsoft/azure-cli:2.0.45
     stdin: true
     command: ['cat']
     resources:
