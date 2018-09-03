@@ -122,7 +122,7 @@ func (c InstallCmd) Run(out io.Writer) error {
 	// step is optional
 	if true {
 		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform.Name)
-		if err := c.Update(); err != nil {
+		if err := c.Update(out); err != nil {
 			return err
 		}
 
@@ -136,7 +136,7 @@ func (c InstallCmd) Run(out io.Writer) error {
 	return nil
 }
 
-func (c InstallCmd) Update() error {
+func (c InstallCmd) Update(out io.Writer) error {
 	log.Info("Updating platform ", c.Platform.Name)
 	searchUrls := []*url.URL{
 		&url.URL{Scheme: "internal", Path: "/"},
@@ -149,6 +149,11 @@ func (c InstallCmd) Update() error {
 	input, err := cwdURL.Parse("kube-system.jsonnet")
 	if err != nil {
 		return err
+	}
+
+	validate := kubecfg.ValidateCmd{
+		Discovery:     c.Discovery,
+		IgnoreUnknown: true,
 	}
 
 	update := kubecfg.UpdateCmd{
@@ -165,6 +170,9 @@ func (c InstallCmd) Update() error {
 		return err
 	}
 	log.Info("Using root manifest ", input)
+	if err := validate.Run(objs, out); err != nil {
+		return err
+	}
 	if err := update.Run(objs); err != nil {
 		return err
 	}
