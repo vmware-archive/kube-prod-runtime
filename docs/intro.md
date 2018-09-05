@@ -3,33 +3,33 @@
 The Bitnami Production Runtime for Kubernetes builds on a default
 "empty" kubernetes cluster.
 
-1. First, download the `installer` tool and place it somewhere in `$PATH`
+1. First, download the `kubeprod` tool and place it somewhere in `$PATH`
 
    ```sh
-   wget -O installer https://github.com/kube-prod-runtime/releases/download/v0.0.1/installer-linux-amd64
-   chmod +x installer
+   wget -O kubeprod https://github.com/kube-prod-runtime/releases/download/v1.0.0/kubeprod-linux-amd64
+   chmod +x kubeprod
    ```
 
 1. Find the prod-runtime "platform" that corresponds to your target
-   environment.  See `installer list-platforms` for supported
+   environment.  See `kubeprod list-platforms` for supported
    targets.
 
    If your environment is not in this list, you can try a similar but
    not identical platform.  It might work, but this combination has
    not been tested and is not supported by Bitnami.  Please file
-   requests using github issues if you have other platforms you would
+   requests using GitHub issues if you have other platforms you would
    like to see supported in the future.
 
-1. Run `installer`, with the target platform, and with the default
+1. Run `kubeprod`, with the target platform, and with the default
    `kubectl` context configured with an admin account for your
    cluster.
 
-   For example, to install onto GKE-1.9.x, use:
+   For example, to install onto AKS 1.9, use:
    ```sh
-   installer install --platform gke-1.9
+   kubeprod install aks --platform aks+k8s-1.9 ...
    ```
 
-   The installer may require some additional platform-specific
+   `kubeprod` may require some additional platform-specific
    information or credentials.
 
 1. It can take a few minutes for the new containers to download and
