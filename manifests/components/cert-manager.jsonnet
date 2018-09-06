@@ -5,6 +5,14 @@ local kube = import "../lib/kube.libsonnet";
   namespace:: {metadata+: {namespace: "kube-system"}},
   letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
+  // Letsencrypt environments
+  letsencrypt_environments:: {
+    "prod": $.letsencryptProd.metadata.name,
+    "staging": $.letsencryptStaging.metadata.name,
+  },
+  // Letsencrypt environment (defaults to the production one)
+  letsencrypt_environment:: "prod",
+
   Issuer(name):: kube._Object("certmanager.k8s.io/v1alpha1", "Issuer", name) {
   },
 
@@ -77,7 +85,7 @@ local kube = import "../lib/kube.libsonnet";
               args_+: {
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
                 "leader-election-namespace": "$(POD_NAMESPACE)",
-                "default-issuer-name": $.letsencryptProd.metadata.name,
+                "default-issuer-name": $.letsencrypt_environments[$.letsencrypt_environment],
                 "default-issuer-kind": "ClusterIssuer",
               },
               env_+: {
