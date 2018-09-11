@@ -1,9 +1,10 @@
 VERSION = dev-$(shell date +%FT%T%z)
 
 GO = go
+GOX = gox
 GOFLAGS =
 GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION)'
-GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo -installsuffix netgo
+GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo
 GOTESTFLAGS = $(GOFLAGS) -race
 GOFMT = gofmt
 export CGO_ENABLED
@@ -18,7 +19,10 @@ $(BINDIR)/kubeprod: $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
 release:
-	$(MAKE) all BINDIR=release CGO_ENABLED=0 GOBUILDFLAGS="$(GORELEASEFLAGS)"
+	go get github.com/mitchellh/gox
+	$(GOX) -os="darwin linux windows" -arch="amd64" \
+		--output="release/kubeprod-{{.OS}}-{{.Arch}}" \
+		$(GORELEASEFLAGS) .
 
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
