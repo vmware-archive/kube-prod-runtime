@@ -290,7 +290,7 @@ func PreUpdate(origConfig interface{}, contactEmail string) (interface{}, error)
 			log.Debugf("Creating AD application ...")
 			app, err := appClient.Create(ctx, graphrbac.ApplicationCreateParameters{
 				AvailableToOtherTenants: to.BoolPtr(false),
-				DisplayName:             to.StringPtr(fmt.Sprintf("%s-kubeprod-externaldns", conf.DnsZone)),
+				DisplayName:             to.StringPtr(fmt.Sprintf("Kubeprod External DNS support for %s", conf.DnsZone)),
 				Homepage:                to.StringPtr("http://kubeprod.io"),
 				IdentifierUris:          &[]string{fmt.Sprintf("http://%s-kubeprod-externaldns-user", conf.DnsZone)},
 			})
