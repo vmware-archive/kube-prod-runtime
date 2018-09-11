@@ -2,14 +2,11 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch-prod:6.3.2-r26";
-
-// Mount point for configuration files
-local ELASTICSEARCH_CONFIG_MOUNTPOINT = "/opt/bitnami/elasticsearch-prod/config";
+local ELASTICSEARCH_IMAGE = "juanariza131/elasticsearch:6";
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
-local ELASTICSEARCH_DATA_MOUNTPOINT = "/opt/bitnami/elasticsearch-prod/data";
+local ELASTICSEARCH_DATA_MOUNTPOINT = "/opt/bitnami/elasticsearch/data";
 
 // Mount point for the custom Java security properties configuration file
 local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.custom";
@@ -21,28 +18,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
   p:: "",
   min_master_nodes:: 2,
   namespace:: { metadata+: { namespace: "kube-system" } },
-
-  // ElasticSearch additional (custom) configuration
-  elasticsearch_config:: {
-    "cluster.name": "elasticsearch-cluster",
-    "http.port": ELASTICSEARCH_HTTP_PORT,
-    "transport.tcp.port": ELASTICSEARCH_TRANSPORT_PORT,
-    "network.host": "0.0.0.0",
-    "network.bind_host": "0.0.0.0",
-    "node.master": true,
-    "node.data": true,
-    "node.ingest": false,
-    // Used for discovery of ElasticSearch nodes via a Kubernetes
-    // headless (without a ClusterIP) service.
-    "discovery.zen.ping.unicast.hosts": $.svc.metadata.name,
-    // Verify quorum requirements.
-    assert ($.sts.spec.replicas >= $.min_master_nodes &&
-            $.sts.spec.replicas < $.min_master_nodes * 2) :
-    "Not enough quorum, verify min_master_nodes vs replicas",
-    // TODO: offer a dynamically sized pool of non-master nodes.
-    // Autoscaler will require custom HPA metrics in practice.
-    "discovery.zen.minimum_master_nodes": $.min_master_nodes,
-  },
 
   serviceAccount: kube.ServiceAccount($.p + "elasticsearch") + $.namespace,
 
@@ -64,13 +39,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
   disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.namespace {
     target_pod: $.sts.spec.template,
     spec+: { maxUnavailable: 1 },
-  },
-
-  // ConfigMap for ElasticSearch additional (custom) configuration
-  config: kube.ConfigMap($.p+"elasticsearch-logging") + $.namespace {
-    data+: {
-      "elasticsearch.yml": kubecfg.manifestYaml($.elasticsearch_config),
-    },
   },
 
   // ConfigMap for additional Java security properties
@@ -116,7 +84,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
           },
           default_container: "elasticsearch",
           volumes_+: {
-            config: kube.ConfigMapVolume($.config),
             java_security: kube.ConfigMapVolume($.java_security),
             },
           securityContext: {
@@ -144,12 +111,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               volumeMounts_+: {
                 // Persistence for ElasticSearch data
                 datadir: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
-                // ElasticSearch additional (custom) configuration
-                config: {
-                  mountPath: "%s/elasticsearch.yml" % ELASTICSEARCH_CONFIG_MOUNTPOINT,
-                  subPath: "elasticsearch.yml",
-                  readOnly: true,
-                },
                 java_security: {
                   mountPath: JAVA_SECURITY_MOUNTPOINT,
                   subPath: "java.security",
@@ -157,6 +118,14 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 },
               },
               env_+: {
+                ELASTICSEARCH_CLUSTER_NAME: "elasticsearch-cluster",
+                // TODO: offer a dynamically sized pool of non-master nodes.
+                // Autoscaler will require custom HPA metrics in practice.
+                assert ($.sts.spec.replicas >= $.min_master_nodes && $.sts.spec.replicas < $.min_master_nodes * 2) : "Not enough quorum, verify min_master_nodes vs replicas",
+                ELASTICSEARCH_MINIMUM_MASTER_NODES: $.min_master_nodes,
+                ELASTICSEARCH_PORT_NUMBER: ELASTICSEARCH_HTTP_PORT,
+                ELASTICSEARCH_NODE_PORT_NUMBER: ELASTICSEARCH_TRANSPORT_PORT,
+                ELASTICSEARCH_CLUSTER_HOSTS: $.svc.metadata.name,
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ES_JAVA_OPTS: std.join(" ", [
                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
