@@ -2,7 +2,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = "juanariza131/elasticsearch:6";
+local ELASTICSEARCH_IMAGE = "tompizmor/elasticsearch:6";
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
