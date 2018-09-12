@@ -39,6 +39,9 @@ dist: archiver release
 		$(DIST_DIRS) archiver make kubeprod-$(VERSION)-{}.zip {} \; \
 	)
 
+checksum:
+	for f in $$(ls _dist/*.gz _dist/*.zip) ; do shasum -a 256 "$${f}" | awk '{print $$1}' > $${f}.sha256 ; done
+
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
 
@@ -58,4 +61,4 @@ endif
 clean:
 	rm -rf $(BINDIR) ./_dist
 
-.PHONY: all release dist archiver test fmt vet clean
+.PHONY: all release dist checksum test fmt vet archiver clean
