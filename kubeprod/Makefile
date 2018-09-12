@@ -19,7 +19,7 @@ all: $(BINDIR)/$(PACKAGE)
 $(BINDIR)/$(PACKAGE): $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
-release:
+release: clean
 	@for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
@@ -38,4 +38,7 @@ fmt:
 vet:
 	$(GO) vet $(GOPKGS)
 
-.PHONY: all release test fmt vet
+clean:
+	rm -rf $(BINDIR)
+
+.PHONY: all release test fmt vet clean
