@@ -158,6 +158,7 @@ spec:
                                     sh 'make test'
                                     sh 'make vet'
 
+                                    sh 'make bootstrap'
                                     sh 'make release VERSION=${TAG_NAME:-BUILD_TAG}'
                                     sh './release/kubeprod-linux-amd64 --help'
                                     stash includes: 'release/**', name: 'release'

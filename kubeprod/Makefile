@@ -18,8 +18,7 @@ all: $(BINDIR)/kubeprod
 $(BINDIR)/kubeprod: $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
-release:
-	go get github.com/mitchellh/gox
+release: gox
 	$(GOX) -os="darwin linux windows" -arch="amd64" \
 		--output="release/kubeprod-{{.OS}}-{{.Arch}}" \
 		$(GORELEASEFLAGS) .
@@ -33,4 +32,11 @@ fmt:
 vet:
 	$(GO) vet $(GOPKGS)
 
-.PHONY: all release test fmt vet
+HAS_GOX := $(shell command -v gox;)
+
+gox:
+ifndef HAS_GOX
+	$(GO) get -u github.com/mitchellh/gox
+endif
+
+.PHONY: all release test fmt vet gox
