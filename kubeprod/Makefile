@@ -1,4 +1,5 @@
-VERSION = dev-$(shell date +%FT%T%z)
+VERSION ?= dev-$(shell date +%FT%T%z)
+TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
 
 GO = go
 GOX = gox
@@ -19,9 +20,7 @@ $(BINDIR)/kubeprod: $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
 release: gox
-	$(GOX) -os="darwin linux windows" -arch="amd64" \
-		--output="release/kubeprod-{{.OS}}-{{.Arch}}" \
-		$(GORELEASEFLAGS) .
+	CGO_ENABLED=0 $(GOX) -parallel=3 -output="_dist/{{.OS}}-{{.Arch}}/{{.Dir}}" -osarch='$(TARGETS)' $(GORELEASEFLAGS) .
 
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
