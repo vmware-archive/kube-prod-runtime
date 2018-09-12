@@ -1,5 +1,6 @@
 VERSION ?= dev-$(shell date +%FT%T%z)
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
+DIST_DIRS = find * -type d -exec
 PACKAGE = kubeprod
 
 GO = go
@@ -29,6 +30,15 @@ release: clean
 		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
 	done
 
+dist: archiver release
+	( \
+		cd _dist && \
+		$(DIST_DIRS) cp ../../LICENSE {} \; && \
+		$(DIST_DIRS) cp ../../README.md {} \; && \
+		$(DIST_DIRS) archiver make kubeprod-$(VERSION)-{}.tar.gz {} \; && \
+		$(DIST_DIRS) archiver make kubeprod-$(VERSION)-{}.zip {} \; \
+	)
+
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
 
@@ -38,7 +48,14 @@ fmt:
 vet:
 	$(GO) vet $(GOPKGS)
 
-clean:
-	rm -rf $(BINDIR)
+HAS_ARCHIVER := $(shell command -v archiver;)
 
-.PHONY: all release test fmt vet clean
+archiver:
+ifndef HAS_ARCHIVER
+	$(GO) get github.com/mholt/archiver/cmd/archiver
+endif
+
+clean:
+	rm -rf $(BINDIR) ./_dist
+
+.PHONY: all release dist archiver test fmt vet clean
