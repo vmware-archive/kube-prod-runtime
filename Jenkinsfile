@@ -37,7 +37,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
             withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
                 sh "kubectl version; kubectl cluster-info"
 
-                unstash 'release'
+                unstash 'binary'
                 unstash 'manifests'
 
                 sh "kubectl --namespace kube-system get po,deploy,svc,ing"
@@ -48,7 +48,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
                 // to do that via some sort of custom jsonnet overlay,
                 // since power users will want similar flexibility.
 
-                sh "./release/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests ${kubeprodArgs}"
 
                 // Wait for deployments to rollout before we start the integration tests
                 try {
@@ -158,9 +158,8 @@ spec:
                                     sh 'make test'
                                     sh 'make vet'
 
-                                    sh 'make release VERSION=$BUILD_TAG'
-                                    sh './release/kubeprod --help'
-                                    stash includes: 'release/**', name: 'release'
+                                    sh './bin/kubeprod --help'
+                                    stash includes: 'bin/**', name: 'binary'
                                 }
                             }
                         }
