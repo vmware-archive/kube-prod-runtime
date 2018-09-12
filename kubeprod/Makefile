@@ -35,8 +35,8 @@ dist: archiver release
 		cd _dist && \
 		$(DIST_DIRS) cp ../../LICENSE {} \; && \
 		$(DIST_DIRS) cp ../../README.md {} \; && \
-		$(DIST_DIRS) archiver make kubeprod-$(VERSION)-{}.tar.gz {} \; && \
-		$(DIST_DIRS) archiver make kubeprod-$(VERSION)-{}.zip {} \; \
+		$(DIST_DIRS) archiver make $(PACKAGE)-$(VERSION)-{}.tar.gz {} \; && \
+		$(DIST_DIRS) archiver make $(PACKAGE)-$(VERSION)-{}.zip {} \; \
 	)
 
 checksum:
