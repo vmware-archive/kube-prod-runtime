@@ -192,32 +192,6 @@ spec:
 
     def platforms = [:]
 
-    def minikubeKversions = []  // fixme: disabled minikube for now ["v1.8.0", "v1.9.6"]
-    for (x in minikubeKversions) {
-        def kversion = x  // local bind required because closures
-        def platform = "minikube-0.25+k8s-" + kversion[1..3]
-        platforms[platform] = {
-            stage(platform) {
-                node(label) {
-                    withGo() {
-                        dir('src/github.com/bitnami/kube-prod-runtime') {
-                            runIntegrationTest(platform, "", "") {
-                                withEnv(["PATH+TOOL=${tool 'minikube'}:${tool 'kubectl'}"]) {
-                                    cache(maxCacheSize: 1000, caches: [
-                                        [$class: 'ArbitraryFileCache', path: "${env.HOME}/.minikube/cache"],
-                                    ]) {
-                                        sh 'sudo apt-get -qy update && sudo apt-get install -qy libvirt-clients libvirt-daemon-system virtualbox'
-                                        sh "minikube start --kubernetes-version=${kversion}"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
     // See:
     //  az aks get-versions -l centralus
     //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
