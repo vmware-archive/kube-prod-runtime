@@ -2,8 +2,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local KIBANA_IMAGE = "bitnami/kibana:6.3.2-r8";
-
+local KIBANA_IMAGE = "bitnami/kibana:5.6.11-r18";
 
 local strip_trailing_slash(s) = (
   if std.endsWith(s, "/") then
