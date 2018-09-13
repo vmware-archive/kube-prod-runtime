@@ -134,7 +134,7 @@ Before running `kubeprod` to bootstrap BKPR, create a directory where `kubeprod`
 * `kube-system.jsonnet`: the cluster-specific entry point which is used by `kubeprod` and `kubecfg`
 * `kubeprod.json`: a JSON configuration file for the cluster. This file might contain sensitive information (secrets, passwords, tokens, etc.) so it is highly recommended to not store it under any revision control system.
 
-When `kubeprod` runs, it performs some platform-specific steps. For example, when bootstrapping BKPR in AKS (Azure Kubernetes), `kubeprod` will create some objects in Azure.
+When `kubeprod` runs, it performs some platform-specific steps. For example, when bootstrapping BKPR in AKS (Azure Kubernetes), `kubeprod` will create some objects in Azure. For more detailed information about these objects, refer to [here](aks/objects.md).
 
 Afterwards, `kubeprod` generates the `kube-system.jsonnet` and `kubeprod.json` files and then will perform a `kubecfg update` using the cluster-specific `kube-system.jsonnet` file generated as the entry point.
 
