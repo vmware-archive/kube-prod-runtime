@@ -2,7 +2,12 @@ local kube = import "../lib/kube.libsonnet";
 
 {
   p:: "",
-  namespace:: {metadata+: {namespace: "kube-system"}},
+
+  metadata:: {
+    metadata+: {
+      namespace: $.namespace,
+    }
+  },
 
   clusterRole: kube.ClusterRole($.p+"external-dns") {
     rules: [
@@ -34,9 +39,9 @@ local kube = import "../lib/kube.libsonnet";
     subjects_+: [$.sa],
   },
 
-  sa: kube.ServiceAccount($.p+"external-dns") + $.namespace,
+  sa: kube.ServiceAccount($.p+"external-dns") + $.metadata,
 
-  deploy: kube.Deployment($.p+"external-dns") + $.namespace {
+  deploy: kube.Deployment($.p+"external-dns") + $.metadata {
     local this = self,
     ownerId:: error "ownerId is required",
     spec+: {

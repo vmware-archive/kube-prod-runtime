@@ -2,14 +2,19 @@ local kube = import "../lib/kube.libsonnet";
 
 {
   p:: "",
-  namespace:: {metadata+: {namespace: "kube-system"}},
 
-  svc: kube.Service($.p+"etcd") + $.namespace {
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    }
+  },
+
+  svc: kube.Service($.p+"etcd") + $.metadata {
     target_pod: $.etcd.spec.template,
     port: 2379,
   },
 
-  etcd: kube.StatefulSet($.p+"etcd") + $.namespace {
+  etcd: kube.StatefulSet($.p+"etcd") + $.metadata {
     spec+: {
       replicas: 3,
       volumeClaimTemplates_+: {

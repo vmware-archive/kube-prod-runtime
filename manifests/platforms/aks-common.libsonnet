@@ -12,12 +12,23 @@ local kibana = import "../components/kibana.jsonnet";
 {
   config:: error "no kubeprod configuration",
 
+  // Shared metadata for all components
+  metadata:: {
+    metadata+: {
+      namespace: kube.Namespace("kubeprod").metadata.name,
+    }
+  },
+
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
 
   edns: edns {
-    azconf: kube.Secret(edns.p+"external-dns-azure-conf") + edns.namespace {
+    local this = self,
+
+    metadata:: $.metadata,
+
+    azconf: kube.Secret(edns.p+"external-dns-azure-conf") + $.metadata {
       data_+: {
         azure:: $.config.externalDns,
         "azure.json": std.manifestJson(self.azure),
@@ -50,14 +61,19 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   cert_manager: cert_manager {
+    metadata: $.metadata,
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
-  nginx_ingress: nginx_ingress,
+  nginx_ingress: nginx_ingress {
+    metadata:: $.metadata,
+  },
 
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
+
+    metadata:: $.metadata,
 
     secret+: {
       data_+: $.config.oauthProxy,
@@ -84,6 +100,7 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   heapster: heapster {
+    metadata:: $.metadata,
     deployment+: {
       metadata+: {
         labels+: {
@@ -97,6 +114,7 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   prometheus: prometheus {
+    metadata:: $.metadata,
     ingress+: {
       host: "prometheus." + $.external_dns_zone_name,
     },
@@ -115,14 +133,17 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   fluentd_es: fluentd_es {
+    metadata:: $.metadata,
     es:: $.elasticsearch,
   },
 
-  elasticsearch: elasticsearch,
+  elasticsearch: elasticsearch {
+    metadata:: $.metadata,
+  },
 
   kibana: kibana {
+    metadata:: $.metadata,
     es:: $.elasticsearch,
-
     ingress+: {
       host: "kibana." + $.external_dns_zone_name,
     },
