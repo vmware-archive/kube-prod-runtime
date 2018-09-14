@@ -13,9 +13,10 @@ local kibana = import "../components/kibana.jsonnet";
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
+  kubeprod: kube.Namespace("kubeprod"),
   metadata:: {
     metadata+: {
-      namespace: kube.Namespace("kubeprod").metadata.name,
+      namespace: $.kubeprod.metadata.name,
     }
   },
 
