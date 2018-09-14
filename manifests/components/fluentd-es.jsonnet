@@ -56,7 +56,6 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
               },
               env_+: {
                 FLUENTD_OPT: "-q",
-                BUFFER_DIR: "/var/log/fluentd-buffers",
                 ES_HOST: $.es.svc.host,
               },
               resources: {
