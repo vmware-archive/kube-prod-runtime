@@ -18,14 +18,6 @@ type Platform struct {
 
 var Platforms = []Platform{
 	{
-		Name:        "minikube-0.25+k8s-1.9",
-		Description: "Minikube 0.25 with Kubernetes 1.9",
-	},
-	{
-		Name:        "minikube-0.25+k8s-1.8",
-		Description: "Minikube 0.25 with Kubernetes 1.8",
-	},
-	{
 		Name:        "aks+k8s-1.9",
 		Description: "Azure Container Service (AKS) with Kubernetes 1.9",
 		PreUpdate:   aks.PreUpdate,
