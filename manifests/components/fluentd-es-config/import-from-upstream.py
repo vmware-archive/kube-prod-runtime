@@ -16,3 +16,4 @@ for fname, content in yaml.safe_load(r.text)['data'].items():
     print("Saving to " + fname)
     with open(fname, "w") as f:
         f.write(content)
+        f.write("\n")  # Add trailing newline
