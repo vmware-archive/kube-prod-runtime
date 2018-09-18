@@ -1,5 +1,4 @@
 local kube = import "../lib/kube.libsonnet";
-local bitnami = import "../lib/bitnami.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.4-r55";
@@ -73,7 +72,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
         },
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
-          affinity: bitnami.PodZoneAntiAffinityAnnotation(this.spec.template),
+          affinity: kube.PodZoneAntiAffinityAnnotation(this.spec.template),
           default_container: "elasticsearch_logging",
           volumes_+: {
             java_security: kube.ConfigMapVolume($.java_security),

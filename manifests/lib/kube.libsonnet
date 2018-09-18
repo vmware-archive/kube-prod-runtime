@@ -517,4 +517,25 @@
       podSelector: {matchLabels: this.target.metadata.labels},
     },
   },
+
+  PodZoneAntiAffinityAnnotation(pod): {
+    podAntiAffinity: {
+      preferredDuringSchedulingIgnoredDuringExecution: [
+        {
+          weight: 50,
+          podAffinityTerm: {
+            labelSelector: { matchLabels: pod.metadata.labels },
+            topologyKey: "failure-domain.beta.kubernetes.io/zone",
+          },
+        },
+        {
+          weight: 100,
+          podAffinityTerm: {
+            labelSelector: { matchLabels: pod.metadata.labels },
+            topologyKey: "kubernetes.io/hostname",
+          },
+        },
+      ],
+    },
+  },
 }
