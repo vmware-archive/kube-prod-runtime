@@ -138,13 +138,10 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 failureThreshold: 4,
                 successThreshold: 2,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
-              livenessProbe: {
-                httpGet: { path: "/_cluster/health?local=true", port: "db" },
+              livenessProbe: self.readinessProbe {
                 // /elasticsearch_logging_discovery has a 5min timeout on cluster bootstrap
-                initialDelaySeconds: 5 * 60,  // Number of seconds after the container has started before liveness probes are initiated.
-                periodSeconds: 30,  // How often (in seconds) to perform the probe.
-                failureThreshold: 4,  // Minimum consecutive failures for the probe to be considered failed after having succeeded.
-
+                initialDelaySeconds: 5 * 60,
+                successThreshold: 1,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
             },
             prom_exporter: kube.Container("prom-exporter") {
