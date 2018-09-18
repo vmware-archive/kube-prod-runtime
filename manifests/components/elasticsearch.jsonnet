@@ -17,12 +17,17 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
   p:: "",
   min_master_nodes:: 2,
 
-  metadata:: {
+  labels:: {
     metadata+: {
-      namespace: "kube-system",
       labels+: {
         "k8s-app": "elasticsearch-logging",
       },
+    },
+  },
+
+  metadata:: $.labels {
+    metadata+: {
+      namespace: "kube-system",
     },
   },
 
@@ -39,7 +44,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     ],
   },
 
-  elasticsearchBinding: kube.ClusterRoleBinding($.p + "elasticsearch-logging") + $.metadata {
+  elasticsearchBinding: kube.ClusterRoleBinding($.p + "elasticsearch-logging") + $.labels {
     roleRef_: $.elasticsearchRole,
     subjects_+: [$.serviceAccount],
   },
