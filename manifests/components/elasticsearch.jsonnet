@@ -25,11 +25,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     },
   },
 
-  metadata:: $.labels {
-    metadata+: {
-      namespace: "kube-system",
-    },
-  },
+  metadata:: $.labels { metadata+: { namespace: "kube-system" } },
 
   serviceAccount: kube.ServiceAccount($.p + "elasticsearch-logging") + $.metadata {
   },
