@@ -1,5 +1,4 @@
 local kube = import "../lib/kube.libsonnet";
-local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.4-r55";
@@ -17,11 +16,21 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 {
   p:: "",
   min_master_nodes:: 2,
-  namespace:: { metadata+: { namespace: "kube-system" } },
 
-  serviceAccount: kube.ServiceAccount($.p + "elasticsearch") + $.namespace,
+  labels:: {
+    metadata+: {
+      labels+: {
+        "k8s-app": "elasticsearch-logging",
+      },
+    },
+  },
 
-  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") {
+  metadata:: $.labels { metadata+: { namespace: "kube-system" } },
+
+  serviceAccount: kube.ServiceAccount($.p + "elasticsearch-logging") + $.metadata {
+  },
+
+  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") + $.metadata {
     rules: [
       {
         apiGroups: [""],
@@ -31,28 +40,29 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     ],
   },
 
-  elasticsearchBinding: kube.ClusterRoleBinding($.p + "elasticsearch-logging") {
+  elasticsearchBinding: kube.ClusterRoleBinding($.p + "elasticsearch-logging") + $.labels {
     roleRef_: $.elasticsearchRole,
     subjects_+: [$.serviceAccount],
   },
 
-  disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.namespace {
+  disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.metadata {
     target_pod: $.sts.spec.template,
     spec+: { maxUnavailable: 1 },
   },
 
   // ConfigMap for additional Java security properties
-  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.namespace {
+  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.metadata {
     data+: {
       "java.security": (importstr "elasticsearch-config/java.security"),
     },
   },
 
-  sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.namespace {
+  sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.metadata {
     local this = self,
     spec+: {
-      replicas: 3,
       podManagementPolicy: "Parallel",
+      replicas: 3,
+      updateStrategy: { type: "RollingUpdate" },
       template+: {
         metadata+: {
           annotations+: {
@@ -62,35 +72,16 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
         },
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
-          affinity: {
-            podAntiAffinity: {
-              preferredDuringSchedulingIgnoredDuringExecution: [
-                {
-                  weight: 100,
-                  podAffinityTerm: {
-                    labelSelector: this.spec.selector,
-                    topologyKey: "kubernetes.io/hostname",
-                  },
-                },
-                {
-                  weight: 10,
-                  podAffinityTerm: {
-                    labelSelector: this.spec.selector,
-                    topologyKey: "failure-domain.beta.kubernetes.io/zone",
-                  },
-                },
-              ],
-            },
-          },
-          default_container: "elasticsearch",
+          affinity: kube.PodZoneAntiAffinityAnnotation(this.spec.template),
+          default_container: "elasticsearch_logging",
           volumes_+: {
             java_security: kube.ConfigMapVolume($.java_security),
-            },
+          },
           securityContext: {
             fsGroup: 1001,
           },
           containers_+: {
-            elasticsearch: kube.Container("elasticsearch") {
+            elasticsearch_logging: kube.Container("elasticsearch-logging") {
               local container = self,
               image: ELASTICSEARCH_IMAGE,
               // This can massively vary depending on the logging volume
@@ -110,7 +101,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               },
               volumeMounts_+: {
                 // Persistence for ElasticSearch data
-                datadir: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
+                data: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
                 java_security: {
                   mountPath: JAVA_SECURITY_MOUNTPOINT,
                   subPath: "java.security",
@@ -135,22 +126,18 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 ]),
               },
               readinessProbe: {
+                httpGet: { path: "/_cluster/health?local=true", port: "db" },
                 // don't allow rolling updates to kill containers until the cluster is green
                 // ...meaning it's not allocating replicas or relocating any shards
-                // FIXME: great idea in theory, breaks bootstrapping.
-                //local probe = self,
-                //httpGet: { path: "/_cluster/health?local=true&wait_for_status=green&timeout=%ds" % probe.timeoutSeconds, port: "db" },
-                httpGet: { path: "/_nodes/_local/version", port: "db" },
-                timeoutSeconds: 5,
-                initialDelaySeconds: 2 * 60,
+                initialDelaySeconds: 120,
                 periodSeconds: 30,
                 failureThreshold: 4,
+                successThreshold: 2,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
               livenessProbe: self.readinessProbe {
-                httpGet: { path: "/_nodes/_local/version", port: "db" },
-
                 // elasticsearch_logging_discovery has a 5min timeout on cluster bootstrap
                 initialDelaySeconds: 5 * 60,
+                successThreshold: 1,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
             },
             prom_exporter: kube.Container("prom-exporter") {
@@ -172,7 +159,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
             },
           },
           initContainers_+: {
-            elasticsearch_init: kube.Container("elasticsearch-init") {
+            elasticsearch_logging_init: kube.Container("elasticsearch-logging-init") {
               image: "alpine:3.6",
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
               command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"],
@@ -186,14 +173,17 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
         },
       },
       volumeClaimTemplates_+: {
-        datadir: { storage: "100Gi" },
+        data: { storage: "100Gi" },
       },
     },
   },
 
-  svc: kube.Service($.p + "elasticsearch-logging") + $.namespace {
+  svc: kube.Service($.p + "elasticsearch-logging") + $.metadata {
     target_pod: $.sts.spec.template,
     metadata+: {
+      labels+: {
+        "kubernetes.io/name": "Elasticsearch",
+      },
       annotations+: {
         // From: https://github.com/kubernetes/dns/blob/master/docs/specification.md
         // An endpoint is considered ready if its address is in the addresses field
