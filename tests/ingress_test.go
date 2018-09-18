@@ -16,7 +16,6 @@ import (
 	"k8s.io/api/core/v1"
 	xv1beta1 "k8s.io/api/extensions/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -73,21 +72,6 @@ func httpClient(hosts *map[string]string) (*http.Client, error) {
 	return &http.Client{Transport: transport}, nil
 }
 
-func DecodeFile(decoder runtime.Decoder, path string) (runtime.Object, error) {
-	buf, err := ioutil.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	obj, _, err := decoder.Decode(buf, nil, nil)
-	return obj, err
-}
-
-func DecodeFileOrDie(decoder runtime.Decoder, path string) runtime.Object {
-	obj, err := DecodeFile(decoder, path)
-	Expect(err).NotTo(HaveOccurred())
-	return obj
-}
-
 func statusCode(resp *http.Response) int {
 	return resp.StatusCode
 }
@@ -137,11 +121,11 @@ var _ = Describe("Ingress", func() {
 
 		decoder := scheme.Codecs.UniversalDeserializer()
 
-		deploy = DecodeFileOrDie(decoder, "testdata/ingress-deploy.yaml").(*appsv1beta1.Deployment)
+		deploy = decodeFileOrDie(decoder, "testdata/ingress-deploy.yaml").(*appsv1beta1.Deployment)
 
-		svc = DecodeFileOrDie(decoder, "testdata/ingress-service.yaml").(*v1.Service)
+		svc = decodeFileOrDie(decoder, "testdata/ingress-service.yaml").(*v1.Service)
 
-		ing = DecodeFileOrDie(decoder, "testdata/ingress-ingress.yaml").(*xv1beta1.Ingress)
+		ing = decodeFileOrDie(decoder, "testdata/ingress-ingress.yaml").(*xv1beta1.Ingress)
 
 		suffix := *dnsSuffix
 		if suffix == "" {

@@ -1,0 +1,22 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: echolog
+  labels:
+    name: echolog
+spec:
+  template:
+    metadata:
+      labels:
+        name: echolog
+    spec:
+      containers:
+        - name: echolog
+          image: busybox
+          command:
+          - sh
+          - -c
+          - while true; do echo "$LOG_SIGNATURE"; sleep 1; done
+          env:
+          - name: LOG_SIGNATURE
+            value: dummy

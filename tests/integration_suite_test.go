@@ -3,6 +3,7 @@ package integration
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"testing"
@@ -17,6 +18,8 @@ import (
 
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
+
+	"k8s.io/apimachinery/pkg/runtime"
 
 	// For client auth plugins
 	_ "k8s.io/client-go/plugin/pkg/client/auth"
@@ -65,6 +68,21 @@ func deleteNsOrDie(c corev1.NamespacesGetter, ns string) {
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+func decodeFile(decoder runtime.Decoder, path string) (runtime.Object, error) {
+	buf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return nil, err
+	}
+	obj, _, err := decoder.Decode(buf, nil, nil)
+	return obj, err
+}
+
+func decodeFileOrDie(decoder runtime.Decoder, path string) runtime.Object {
+	obj, err := decodeFile(decoder, path)
+	Expect(err).NotTo(HaveOccurred())
+	return obj
 }
 
 func TestE2e(t *testing.T) {
