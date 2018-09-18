@@ -139,7 +139,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 successThreshold: 2,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
               livenessProbe: self.readinessProbe {
-                // /elasticsearch_logging_discovery has a 5min timeout on cluster bootstrap
+                // elasticsearch_logging_discovery has a 5min timeout on cluster bootstrap
                 initialDelaySeconds: 5 * 60,
                 successThreshold: 1,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
