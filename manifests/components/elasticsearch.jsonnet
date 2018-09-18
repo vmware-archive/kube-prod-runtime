@@ -64,7 +64,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
   sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.metadata {
     local this = self,
     spec+: {
-      //podManagementPolicy: "OrderedReady",
       podManagementPolicy: "Parallel",
       replicas: 3,
       updateStrategy: { type: "RollingUpdate" },
