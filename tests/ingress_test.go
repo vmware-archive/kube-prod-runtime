@@ -131,7 +131,7 @@ var _ = Describe("Ingress", func() {
 	var svc *v1.Service
 	var ns string
 
-	BeforeEach(func() {
+	BeforeSuite(func() {
 		c = kubernetes.NewForConfigOrDie(clusterConfigOrDie())
 		ns = createNsOrDie(c.CoreV1(), "test-ing-")
 
@@ -148,14 +148,17 @@ var _ = Describe("Ingress", func() {
 			suffix = "kubeprod.test"
 		}
 		ing.Spec.Rules[0].Host = fmt.Sprintf("%s.%s", ns, suffix)
-	})
 
-	AfterEach(func() {
-		// disable namespace deletion due to timeout issue experienced on AKS, TODO: re-enable
-		// deleteNsOrDie(c.CoreV1(), ns)
-	})
+		if *dnsSuffix != "" {
+			// enable tls certificate provisioning
+			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "kubernetes.io/tls-acme", "true")
+			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "certmanager.k8s.io/cluster-issuer", "letsencrypt-staging")
+			ing.Spec.TLS = []xv1beta1.IngressTLS{{
+				Hosts:      []string{ing.Spec.Rules[0].Host},
+				SecretName: fmt.Sprintf("%s-tls", ing.GetName()),
+			}}
+		}
 
-	JustBeforeEach(func() {
 		var err error
 		deploy, err = c.AppsV1beta1().Deployments(ns).Create(deploy)
 		Expect(err).NotTo(HaveOccurred())
@@ -165,6 +168,11 @@ var _ = Describe("Ingress", func() {
 
 		ing, err = c.ExtensionsV1beta1().Ingresses(ns).Create(ing)
 		Expect(err).NotTo(HaveOccurred())
+	})
+
+	AfterSuite(func() {
+		// disable namespace deletion due to timeout issue experienced on AKS, TODO: re-enable
+		// deleteNsOrDie(c.CoreV1(), ns)
 	})
 
 	Context("basic", func() {
@@ -252,24 +260,13 @@ var _ = Describe("Ingress", func() {
 			// Will probably need to revisit for minikube :(
 			Expect(string(realIP)).NotTo(WithTransform(isPrivateIP, BeTrue()))
 		})
-	})
 
-	Context("with TLS", func() {
-		BeforeEach(func() {
+		It("should be reachable via https URL", func() {
 			if *dnsSuffix == "" {
 				// This test requires a real DNS suffix, because letsencrypt
 				Skip("--dns-suffix was not provided")
 			}
 
-			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "kubernetes.io/tls-acme", "true")
-			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "certmanager.k8s.io/cluster-issuer", "letsencrypt-staging")
-			ing.Spec.TLS = []xv1beta1.IngressTLS{{
-				Hosts:      []string{ing.Spec.Rules[0].Host},
-				SecretName: fmt.Sprintf("%s-tls", ing.GetName()),
-			}}
-		})
-
-		It("should be reachable via https URL", func() {
 			url := fmt.Sprintf("https://%s", ing.Spec.Rules[0].Host)
 			var resp *http.Response
 
