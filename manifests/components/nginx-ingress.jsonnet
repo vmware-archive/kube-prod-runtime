@@ -1,6 +1,6 @@
 local kube = import "../lib/kube.libsonnet";
 
-local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.18.0-r5";
+local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
 
 {
   p:: "",
@@ -184,6 +184,13 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.18.0-r5";
           containers_+: {
             default: kube.Container("nginx") {
               image: NGNIX_INGRESS_IMAGE,
+              securityContext: {
+                runAsUser: 1001,
+                capabilities: {
+                  drop: ['ALL'],
+                  add: ['NET_BIND_SERVICE'],
+                },
+              },
               env_+: {
                 POD_NAME: kube.FieldRef("metadata.name"),
                 POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
