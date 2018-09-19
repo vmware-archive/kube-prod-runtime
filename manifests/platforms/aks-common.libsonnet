@@ -14,11 +14,6 @@ local kibana = import "../components/kibana.jsonnet";
 
   // Shared metadata for all components
   kubeprod: kube.Namespace("kubeprod"),
-  metadata:: {
-    metadata+: {
-      namespace: $.kubeprod.metadata.name,
-    }
-  },
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -27,9 +22,12 @@ local kibana = import "../components/kibana.jsonnet";
   edns: edns {
     local this = self,
 
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
 
-    azconf: kube.Secret(edns.p+"external-dns-azure-conf") + $.metadata {
+    azconf: kube.Secret(edns.p+"external-dns-azure-conf") {
+      metadata+: {
+        namespace: $.kubeprod.metadata.name,
+      },
       data_+: {
         azure:: $.config.externalDns,
         "azure.json": std.manifestJson(self.azure),
@@ -62,19 +60,19 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   cert_manager: cert_manager {
-    metadata: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
   nginx_ingress: nginx_ingress {
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
   },
 
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
 
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
 
     secret+: {
       data_+: $.config.oauthProxy,
@@ -101,7 +99,7 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   heapster: heapster {
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
     deployment+: {
       metadata+: {
         labels+: {
@@ -115,7 +113,7 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   prometheus: prometheus {
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
     ingress+: {
       host: "prometheus." + $.external_dns_zone_name,
     },
@@ -134,16 +132,16 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   fluentd_es: fluentd_es {
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
     es:: $.elasticsearch,
   },
 
   elasticsearch: elasticsearch {
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
   },
 
   kibana: kibana {
-    metadata:: $.metadata,
+    namespace:: $.kubeprod.metadata.name,
     es:: $.elasticsearch,
     ingress+: {
       host: "kibana." + $.external_dns_zone_name,

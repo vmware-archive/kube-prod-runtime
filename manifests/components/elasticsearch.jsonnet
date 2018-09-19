@@ -16,6 +16,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 {
   p:: "",
   min_master_nodes:: 2,
+  namespace:: error "namespace is undefined",
 
   labels:: {
     metadata+: {
@@ -25,12 +26,16 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     },
   },
 
-  metadata:: $.labels { metadata+: { namespace: "kubeprod" } },
-
-  serviceAccount: kube.ServiceAccount($.p + "elasticsearch-logging") + $.metadata {
+  serviceAccount: kube.ServiceAccount($.p + "elasticsearch-logging") + $.labels {
+    metadata+: {
+      namespace: $.namespace,
+    },
   },
 
-  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") + $.metadata {
+  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") + $.labels {
+    metadata+: {
+      namespace: $.namespace,
+    },
     rules: [
       {
         apiGroups: [""],
@@ -45,20 +50,29 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     subjects_+: [$.serviceAccount],
   },
 
-  disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.metadata {
+  disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.labels {
+    metadata+: {
+      namespace: $.namespace,
+    },
     target_pod: $.sts.spec.template,
     spec+: { maxUnavailable: 1 },
   },
 
   // ConfigMap for additional Java security properties
-  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.metadata {
+  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.labels {
+    metadata+: {
+      namespace: $.namespace,
+    },
     data+: {
       "java.security": (importstr "elasticsearch-config/java.security"),
     },
   },
 
-  sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.metadata {
+  sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.labels {
     local this = self,
+    metadata+: {
+      namespace: $.namespace,
+    },
     spec+: {
       podManagementPolicy: "Parallel",
       replicas: 3,
@@ -178,9 +192,10 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     },
   },
 
-  svc: kube.Service($.p + "elasticsearch-logging") + $.metadata {
+  svc: kube.Service($.p + "elasticsearch-logging") + $.labels {
     target_pod: $.sts.spec.template,
     metadata+: {
+      namespace: $.namespace,
       labels+: {
         "kubernetes.io/name": "Elasticsearch",
       },

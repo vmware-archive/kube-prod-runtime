@@ -4,13 +4,13 @@ local arch = "amd64";
 local version = "v1.5.2";
 
 {
-  metadata:: {
-    metadata+: {
-      namespace: "kubeprod",
-    }
-  },
+  namespace:: error "namespace is undefined",
 
-  serviceAccount: kube.ServiceAccount("heapster") + $.metadata,
+  serviceAccount: kube.ServiceAccount("heapster") {
+    metadata+: {
+      namespace: $.namespace,
+    },
+  },
 
   clusterRoleBinding: kube.ClusterRoleBinding("heapster-binding") {
     roleRef: {
@@ -21,8 +21,11 @@ local version = "v1.5.2";
     subjects_: [$.serviceAccount],
   },
 
-  nannyRole: kube.Role("pod-nanny") + $.metadata {
-    metadata+: { name: "system:pod-nanny" },
+  nannyRole: kube.Role("pod-nanny") {
+    metadata+: {
+      namespace: $.namespace,
+      name: "system:pod-nanny"
+    },
     rules: [
       {
         apiGroups: [""],
@@ -37,19 +40,27 @@ local version = "v1.5.2";
     ],
   },
 
-  roleBinding: kube.RoleBinding("heapster-binding") + $.metadata {
+  roleBinding: kube.RoleBinding("heapster-binding") {
+    metadata+: {
+      namespace: $.namespace,
+    },
     roleRef_: $.nannyRole,
     subjects_: [$.serviceAccount],
   },
 
-  service: kube.Service("heapster") + $.metadata {
+  service: kube.Service("heapster") {
+    metadata+: {
+      namespace: $.namespace,
+    },
     target_pod: $.deployment.spec.template,
     port: 80,
   },
 
-  deployment: kube.Deployment("heapster") + $.metadata {
+  deployment: kube.Deployment("heapster") {
     local this = self,
-
+    metadata+: {
+      namespace: $.namespace,
+    },
     spec+: {
       template+: {
         metadata+: {

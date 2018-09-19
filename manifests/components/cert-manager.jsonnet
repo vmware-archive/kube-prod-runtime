@@ -2,13 +2,7 @@ local kube = import "../lib/kube.libsonnet";
 
 {
   p:: "",
-
-  metadata:: {
-    metadata+: {
-      namespace: "kubeprod",
-    }
-  },
-
+  namespace:: error "namespace is undefined",
   letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
   // Letsencrypt environments
@@ -38,7 +32,11 @@ local kube = import "../lib/kube.libsonnet";
     },
   },
 
-  sa: kube.ServiceAccount($.p+"cert-manager") + $.metadata,
+  sa: kube.ServiceAccount($.p+"cert-manager") {
+    metadata+: {
+      namespace: $.namespace,
+    },
+  },
 
   clusterRole: kube.ClusterRole($.p+"cert-manager") {
     rules: [
@@ -73,7 +71,10 @@ local kube = import "../lib/kube.libsonnet";
     subjects_+: [$.sa],
   },
 
-  deploy: kube.Deployment($.p+"cert-manager") + $.metadata {
+  deploy: kube.Deployment($.p+"cert-manager") {
+    metadata+: {
+      namespace: $.namespace,
+    },
     spec+: {
       template+: {
         metadata+: {

@@ -13,10 +13,11 @@ local strip_trailing_slash(s) = (
 
 {
   p:: "",
+  namespace:: error "namespace is undefined",
 
   metadata:: {
     metadata+: {
-      namespace: "kubeprod",
+      namespace: $.namespace,
     }
   },
 
