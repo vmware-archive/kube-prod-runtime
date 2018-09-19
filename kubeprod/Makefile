@@ -1,11 +1,11 @@
 VERSION ?= dev-$(shell date +%FT%T%z)
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
+PACKAGE = kubeprod
 
 GO = go
-GOX = gox
 GOFLAGS =
 GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION)'
-GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo
+GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo -installsuffix netgo
 GOTESTFLAGS = $(GOFLAGS) -race
 GOFMT = gofmt
 export CGO_ENABLED
@@ -14,13 +14,20 @@ BINDIR = bin
 
 GOPKGS = . ./cmd/... ./pkg/...
 
-all: $(BINDIR)/kubeprod
+all: $(BINDIR)/$(PACKAGE)
 
-$(BINDIR)/kubeprod: $(shell tools/godeps.sh .)
+$(BINDIR)/$(PACKAGE): $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
-release: gox
-	CGO_ENABLED=0 $(GOX) -parallel=3 -output="_dist/{{.OS}}-{{.Arch}}/{{.Dir}}" -osarch='$(TARGETS)' $(GORELEASEFLAGS) .
+release:
+	@for platform in $(TARGETS); do \
+		GOOS=$${platform%/*} ; \
+		GOARCH=$${platform#*/} ; \
+		output=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE)-$${GOOS}-$${GOARCH} ; \
+		if [ $${GOOS} = "windows" ]; then output=$${output}.exe ; fi ; \
+		echo CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
+		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
+	done
 
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
@@ -31,11 +38,4 @@ fmt:
 vet:
 	$(GO) vet $(GOPKGS)
 
-HAS_GOX := $(shell command -v gox;)
-
-gox:
-ifndef HAS_GOX
-	$(GO) get -u github.com/mitchellh/gox
-endif
-
-.PHONY: all release test fmt vet gox
+.PHONY: all release test fmt vet
