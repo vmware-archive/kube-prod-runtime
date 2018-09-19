@@ -83,7 +83,18 @@ local kibana = import "../components/kibana.jsonnet";
     },
   },
 
-  heapster: heapster,
+  heapster: heapster {
+    deployment+: {
+      metadata+: {
+        labels+: {
+          // The heapster pod was constantly being relaunched delaying the rollout on AKS
+          // adding the // addon-manager label "EnsureExists" works around this issue
+          // monitor https://github.com/Azure/ACS/issues/49 for issue resolution in AKS
+          "addonmanager.kubernetes.io/mode": "EnsureExists",
+        },
+      },
+    },
+  },
 
   prometheus: prometheus {
     ingress+: {
