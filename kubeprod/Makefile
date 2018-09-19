@@ -1,5 +1,6 @@
 VERSION ?= dev-$(shell date +%FT%T%z)
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
+DIST_DIRS = find * -type d -exec
 PACKAGE = kubeprod
 
 GO = go
@@ -19,7 +20,7 @@ all: $(BINDIR)/$(PACKAGE)
 $(BINDIR)/$(PACKAGE): $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
-release:
+release: clean
 	@for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
@@ -28,6 +29,18 @@ release:
 		echo CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
 		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
 	done
+
+dist: archiver release
+	( \
+		cd _dist && \
+		$(DIST_DIRS) cp ../../LICENSE {} \; && \
+		$(DIST_DIRS) cp ../../README.md {} \; && \
+		$(DIST_DIRS) archiver make $(PACKAGE)-$(VERSION)-{}.tar.gz {} \; && \
+		$(DIST_DIRS) archiver make $(PACKAGE)-$(VERSION)-{}.zip {} \; \
+	)
+
+checksum:
+	for f in $$(ls _dist/*.gz _dist/*.zip) ; do shasum -a 256 "$${f}" | awk '{print $$1}' > $${f}.sha256 ; done
 
 test:
 	$(GO) test $(GOTESTFLAGS) $(GOPKGS)
@@ -38,4 +51,14 @@ fmt:
 vet:
 	$(GO) vet $(GOPKGS)
 
-.PHONY: all release test fmt vet
+HAS_ARCHIVER := $(shell command -v archiver;)
+
+archiver:
+ifndef HAS_ARCHIVER
+	$(GO) get github.com/mholt/archiver/cmd/archiver
+endif
+
+clean:
+	rm -rf $(BINDIR) ./_dist
+
+.PHONY: all release dist checksum test fmt vet archiver clean

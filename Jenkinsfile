@@ -8,6 +8,8 @@
 // - jobcacher
 // - azure-credentials
 
+import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
+
 // Force using our pod
 //def label = UUID.randomUUID().toString()
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
@@ -138,6 +140,20 @@ spec:
     stage('Checkout') {
         node(label) {
             checkout scm
+
+            // Ideally this should be done in the Release stage, but it seems to be quite a task to get
+            // git metadata stash and unstashed properly (see: https://issues.jenkins-ci.org/browse/JENKINS-33126)
+            if (env.TAG_NAME) {
+                withGo() {
+                    withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                        withCredentials([usernamePassword(credentialsId: 'bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                            sh "make release-notes VERSION=${env.TAG_NAME}"
+                        }
+                        stash includes: 'Release_Notes.md', name: 'release-notes'
+                    }
+                }
+            }
+
             stash includes: '**', excludes: 'tests/**', name: 'src'
             stash includes: 'tests/**', name: 'tests'
         }
@@ -325,4 +341,27 @@ az account set -s $AZURE_SUBSCRIPTION_ID
     }
 
     parallel platforms
+
+    stage('Release') {
+        node(label) {
+            if (env.TAG_NAME) {
+                withGo() {
+                    dir('src/github.com/bitnami/kube-prod-runtime') {
+                        timeout(time: 30) {
+                            unstash 'src'
+                            unstash 'release-notes'
+
+                            sh "make dist VERSION=${env.TAG_NAME}"
+
+                            withCredentials([usernamePassword(credentialsId: 'bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                                sh "make publish VERSION=${env.TAG_NAME}"
+                            }
+                        }
+                    }
+                }
+            } else {
+                Utils.markStageSkippedForConditional(STAGE_NAME)
+            }
+        }
+    }
 }
