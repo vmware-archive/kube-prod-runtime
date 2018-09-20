@@ -1,6 +1,8 @@
 VERSION ?= dev-$(shell date +%FT%T%z)
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
-DIST_DIRS = find * -type d -exec
+DIST_DIRS = find * -maxdepth 0 -type d -exec
+MANIFEST_DIST_DIRS = lib components platforms
+
 PACKAGE = kubeprod
 
 GO = go
@@ -30,7 +32,17 @@ release: clean
 		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
 	done
 
-dist: archiver release
+manifests: release
+	@for platform in $(TARGETS); do \
+		GOOS=$${platform%/*} ; \
+		GOARCH=$${platform#*/} ; \
+		mkdir -p _dist/$${GOOS}-$${GOARCH}/manifests ; \
+		for d in $(MANIFEST_DIST_DIRS); do \
+			cp -a ../manifests/$${d} _dist/$${GOOS}-$${GOARCH}/manifests/ ; \
+		done ; \
+	done
+
+dist: archiver release manifests
 	( \
 		cd _dist && \
 		$(DIST_DIRS) cp ../../LICENSE {} \; && \

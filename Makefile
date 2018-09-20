@@ -23,7 +23,6 @@ release-notes: Release_Notes.md
 
 dist:
 	$(MAKE) -C kubeprod $@ VERSION=$(VERSION)
-	$(MAKE) -C manifests $@ VERSION=$(VERSION)
 
 publish: github-release release-notes
 ifndef GITHUB_TOKEN
@@ -32,12 +31,10 @@ endif
 	github-release delete --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' || :
 	cat Release_Notes.md | github-release release --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' -n 'BKPR $(VERSION)' -d -
 	for f in $$(ls kubeprod/_dist/*.gz kubeprod/_dist/*.zip) ; do github-release upload --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' --name "$$(basename $${f})" --file "$${f}" ; done ; \
-  for f in $$(ls manifests/_dist/*.gz manifests/_dist/*.zip) ; do github-release upload --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' --name "$$(basename $${f})" --file "$${f}" ; done
 
 clean:
 	rm -rf Release_Notes.md
 	$(MAKE) -C kubeprod $@
-	$(MAKE) -C manifests $@
 
 HAS_GITHUB_RELEASE := $(shell command -v github-release;)
 
