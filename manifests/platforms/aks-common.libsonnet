@@ -20,14 +20,8 @@ local kibana = import "../components/kibana.jsonnet";
   letsencrypt_environment:: "prod",
 
   edns: edns {
-    local this = self,
-
-    namespace:: $.kubeprod.metadata.name,
-
-    azconf: kube.Secret(edns.p+"external-dns-azure-conf") {
-      metadata+: {
-        namespace: $.kubeprod.metadata.name,
-      },
+    azconf: kube.Secret(edns.p + "external-dns-azure-conf") {
+      metadata+: { namespace: "kubeprod" },
       data_+: {
         azure:: $.config.externalDns,
         "azure.json": std.manifestJson(self.azure),
@@ -60,19 +54,15 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   cert_manager: cert_manager {
-    namespace:: $.kubeprod.metadata.name,
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
   nginx_ingress: nginx_ingress {
-    namespace:: $.kubeprod.metadata.name,
   },
 
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
-
-    namespace:: $.kubeprod.metadata.name,
 
     secret+: {
       data_+: $.config.oauthProxy,
@@ -99,7 +89,6 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   heapster: heapster {
-    namespace:: $.kubeprod.metadata.name,
     deployment+: {
       metadata+: {
         labels+: {
@@ -113,7 +102,6 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   prometheus: prometheus {
-    namespace:: $.kubeprod.metadata.name,
     ingress+: {
       host: "prometheus." + $.external_dns_zone_name,
     },
@@ -132,16 +120,13 @@ local kibana = import "../components/kibana.jsonnet";
   },
 
   fluentd_es: fluentd_es {
-    namespace:: $.kubeprod.metadata.name,
     es:: $.elasticsearch,
   },
 
   elasticsearch: elasticsearch {
-    namespace:: $.kubeprod.metadata.name,
   },
 
   kibana: kibana {
-    namespace:: $.kubeprod.metadata.name,
     es:: $.elasticsearch,
     ingress+: {
       host: "kibana." + $.external_dns_zone_name,

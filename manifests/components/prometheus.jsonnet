@@ -23,18 +23,19 @@ local get_cm_web_hook_url = function(port, path) (
 
 {
   p:: "",
-  namespace:: error "namespace is undefined",
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
+  },
 
-  ingress: utils.AuthIngress($.p + "prometheus") {
+  ingress: utils.AuthIngress($.p + "prometheus") + $.metadata {
     local this = self,
     host:: error "host is required",
     prom_path:: "/",
     am_path:: "/alertmanager",
     prom_url:: "http://%s%s" % [this.host, self.prom_path],
     am_url:: "http://%s%s" % [this.host, self.am_path],
-    metadata+: {
-      namespace: $.namespace,
-    },
     spec+: {
       rules+: [
         {
@@ -98,7 +99,7 @@ local get_cm_web_hook_url = function(port, path) (
           rules: [
             {
               alert: "PrometheusBadConfig",
-              expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.namespace,
+              expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
               "for": "10m",
               labels: {severity: "critical"},
               annotations: {
@@ -108,7 +109,7 @@ local get_cm_web_hook_url = function(port, path) (
             },
             {
               alert: "AlertmanagerBadConfig",
-              expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.namespace,
+              expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
               "for": "10m",
               labels: {severity: "critical"},
               annotations: {
@@ -128,10 +129,7 @@ local get_cm_web_hook_url = function(port, path) (
   prometheus: {
     local prom = self,
 
-    serviceAccount: kube.ServiceAccount($.p + "prometheus") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    serviceAccount: kube.ServiceAccount($.p + "prometheus") + $.metadata {
     },
 
     prometheusRole: kube.ClusterRole($.p + "prometheus") {
@@ -158,26 +156,17 @@ local get_cm_web_hook_url = function(port, path) (
       subjects_+: [prom.serviceAccount],
     },
 
-    svc: kube.Service($.p + "prometheus") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    svc: kube.Service($.p + "prometheus") + $.metadata {
       target_pod: prom.deploy.spec.template,
     },
 
-    config: kube.ConfigMap($.p + "prometheus") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    config: kube.ConfigMap($.p + "prometheus") + $.metadata {
       data+: $.rules {
         "prometheus.yml": kubecfg.manifestYaml($.config),
       },
     },
 
-    deploy: kube.StatefulSet($.p + "prometheus") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    deploy: kube.StatefulSet($.p + "prometheus") + $.metadata {
       spec+: {
         volumeClaimTemplates_: {
           data: {
@@ -284,36 +273,23 @@ local get_cm_web_hook_url = function(port, path) (
   alertmanager: {
     local am = self,
 
-    svc: kube.Service($.p + "alertmanager") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    svc: kube.Service($.p + "alertmanager") + $.metadata {
       target_pod: am.deploy.spec.template,
     },
 
-    config: kube.ConfigMap($.p + "alertmanager") {
-      metadata+: {
-        namespace: $.namespace,
-      },
-
+    config: kube.ConfigMap($.p + "alertmanager") + $.metadata {
       data+: {
         "config.yml": kubecfg.manifestYaml($.am_config),
       },
     },
 
-    templates: kube.ConfigMap($.p + "alertmanager-templates") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    templates: kube.ConfigMap($.p + "alertmanager-templates") + $.metadata {
       data+: {
         // empty (for now)
       },
     },
 
-    deploy: kube.StatefulSet($.p + "alertmanager") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    deploy: kube.StatefulSet($.p + "alertmanager") + $.metadata {
       spec+: {
         volumeClaimTemplates_+: {
           storage: {storage: "5Gi"},
@@ -377,11 +353,8 @@ local get_cm_web_hook_url = function(port, path) (
   },
 
   nodeExporter: {
-    daemonset: kube.DaemonSet($.p + "node-exporter") {
+    daemonset: kube.DaemonSet($.p + "node-exporter") + $.metadata {
       local this = self,
-      metadata+: {
-        namespace: $.namespace,
-      },
       spec+: {
         template+: {
           spec+: {
@@ -438,10 +411,7 @@ local get_cm_web_hook_url = function(port, path) (
   },
 
   ksm: {
-    serviceAccount: kube.ServiceAccount($.p + "kube-state-metrics") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    serviceAccount: kube.ServiceAccount($.p + "kube-state-metrics") + $.metadata {
     },
 
     clusterRole: kube.ClusterRole($.p + "kube-state-metrics") {
@@ -464,10 +434,7 @@ local get_cm_web_hook_url = function(port, path) (
       subjects_: [$.ksm.serviceAccount],
     },
 
-    role: kube.Role($.p + "kube-state-metrics-resizer") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    role: kube.Role($.p + "kube-state-metrics-resizer") + $.metadata {
       rules: [
         {
           apiGroups: [""],
@@ -483,19 +450,13 @@ local get_cm_web_hook_url = function(port, path) (
       ],
     },
 
-    roleBinding: kube.RoleBinding($.p + "kube-state-metrics") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    roleBinding: kube.RoleBinding($.p + "kube-state-metrics") + $.metadata {
       roleRef_: $.ksm.role,
       subjects_: [$.ksm.serviceAccount],
     },
 
-    deploy: kube.Deployment($.p + "kube-state-metrics") {
+    deploy: kube.Deployment($.p + "kube-state-metrics") + $.metadata {
       local deploy = self,
-      metadata+: {
-        namespace: $.namespace,
-      },
       spec+: {
         template+: {
           metadata+: {

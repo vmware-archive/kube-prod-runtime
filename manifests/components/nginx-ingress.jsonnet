@@ -4,12 +4,13 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
 
 {
   p:: "",
-  namespace:: error "namespace is undefined",
-
-  config: kube.ConfigMap($.p + "nginx-ingress") {
+  metadata:: {
     metadata+: {
-      namespace: $.namespace,
+      namespace: "kubeprod",
     },
+  },
+
+  config: kube.ConfigMap($.p + "nginx-ingress") + $.metadata {
     data+: {
       "proxy-connect-timeout": "15",
       "disable-ipv6": "false",
@@ -25,31 +26,19 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
     },
   },
 
-  tcpconf: kube.ConfigMap($.p+"tcp-services") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  tcpconf: kube.ConfigMap($.p + "tcp-services") + $.metadata {
   },
 
-  udpconf: kube.ConfigMap($.p+"udp-services") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  udpconf: kube.ConfigMap($.p + "udp-services") + $.metadata {
   },
 
   default: {
-    svc: kube.Service($.p+"default-http-backend") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    svc: kube.Service($.p + "default-http-backend") + $.metadata {
       target_pod: $.default.deploy.spec.template,
       port: 80,
     },
 
-    deploy: kube.Deployment($.p+"default-http-backend") {
-      metadata+: {
-        namespace: $.namespace,
-      },
+    deploy: kube.Deployment($.p + "default-http-backend") + $.metadata {
       spec+: {
         template+: {
           spec+: {
@@ -114,10 +103,7 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
     ],
   },
 
-  ingressControllerRole: kube.Role($.p+"nginx-ingress-controller") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  ingressControllerRole: kube.Role($.p + "nginx-ingress-controller") + $.metadata {
     rules: [
       {
         apiGroups: [""],
@@ -158,25 +144,15 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
     subjects_: [$.serviceAccount],
   },
 
-  ingressControllerRoleBinding: kube.RoleBinding($.p+"nginx-ingress-controller") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  ingressControllerRoleBinding: kube.RoleBinding($.p + "nginx-ingress-controller") + $.metadata {
     roleRef_: $.ingressControllerRole,
     subjects_: [$.serviceAccount],
   },
 
-  serviceAccount: kube.ServiceAccount($.p+"nginx-ingress-controller") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  serviceAccount: kube.ServiceAccount($.p + "nginx-ingress-controller") + $.metadata {
   },
 
-  svc: kube.Service($.p+"nginx-ingress") {
-    local this = self,
-    metadata+: {
-      namespace: $.namespace,
-    },
+  svc: kube.Service($.p + "nginx-ingress") + $.metadata {
     target_pod: $.controller.spec.template,
     spec+: {
       ports: [
@@ -188,18 +164,12 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
     },
   },
 
-  hpa: kube.HorizontalPodAutoscaler($.p+"nginx-ingress-controller") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  hpa: kube.HorizontalPodAutoscaler($.p + "nginx-ingress-controller") + $.metadata {
     target: $.controller,
     spec+: {maxReplicas: 10},
   },
 
-  controller: kube.Deployment($.p+"nginx-ingress-controller") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  controller: kube.Deployment($.p + "nginx-ingress-controller") + $.metadata {
     spec+: {
       template+: {
         metadata+: {

@@ -2,12 +2,13 @@ local kube = import "../lib/kube.libsonnet";
 
 {
   p:: "",
-  namespace:: error "namespace is undefined",
-
-  secret: kube.Secret($.p+"oauth2-proxy") {
+  metadata:: {
     metadata+: {
-      namespace: $.namespace,
+      namespace: "kubeprod",
     },
+  },
+
+  secret: kube.Secret($.p + "oauth2-proxy") + $.metadata {
     data_+: {
       client_id: error "client_id is required",
       client_secret: error "client_secret is required",
@@ -15,26 +16,17 @@ local kube = import "../lib/kube.libsonnet";
     },
   },
 
-  svc: kube.Service($.p+"oauth2-proxy") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  svc: kube.Service($.p + "oauth2-proxy") + $.metadata {
     target_pod: $.deploy.spec.template,
     port: 4180,
   },
 
-  hpa: kube.HorizontalPodAutoscaler($.p+"oauth2-proxy") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  hpa: kube.HorizontalPodAutoscaler($.p + "oauth2-proxy") + $.metadata {
     target: $.deploy,
     spec+: {maxReplicas: 10},
   },
 
-  deploy: kube.Deployment($.p+"oauth2-proxy") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  deploy: kube.Deployment($.p + "oauth2-proxy") + $.metadata {
     spec+: {
       template+: {
         spec+: {

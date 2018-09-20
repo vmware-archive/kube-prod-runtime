@@ -9,16 +9,17 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
 {
   p:: "",
-  namespace:: error "namespace is undefined",
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
+  },
 
   criticalPod:: { metadata+: { annotations+: { "scheduler.alpha.kubernetes.io/critical-pod": "" } } },
 
   es: error "elasticsearch is required",
 
-  fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
     data+: {
       // Verbatim from upstream:
       "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
@@ -31,10 +32,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     },
   },
 
-  serviceAccount: kube.ServiceAccount($.p + "fluentd-es") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  serviceAccount: kube.ServiceAccount($.p + "fluentd-es") + $.metadata {
   },
 
   fluentdRole: kube.ClusterRole($.p + "fluentd-es") {
@@ -52,10 +50,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     subjects_+: [$.serviceAccount],
   },
 
-  daemonset: kube.DaemonSet($.p + "fluentd-es") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  daemonset: kube.DaemonSet($.p + "fluentd-es") + $.metadata {
     spec+: {
       template+: $.criticalPod {
         spec+: {

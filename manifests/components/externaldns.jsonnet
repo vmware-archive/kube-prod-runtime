@@ -2,9 +2,13 @@ local kube = import "../lib/kube.libsonnet";
 
 {
   p:: "",
-  namespace:: error "namespace is undefined",
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
+  },
 
-  clusterRole: kube.ClusterRole($.p+"external-dns") {
+  clusterRole: kube.ClusterRole($.p + "external-dns") {
     rules: [
       {
         apiGroups: [""],
@@ -29,23 +33,17 @@ local kube = import "../lib/kube.libsonnet";
     ],
   },
 
-  clusterRoleBinding: kube.ClusterRoleBinding($.p+"external-dns-viewer") {
+  clusterRoleBinding: kube.ClusterRoleBinding($.p + "external-dns-viewer") {
     roleRef_: $.clusterRole,
     subjects_+: [$.sa],
   },
 
-  sa: kube.ServiceAccount($.p+"external-dns") {
-    metadata+: {
-      namespace: $.namespace,
-    },
+  sa: kube.ServiceAccount($.p + "external-dns") + $.metadata {
   },
 
-  deploy: kube.Deployment($.p+"external-dns") {
+  deploy: kube.Deployment($.p + "external-dns") + $.metadata {
     local this = self,
     ownerId:: error "ownerId is required",
-    metadata+: {
-      namespace: $.namespace,
-    },
     spec+: {
       template+: {
         spec+: {
