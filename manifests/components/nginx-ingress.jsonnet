@@ -14,7 +14,7 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
       "proxy-connect-timeout": "15",
       "disable-ipv6": "false",
 
-      "hsts": "false",
+      "hsts": "true",
       //"hsts-include-subdomains": "false",
 
       "enable-vts-status": "true",
