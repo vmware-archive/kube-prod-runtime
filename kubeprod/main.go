@@ -7,6 +7,9 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/cmd"
+
+	// Register platform-specific packages
+	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
 )
 
 var version = "(dev build)"

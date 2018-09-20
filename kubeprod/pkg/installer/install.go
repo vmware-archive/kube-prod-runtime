@@ -59,16 +59,16 @@ func marshalFile(path string, obj interface{}) error {
 	return f.Close()
 }
 
-// InstallCmd represents the show subcommand
+// InstallCmd represents the install subcommand
 type InstallCmd struct {
 	Config     *restclient.Config
 	ClientPool dynamic.ClientPool
 	Discovery  discovery.DiscoveryInterface
 
-	Platform     *prodruntime.Platform
-	ManifestBase *url.URL
-	ContactEmail string
-	DnsSuffix    string
+	PlatformConfig     interface{}
+	Platform           *prodruntime.Platform
+	PlatformConfigPath string
+	ManifestBase       *url.URL
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
@@ -86,33 +86,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 		}
 	}
 
-	// TODO: should be a command line flag or similar
-	// In particular, the (cluster-specific) config should not be
-	// stored along with the rest of the (generic) manifests.
-	confUrl, err := c.ManifestBase.Parse("kubeprod.json")
-	if err != nil {
-		return err
-	}
-	if confUrl.Scheme != "file" {
-		return fmt.Errorf("unable to handle non-file manifest URLs .. for now")
-	}
-
-	var conf interface{}
-	if err := unmarshalFile("./kubeprod.json", &conf); err == nil {
-		log.Debug("Reading existing cluster settings from %q", confUrl)
-	} else if !os.IsNotExist(err) {
-		return err
-	}
-
-	if conf, err = c.Platform.RunPreUpdate(conf, c.ContactEmail); err != nil {
-		return err
-	}
-
-	log.Infof("Writing cluster settings to ./kubeprod.json")
-	if err := marshalFile("./kubeprod.json", conf); err != nil {
-		return err
-	}
-
 	log.Info("Generating root manifest for platform ", c.Platform.Name)
 	if err := prodruntime.WriteRootManifest(c.ManifestBase.Path, c.Platform.Name); err != nil {
 		return err
@@ -125,10 +98,6 @@ func (c InstallCmd) Run(out io.Writer) error {
 		if err := c.Update(out); err != nil {
 			return err
 		}
-
-		if err := c.Platform.RunPostUpdate(c.Config); err != nil {
-			return err
-		}
 	} else {
 		fmt.Println("Kubernetes cluster is ready for deployment.")
 		fmt.Println("run: kubecfg update --ignore-unknown kube-system.jsonnet")
@@ -136,10 +105,32 @@ func (c InstallCmd) Run(out io.Writer) error {
 	return nil
 }
 
+func (c InstallCmd) ReadPlatformConfig(into interface{}) error {
+	path := c.PlatformConfigPath
+
+	if err := unmarshalFile(path, into); err == nil {
+		log.Debug("Reading existing cluster settings from %q", path)
+	} else if !os.IsNotExist(err) {
+		return err
+	}
+
+	return nil
+}
+
+func (c InstallCmd) WritePlatformConfig(conf interface{}) error {
+	path := c.PlatformConfigPath
+
+	if err := marshalFile(path, conf); err == nil {
+		log.Infof("Writing cluster settings to %q", path)
+	}
+
+	return nil
+}
+
 func (c InstallCmd) Update(out io.Writer) error {
 	log.Info("Updating platform ", c.Platform.Name)
 	searchUrls := []*url.URL{
-		&url.URL{Scheme: "internal", Path: "/"},
+		{Scheme: "internal", Path: "/"},
 	}
 	importer := utils.MakeUniversalImporter(searchUrls)
 	cwdURL, err := tools.CwdURL()
