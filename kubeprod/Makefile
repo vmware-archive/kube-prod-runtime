@@ -1,6 +1,5 @@
 VERSION ?= dev-$(shell date +%FT%T%z)
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
-DIST_DIRS = find * -maxdepth 0 -type d -exec
 MANIFEST_DIST_DIRS = lib components platforms
 
 PACKAGE = kubeprod
@@ -26,30 +25,30 @@ release: clean
 	@for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
-		output=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE)-$${GOOS}-$${GOARCH} ; \
+		output=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE) ; \
 		if [ $${GOOS} = "windows" ]; then output=$${output}.exe ; fi ; \
 		echo CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
 		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
 	done
 
 manifests: release
-	@for platform in $(TARGETS); do \
-		GOOS=$${platform%/*} ; \
-		GOARCH=$${platform#*/} ; \
-		mkdir -p _dist/$${GOOS}-$${GOARCH}/manifests ; \
-		for d in $(MANIFEST_DIST_DIRS); do \
-			cp -a ../manifests/$${d} _dist/$${GOOS}-$${GOARCH}/manifests/ ; \
-		done ; \
+	@mkdir -p _dist/manifests
+	@for d in $(MANIFEST_DIST_DIRS); do \
+		echo "cp -a ../manifests/$${d} _dist/manifests/" ; \
+		cp -a ../manifests/$${d} _dist/manifests/ ; \
 	done
 
 dist: archiver release manifests
-	( \
-		cd _dist && \
-		$(DIST_DIRS) cp ../../LICENSE {} \; && \
-		$(DIST_DIRS) cp ../../README.md {} \; && \
-		$(DIST_DIRS) archiver make $(PACKAGE)-$(VERSION)-{}.tar.gz {} \; && \
-		$(DIST_DIRS) archiver make $(PACKAGE)-$(VERSION)-{}.zip {} \; \
-	)
+	@for platform in $(TARGETS); do \
+		GOOS=$${platform%/*} ; \
+		GOARCH=$${platform#*/} ; \
+		output_format=tar.gz ; \
+		kubeprod_binary=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE) ; \
+		if [ $${GOOS} = "windows" ]; then output_format=zip ; kubeprod_binary=$${kubeprod_binary}.exe ; fi ; \
+		output=_dist/$(PACKAGE)-$(VERSION)-$${GOOS}-$${GOARCH}.$${output_format} ; \
+		echo "archiver make $${output} ../LICENSE ../README.md $${kubeprod_binary} _dist/manifests" ; \
+		archiver make $${output} ../LICENSE ../README.md $${kubeprod_binary} _dist/manifests ; \
+	done
 
 checksum:
 	for f in $$(ls _dist/*.gz _dist/*.zip) ; do shasum -a 256 "$${f}" | awk '{print $$1}' > $${f}.sha256 ; done
