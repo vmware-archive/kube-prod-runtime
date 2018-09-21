@@ -307,7 +307,7 @@ az aks create                      \
 """
                                             ])
 
-                                            writeFile([file: 'kube-system.jsonnet', text: """
+                                            writeFile([file: 'kubeprod.jsonnet', text: """
 (import "manifests/platforms/${platform}.jsonnet") {
   config:: import "kubeprod.json",
   letsencrypt_environment: "staging"
