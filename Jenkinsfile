@@ -42,7 +42,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
                 unstash 'binary'
                 unstash 'manifests'
 
-                sh "kubectl --namespace kube-system get po,deploy,svc,ing"
+                sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
 
                 // install
                 // FIXME: we should have a better "test mode", that uses
@@ -57,10 +57,10 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
                     timeout(time: 30, unit: 'MINUTES') {
                         sh '''
 set +x
-for deploy in $(kubectl --namespace kube-system get deploy --output name)
+for deploy in $(kubectl --namespace kubeprod get deploy --output name)
 do
   echo "Waiting for rollout of ${deploy}..."
-  while ! $(kubectl --namespace kube-system rollout status ${deploy} --watch=false | grep -q "successfully rolled out")
+  while ! $(kubectl --namespace kubeprod rollout status ${deploy} --watch=false | grep -q "successfully rolled out")
   do
     sleep 3
   done
@@ -68,7 +68,7 @@ done
 '''
                     }
                 } catch (error) {
-                    sh "kubectl --namespace kube-system get po,deploy,svc,ing"
+                    sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
                     throw error
                 }
 
@@ -80,7 +80,7 @@ done
                             sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
                         }
                     } catch (error) {
-                        sh "kubectl --namespace kube-system get po,deploy,svc,ing"
+                        sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
                         input 'Paused for manual debugging'
                             throw error
                     } finally {
