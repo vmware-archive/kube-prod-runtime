@@ -42,9 +42,16 @@ dist: archiver release manifests
 	@for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
-		output_format=tar.gz ; \
-		kubeprod_binary=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE) ; \
-		if [ $${GOOS} = "windows" ]; then output_format=zip ; kubeprod_binary=$${kubeprod_binary}.exe ; fi ; \
+		case $${GOOS} in \
+			windows) \
+				output_format=zip ; \
+				kubeprod_binary=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE).exe ; \
+				;; \
+			*) \
+				output_format=tar.gz ; \
+				kubeprod_binary=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE); \
+				;; \
+		esac ; \
 		output=_dist/$(PACKAGE)-$(VERSION)-$${GOOS}-$${GOARCH}.$${output_format} ; \
 		echo "archiver make $${output} ../LICENSE ../README.md $${kubeprod_binary} _dist/manifests" ; \
 		archiver make $${output} ../LICENSE ../README.md $${kubeprod_binary} _dist/manifests ; \
