@@ -29,7 +29,7 @@ func RandString(n int) string {
 }
 
 type hits struct {
-	Total int `json:"total`
+	Total int `json:"total"`
 }
 
 type apiResponse struct {
