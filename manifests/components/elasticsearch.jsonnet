@@ -5,7 +5,7 @@ local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.4-r55";
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
-local ELASTICSEARCH_DATA_MOUNTPOINT = "/opt/bitnami/elasticsearch/data";
+local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
 
 // Mount point for the custom Java security properties configuration file
 local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.custom";
