@@ -307,6 +307,9 @@ local get_cm_web_hook_url = function(port, path) (
               config: kube.ConfigMapVolume(am.config),
               templates: kube.ConfigMapVolume(am.templates),
             },
+            securityContext+: {
+              fsGroup: 1001,
+            },
             containers_+: {
               default: kube.Container("alertmanager") {
                 image: "bitnami/alertmanager:0.14.0",
