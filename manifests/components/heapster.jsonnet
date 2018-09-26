@@ -4,11 +4,14 @@ local arch = "amd64";
 local version = "v1.5.2";
 
 {
-  namespace:: {
-    metadata+: { namespace: "kube-system" },
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
   },
 
-  serviceAccount: kube.ServiceAccount("heapster") + $.namespace,
+  serviceAccount: kube.ServiceAccount("heapster") + $.metadata {
+  },
 
   clusterRoleBinding: kube.ClusterRoleBinding("heapster-binding") {
     roleRef: {
@@ -19,8 +22,10 @@ local version = "v1.5.2";
     subjects_: [$.serviceAccount],
   },
 
-  nannyRole: kube.Role("pod-nanny") + $.namespace {
-    metadata+: { name: "system:pod-nanny" },
+  nannyRole: kube.Role("pod-nanny") + $.metadata {
+    metadata+: {
+      name: "system:pod-nanny"
+    },
     rules: [
       {
         apiGroups: [""],
@@ -35,19 +40,18 @@ local version = "v1.5.2";
     ],
   },
 
-  roleBinding: kube.RoleBinding("heapster-binding") + $.namespace {
+  roleBinding: kube.RoleBinding("heapster-binding") + $.metadata {
     roleRef_: $.nannyRole,
     subjects_: [$.serviceAccount],
   },
 
-  service: kube.Service("heapster") + $.namespace {
+  service: kube.Service("heapster") + $.metadata {
     target_pod: $.deployment.spec.template,
     port: 80,
   },
 
-  deployment: kube.Deployment("heapster") + $.namespace {
+  deployment: kube.Deployment("heapster") + $.metadata {
     local this = self,
-
     spec+: {
       template+: {
         metadata+: {

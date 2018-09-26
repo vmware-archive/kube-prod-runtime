@@ -2,7 +2,11 @@ local kube = import "../lib/kube.libsonnet";
 
 {
   p:: "",
-  namespace:: {metadata+: {namespace: "kube-system"}},
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
+  },
   letsencrypt_contact_email:: error "Letsencrypt contact e-mail is undefined",
 
   // Letsencrypt environments
@@ -32,9 +36,10 @@ local kube = import "../lib/kube.libsonnet";
     },
   },
 
-  sa: kube.ServiceAccount($.p+"cert-manager") + $.namespace,
+  sa: kube.ServiceAccount($.p + "cert-manager") + $.metadata {
+  },
 
-  clusterRole: kube.ClusterRole($.p+"cert-manager") {
+  clusterRole: kube.ClusterRole($.p + "cert-manager") {
     rules: [
       {
         apiGroups: ["certmanager.k8s.io"],
@@ -67,7 +72,7 @@ local kube = import "../lib/kube.libsonnet";
     subjects_+: [$.sa],
   },
 
-  deploy: kube.Deployment($.p+"cert-manager") + $.namespace {
+  deploy: kube.Deployment($.p+"cert-manager") + $.metadata {
     spec+: {
       template+: {
         metadata+: {
@@ -124,5 +129,4 @@ local kube = import "../lib/kube.libsonnet";
       },
     },
   },
-
 }

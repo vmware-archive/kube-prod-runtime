@@ -12,12 +12,16 @@ local kibana = import "../components/kibana.jsonnet";
 {
   config:: error "no kubeprod configuration",
 
+  // Shared metadata for all components
+  kubeprod: kube.Namespace("kubeprod"),
+
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
 
   edns: edns {
-    azconf: kube.Secret(edns.p+"external-dns-azure-conf") + edns.namespace {
+    azconf: kube.Secret(edns.p + "external-dns-azure-conf") {
+      metadata+: { namespace: "kubeprod" },
       data_+: {
         azure:: $.config.externalDns,
         "azure.json": std.manifestJson(self.azure),
@@ -54,7 +58,8 @@ local kibana = import "../components/kibana.jsonnet";
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
-  nginx_ingress: nginx_ingress,
+  nginx_ingress: nginx_ingress {
+  },
 
   oauth2_proxy: oauth2_proxy {
     local oauth2 = self,
@@ -118,11 +123,11 @@ local kibana = import "../components/kibana.jsonnet";
     es:: $.elasticsearch,
   },
 
-  elasticsearch: elasticsearch,
+  elasticsearch: elasticsearch {
+  },
 
   kibana: kibana {
     es:: $.elasticsearch,
-
     ingress+: {
       host: "kibana." + $.external_dns_zone_name,
     },

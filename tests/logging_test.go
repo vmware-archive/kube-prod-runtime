@@ -9,7 +9,6 @@ import (
 	. "github.com/onsi/gomega"
 
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -78,7 +77,7 @@ var _ = Describe("Logging", func() {
 				var err error
 				selector := "log:" + deploy.Spec.Template.Spec.Containers[0].Env[0].Value
 				params := map[string]string{"q": selector}
-				resultRaw, err := c.CoreV1().Services(metav1.NamespaceSystem).ProxyGet("http", "elasticsearch-logging", "9200", "_search", params).DoRaw()
+				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "elasticsearch-logging", "9200", "_search", params).DoRaw()
 				if err != nil {
 					return nil, err
 				}

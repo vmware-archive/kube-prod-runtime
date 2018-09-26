@@ -151,16 +151,16 @@ kubeprod install aks \
 
 Replace the `<email-address>` in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
 
-Once BKPR has been deployed to your cluster, you will need to wait for all pods to be running and TLS certificates to be issued to be able to use BKPR. BKPR deploys everything into the `kube-system` namespace. Check that all pods are successfully running:
+Once BKPR has been deployed to your cluster, you will need to wait for all pods to be running and TLS certificates to be issued to be able to use BKPR. BKPR deploys everything into the `kubeprod` namespace. Check that all pods are successfully running:
 
 ```bash
-kubectl get pods -n kube-system
+kubectl get pods -n kubeprod
 ``` 
 
 BKPR uses `cert-manager` to requests TLS certificates for Kibana and Prometheus. You can check the certificates objects that were created:
 
 ```console
-kubectl get certificates -n kube-system
+kubectl get certificates -n kubeprod
 NAME                 AGE
 kibana-logging-tls   3h
 prometheus-tls       3h
@@ -169,7 +169,7 @@ prometheus-tls       3h
 And check whether the TLS certificates were already successfully issued:
 
 ```console
-kubectl describe certificate -n kube-system kibana-logging-tls
+kubectl describe certificate -n kubeprod kibana-logging-tls
 ...
   Conditions:
     Last Transition Time:  2018-07-06T09:58:34Z

@@ -13,13 +13,18 @@ local strip_trailing_slash(s) = (
 
 {
   p:: "",
-  namespace:: { metadata+: { namespace: "kube-system" } },
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
+  },
 
   es: error "elasticsearch is required",
 
-  serviceAccount: kube.ServiceAccount($.p + "kibana") + $.namespace,
+  serviceAccount: kube.ServiceAccount($.p + "kibana") + $.metadata {
+  },
 
-  deploy: kube.Deployment($.p + "kibana") + $.namespace {
+  deploy: kube.Deployment($.p + "kibana") + $.metadata {
     spec+: {
       template+: {
         spec+: {
@@ -55,11 +60,11 @@ local strip_trailing_slash(s) = (
     },
   },
 
-  svc: kube.Service($.p + "kibana-logging") + $.namespace {
+  svc: kube.Service($.p + "kibana-logging") + $.metadata {
     target_pod: $.deploy.spec.template,
   },
 
-  ingress: utils.AuthIngress($.p + "kibana-logging") + $.namespace {
+  ingress: utils.AuthIngress($.p + "kibana-logging") + $.metadata {
     local this = self,
     host:: error "host is required",
     spec+: {

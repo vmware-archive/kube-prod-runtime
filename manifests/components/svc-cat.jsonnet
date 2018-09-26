@@ -27,7 +27,12 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
 
 {
   p:: "service-catalog-",
-  namespace:: {metadata+: {namespace: "kube-system"}},
+
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    }
+  },
 
   apiservice: APIService() {
     spec+: {
@@ -44,7 +49,7 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
   },
 
   api: {
-    sa: kube.ServiceAccount($.p+"apiserver") + $.namespace,
+    sa: kube.ServiceAccount($.p+"apiserver") + $.metadata,
 
     clusterRole: kube.ClusterRole($.p+"apiserver") {
       rules: [{
@@ -68,7 +73,7 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
       subjects_+: [$.api.sa],
     },
 
-    apiserverAuthBinding: kube.RoleBinding($.p+"apiserver-auth-reader") + $.namespace {
+    apiserverAuthBinding: kube.RoleBinding($.p+"apiserver-auth-reader") + $.metadata {
       roleRef: {
         apiGroup: "rbac.authorization.k8s.io",
         kind: "Role",
@@ -77,7 +82,7 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
       subjects_+: [$.api.sa],
     },
 
-    cert: kube.Secret($.p+"apiserver-cert") + $.namespace {
+    cert: kube.Secret($.p+"apiserver-cert") + $.metadata {
       type: "kubernetes.io/tls",
       data_+: {
         "tls.cert":: error "provided externally",
@@ -85,12 +90,12 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
       },
     },
 
-    svc: kube.Service($.p+"controller-manager") + $.namespace {
+    svc: kube.Service($.p+"controller-manager") + $.metadata {
       target_pod: $.api.deploy.spec.template,
       port: 443,
     },
 
-    deploy: kube.Deployment($.p+"controller-manager") + $.namespace {
+    deploy: kube.Deployment($.p+"controller-manager") + $.metadata {
       spec+: {
         template+: {
           spec+: {
@@ -153,7 +158,7 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
   },
 
   cm: {
-    sa: kube.SerivceAccount($.p+"controller-manager") + $.namespace ,
+    sa: kube.SerivceAccount($.p+"controller-manager") + $.metadata ,
 
     clusterRole: kube.ClusterRole($.p+"controller-manager") {
       rules: [
@@ -198,7 +203,7 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
       subjects_+: [$.cm.sa],
     },
 
-    lockRole: kube.Role($.p+"controller-manager-lock") + $.namespace {
+    lockRole: kube.Role($.p+"controller-manager-lock") + $.metadata {
       rules: [
         {
           apiGroups: [""],
@@ -214,12 +219,12 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
       ],
     },
 
-    lockRoleBinding: kube.RoleBinding($.p+"controller-manager-lock") + $.namespace {
+    lockRoleBinding: kube.RoleBinding($.p+"controller-manager-lock") + $.metadata {
       roleRef_: $.cm.lockRole,
       subjects_+: [$.cm.sa],
     },
 
-    deploy: kube.Deployment($.p+"controller-manager") + $.namespace {
+    deploy: kube.Deployment($.p+"controller-manager") + $.metadata {
       metadata+: {
         annotations+: {
           "prometheus.io/scrape": "true",
