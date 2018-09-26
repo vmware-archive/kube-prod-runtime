@@ -308,6 +308,7 @@ local get_cm_web_hook_url = function(port, path) (
               templates: kube.ConfigMapVolume(am.templates),
             },
             securityContext+: {
+              runAsUser: 1001,
               fsGroup: 1001,
             },
             containers_+: {
