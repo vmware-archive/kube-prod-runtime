@@ -78,7 +78,7 @@ var _ = Describe("Logging", func() {
 				var err error
 				selector := "log:" + deploy.Spec.Template.Spec.Containers[0].Env[0].Value
 				params := map[string]string{"q": selector}
-				resultRaw, err := c.CoreV1().Services(metav1.NamespaceSystem).ProxyGet("http", "elasticsearch-logging", "9200", "_search", params).DoRaw()
+				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "elasticsearch-logging", "9200", "_search", params).DoRaw()
 				if err != nil {
 					return nil, err
 				}
