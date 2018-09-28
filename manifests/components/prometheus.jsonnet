@@ -313,7 +313,7 @@ local get_cm_web_hook_url = function(port, path) (
             },
             containers_+: {
               default: kube.Container("alertmanager") {
-                image: "bitnami/alertmanager:0.14.0",
+                image: "bitnami/alertmanager:0.15.2-r36",
                 args_+: {
                   "config.file": "/etc/alertmanager/config.yml",
                   "storage.path": "/alertmanager",
