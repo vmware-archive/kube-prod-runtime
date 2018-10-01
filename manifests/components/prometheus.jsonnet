@@ -306,18 +306,19 @@ local get_cm_web_hook_url = function(port, path) (
             },
             containers_+: {
               default: kube.Container("alertmanager") {
+                local this = self,
                 image: "bitnami/alertmanager:0.15.2-r36",
                 args_+: {
-                  "config.file": "/etc/alertmanager/config.yml",
-                  "storage.path": "/alertmanager",
+                  "config.file": this.volumeMounts_.config.mountPath + "/config.yml",
+                  "storage.path": this.volumeMounts_.storage.mountPath,
                   "web.external-url": $.ingress.am_url,
                 },
                 ports_+: {
                   alertmanager: {containerPort: 9093},
                 },
                 volumeMounts_+: {
-                  config: {mountPath: "/etc/alertmanager", readOnly: true},
-                  storage: {mountPath: "/alertmanager"},
+                  config: {mountPath: "/opt/bitnami/alertmanager/conf", readOnly: true},
+                  storage: {mountPath: "/opt/bitnami/alertmanager/data"},
                 },
                 livenessProbe+: {
                   httpGet: {path: path_join($.ingress.am_path, "-/healthy"), port: 9093},
