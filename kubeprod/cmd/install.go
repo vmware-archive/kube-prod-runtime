@@ -17,8 +17,7 @@ const (
 	FlagManifests       = "manifests"
 	DefaultManifestBase = "https://github.com/bitnami/kube-prod-runtime/manifests/"
 
-	FlagPlatformConfig    = "config"
-	DefaultPlatformConfig = "kubeprod.json"
+	FlagPlatformConfig = "config"
 )
 
 var InstallCmd = &cobra.Command{
@@ -33,7 +32,7 @@ func init() {
 	InstallCmd.PersistentFlags().String(FlagPlatform, "", "Target platform name.  See list-platforms for possible values")
 	InstallCmd.MarkPersistentFlagRequired(FlagPlatform)
 	InstallCmd.PersistentFlags().String(FlagManifests, DefaultManifestBase, "Base URL below which to find platform manifests")
-	InstallCmd.PersistentFlags().String(FlagPlatformConfig, DefaultPlatformConfig, "Path for generated platform config file")
+	InstallCmd.PersistentFlags().String(FlagPlatformConfig, prodruntime.DefaultPlatformConfig, "Path for generated platform config file")
 }
 
 // Common initialisation for platform install subcommands

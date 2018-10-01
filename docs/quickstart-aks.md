@@ -131,12 +131,12 @@ BKPR bootstraps your AKS cluster with pre-configured services that make it easie
 
 Before running `kubeprod` to bootstrap BKPR, create a directory where `kubeprod` will deploy the following files:
 
-* `kubeprod.jsonnet`: the cluster-specific entry point which is used by `kubeprod` and `kubecfg`
-* `kubeprod.json`: a JSON configuration file for the cluster. This file might contain sensitive information (secrets, passwords, tokens, etc.) so it is highly recommended to not store it under any revision control system.
+* `kubeprod-manifest.jsonnet`: the cluster-specific entry point which is used by `kubeprod` and `kubecfg`
+* `kubeprod-autogen.json`: a JSON configuration file for the cluster. This file might contain sensitive information (secrets, passwords, tokens, etc.) so it is highly recommended to not store it under any revision control system.
 
 When `kubeprod` runs, it performs some platform-specific steps. For example, when bootstrapping BKPR in AKS (Azure Kubernetes), `kubeprod` will create some objects in Azure. For more detailed information about these objects, refer to [here](aks/objects.md).
 
-Afterwards, `kubeprod` generates the `kubeprod.jsonnet` and `kubeprod.json` files and then will perform a `kubecfg update` using the cluster-specific `kubeprod.jsonnet` file generated as the entry point.
+Afterwards, `kubeprod` generates the `kubeprod-manifest.jsonnet` and `kubeprod-autogen.json` files and then will perform a `kubecfg update` using the cluster-specific `kubeprod-manifest.jsonnet` file generated as the entry point.
 
 Run `kubeprod` from the directory you just created.
 
