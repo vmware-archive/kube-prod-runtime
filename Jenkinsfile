@@ -13,6 +13,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 // Force using our pod
 //def label = UUID.randomUUID().toString()
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+def jsonConfig = "kubeprod-autogen.json"
 
 def withGo(Closure body) {
     container('go') {
@@ -230,7 +231,6 @@ spec:
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
-                                def jsonConfig = "kubeprod-autogen.json"
 
                                 def aks
                                 try {
