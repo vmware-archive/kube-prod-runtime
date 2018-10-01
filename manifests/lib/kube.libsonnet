@@ -110,6 +110,7 @@
       ports: [
         {
           port: service.port,
+          name: service.target_pod.spec.containers[0].ports[0].name,
           targetPort: service.target_pod.spec.containers[0].ports[0].containerPort,
         },
       ],
