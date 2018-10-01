@@ -100,7 +100,7 @@ func (c InstallCmd) Run(out io.Writer) error {
 		}
 	} else {
 		fmt.Println("Kubernetes cluster is ready for deployment.")
-		fmt.Println("run: kubecfg update --ignore-unknown kube-system.jsonnet")
+		fmt.Printf("run: kubecfg update --ignore-unknown %s\n", prodruntime.RootManifest)
 	}
 	return nil
 }
@@ -137,7 +137,7 @@ func (c InstallCmd) Update(out io.Writer) error {
 	if err != nil {
 		return err
 	}
-	input, err := cwdURL.Parse("kube-system.jsonnet")
+	input, err := cwdURL.Parse(prodruntime.RootManifest)
 	if err != nil {
 		return err
 	}
