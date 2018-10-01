@@ -55,7 +55,7 @@ local get_cm_web_hook_url = function(port, path) (
     alerting+: {
       am_namespace: $.alertmanager.svc.metadata.namespace,
       am_name: $.alertmanager.svc.metadata.name,
-      am_port: std.toString($.alertmanager.svc.spec.ports[0].port),
+      am_port: std.toString($.alertmanager.svc.spec.ports[0].name),
       am_path: $.ingress.am_path,
     },
     rule_files+: std.objectFields($.rules),
