@@ -50,7 +50,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
                 // to do that via some sort of custom jsonnet overlay,
                 // since power users will want similar flexibility.
 
-                sh "./bin/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --config=${jsonConfig} ${kubeprodArgs}"
 
                 // Wait for deployments to rollout before we start the integration tests
                 try {
@@ -230,6 +230,7 @@ spec:
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
+                                def jsonConfig = "kubeprod-autogen.json"
 
                                 def aks
                                 try {
@@ -287,7 +288,7 @@ az aks create                      \
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
 
-                                            writeFile([file: 'kubeprod-autogen.json', text: """
+                                            writeFile([file: jsonConfig, text: """
 {
   "dnsZone": "${dnsZone}",
   "contactEmail": "${adminEmail}",
@@ -309,7 +310,7 @@ az aks create                      \
 
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
 (import "manifests/platforms/${platform}.jsonnet") {
-  config:: import "kubeprod-autogen.json",
+  config:: import "${jsonConfig}",
   letsencrypt_environment: "staging"
 }
 """
