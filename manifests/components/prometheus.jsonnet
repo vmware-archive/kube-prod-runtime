@@ -283,12 +283,6 @@ local get_cm_web_hook_url = function(port, path) (
       },
     },
 
-    templates: kube.ConfigMap($.p + "alertmanager-templates") + $.metadata {
-      data+: {
-        // empty (for now)
-      },
-    },
-
     deploy: kube.StatefulSet($.p + "alertmanager") + $.metadata {
       spec+: {
         volumeClaimTemplates_+: {
@@ -305,7 +299,6 @@ local get_cm_web_hook_url = function(port, path) (
           spec+: {
             volumes_+: {
               config: kube.ConfigMapVolume(am.config),
-              templates: kube.ConfigMapVolume(am.templates),
             },
             securityContext+: {
               runAsUser: 1001,
@@ -324,7 +317,6 @@ local get_cm_web_hook_url = function(port, path) (
                 },
                 volumeMounts_+: {
                   config: {mountPath: "/etc/alertmanager", readOnly: true},
-                  templates: {mountPath: "/etc/alertmanager-templates", readOnly: true},
                   storage: {mountPath: "/alertmanager"},
                 },
                 livenessProbe+: {
