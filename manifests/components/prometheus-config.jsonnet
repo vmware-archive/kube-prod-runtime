@@ -26,7 +26,7 @@ local NODE_NAME = "__meta_kubernetes_node_name";
     local a = self,
     am_namespace:: error "am_namespace is undefined",
     am_name:: "alertmanager",
-    am_port:: "9093",
+    am_port:: "alertmanager",
     am_path:: "/",
     alertmanagers: [{
       path_prefix: a.am_path,
