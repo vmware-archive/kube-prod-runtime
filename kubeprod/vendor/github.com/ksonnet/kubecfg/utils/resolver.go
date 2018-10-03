@@ -18,11 +18,12 @@ package utils
 import (
 	"bytes"
 	"fmt"
-	"net/http"
-	"strings"
+
+	"github.com/genuinetools/reg/registry"
+	"github.com/genuinetools/reg/repoutils"
 )
 
-const defaultRegistry = "registry-1.docker.io"
+const defaultRegistry = "registry-1.docker.io"	
 
 // ImageName represents the parts of a docker image name
 type ImageName struct {
@@ -74,35 +75,19 @@ func (n ImageName) RegistryURL() string {
 	return fmt.Sprintf("https://%s", reg)
 }
 
-// ParseImageName parses a docker image into an ImageName struct
+// ParseImageName parses a docker image into an ImageName struct.
 func ParseImageName(image string) (ImageName, error) {
 	ret := ImageName{}
 
-	if parts := strings.Split(image, "/"); len(parts) == 1 {
-		ret.Name = parts[0]
-	} else if len(parts) == 2 {
-		ret.Repository = parts[0]
-		ret.Name = parts[1]
-	} else if len(parts) == 3 {
-		ret.Registry = parts[0]
-		ret.Repository = parts[1]
-		ret.Name = parts[2]
-	} else {
-		return ret, fmt.Errorf("Malformed docker image name: %s", image)
+	img, err := registry.ParseImage(image)
+	if err != nil {
+		return ret, err
 	}
 
-	if parts := strings.Split(ret.Name, "@"); len(parts) == 2 {
-		ret.Name = parts[0]
-		ret.Digest = parts[1]
-	} else if parts := strings.Split(ret.Name, ":"); len(parts) == 2 {
-		ret.Name = parts[0]
-		ret.Tag = parts[1]
-	} else if len(parts) == 1 {
-		ret.Name = parts[0]
-		ret.Tag = "latest"
-	} else {
-		return ret, fmt.Errorf("Malformed docker image name/tag: %s", image)
-	}
+	ret.Registry = img.Domain
+	ret.Name = img.Path
+	ret.Digest = img.Digest.String()
+	ret.Tag = img.Tag
 
 	return ret, nil
 }
@@ -126,16 +111,16 @@ func (r identityResolver) Resolve(image *ImageName) error {
 
 // NewRegistryResolver returns a resolver that looks up a docker
 // registry to resolve digests
-func NewRegistryResolver(httpClient *http.Client) Resolver {
+func NewRegistryResolver(opt registry.Opt) Resolver {
 	return &registryResolver{
-		Client: httpClient,
-		cache:  make(map[string]string),
+		opt:   opt,
+		cache: make(map[string]string),
 	}
 }
 
 type registryResolver struct {
-	Client *http.Client
-	cache  map[string]string
+	opt   registry.Opt
+	cache map[string]string
 }
 
 func (r *registryResolver) Resolve(n *ImageName) error {
@@ -149,13 +134,28 @@ func (r *registryResolver) Resolve(n *ImageName) error {
 		return nil
 	}
 
-	c := NewRegistryClient(r.Client, n.RegistryURL())
-	digest, err := c.ManifestDigest(n.RegistryRepoName(), n.Tag)
+	img, err := registry.ParseImage(n.String())
 	if err != nil {
-		return fmt.Errorf("Unable to fetch digest for %s: %v", n, err)
+		return fmt.Errorf("unable to parse image name: %v", err)
 	}
 
-	r.cache[n.String()] = digest
-	n.Digest = digest
+	auth, err := repoutils.GetAuthConfig("", "", img.Domain)
+	if err != nil {
+		return fmt.Errorf("unable to get auth config for registry: %v", err)
+	}
+
+	c, err := registry.New(auth, r.opt)
+	if err != nil {
+		return fmt.Errorf("unable to create registry client: %v", err)
+	}
+
+	digest, err := c.Digest(img)
+	if err != nil {
+		return fmt.Errorf("unable to get digest from the registry: %v", err)
+	}
+
+	n.Digest = digest.String()
+	r.cache[n.String()] = n.Digest
+
 	return nil
 }

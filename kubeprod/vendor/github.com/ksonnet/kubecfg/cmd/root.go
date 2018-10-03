@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/genuinetools/reg/registry"
 
 	jsonnet "github.com/google/go-jsonnet"
 	log "github.com/sirupsen/logrus"
@@ -337,9 +338,7 @@ func buildResolver(cmd *cobra.Command) (utils.Resolver, error) {
 	case "noop":
 		ret.Inner = utils.NewIdentityResolver()
 	case "registry":
-		ret.Inner = utils.NewRegistryResolver(&http.Client{
-			Transport: utils.NewAuthTransport(http.DefaultTransport),
-		})
+		ret.Inner = utils.NewRegistryResolver(registry.Opt{})
 	default:
 		return nil, fmt.Errorf("Bad value for --%s: %s", flagResolver, resolver)
 	}
