@@ -6,15 +6,9 @@ This document describes the versioning convention used in Bitnami Kubernetes Pro
 
 ## Summary
 
-Given a version number MAJOR.MINOR.PATCH, increment the:
-
-1. MAJOR version when you make incompatible API changes.
-1. MINOR version when you add functionality in a backwards-compatible manner, and
-1. PATCH version when you make backwards-compatible bug fixes.
-
 BKPR consists of a series of Kubernetes manifests written in *jsonnet* and an accompanying binary named `kubeprod`.
 
-## What triggers a version increment
+### What triggers a version increment
 
 * Security fixes will increment the PATCH version.
 * Bug fixes, as long as the `kubeprod` binary and accompanying manifests are backwards compatible, will increment the MINOR version.
