@@ -8,6 +8,9 @@ import (
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/cmd"
 
+	// Register k8s auth plugins
+	_ "k8s.io/client-go/plugin/pkg/client/auth"
+
 	// Register platform-specific packages
 	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
 )
