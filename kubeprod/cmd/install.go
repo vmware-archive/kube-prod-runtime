@@ -88,6 +88,9 @@ func NewInstallSubcommand(cmd *cobra.Command) (*installer.InstallCmd, error) {
 	}
 
 	c.ClientPool, c.Discovery, err = restClientPool(c.Config)
+	if err != nil {
+		return nil, err
+	}
 
 	return &c, nil
 }
