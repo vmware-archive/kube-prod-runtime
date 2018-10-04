@@ -36,6 +36,15 @@ type alert struct {
 	Status status `json:"status"`
 }
 
+type endpoint struct {
+	Url string `json:"url"`
+}
+
+type alertmanager struct {
+	Active  []endpoint `json:"activeAlertmanagers"`
+	Dropped []endpoint `json:"droppedAlertmanagers"`
+}
+
 type promResponse struct {
 	Status string          `json:"status"`
 	Data   json.RawMessage `json:"data"`
@@ -43,6 +52,10 @@ type promResponse struct {
 
 func countSeries(series []Series) int {
 	return len(series)
+}
+
+func countEndpoints(endpoints []endpoint) int {
+	return len(endpoints)
 }
 
 func countAlerts(alerts []alert) int {
@@ -62,7 +75,7 @@ var _ = Describe("Monitoring", func() {
 	})
 
 	AfterEach(func() {
-		deleteNsOrDie(c.CoreV1(), ns)
+		// deleteNsOrDie(c.CoreV1(), ns)
 	})
 
 	JustBeforeEach(func() {
@@ -95,6 +108,29 @@ var _ = Describe("Monitoring", func() {
 
 			Expect(series[0].Container).To(Equal(deploy.Spec.Template.Spec.Containers[0].Name))
 			Expect(series[0].Namespace).To(Equal(ns))
+		})
+
+		// This test queries the prometheus api to check if the alertmanagers
+		// are auto-discovered
+		It("should discover alertmanagers in the cluster", func() {
+			var managers alertmanager
+			Eventually(func() ([]endpoint, error) {
+				var err error
+				params := map[string]string{}
+				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "prometheus", "9090", "api/v1/alertmanagers", params).DoRaw()
+				if err != nil {
+					return nil, err
+				}
+
+				resp := promResponse{}
+				json.Unmarshal(resultRaw, &resp)
+				json.Unmarshal(resp.Data, &managers)
+
+				return managers.Active, err
+			}, "20m", "5s").
+				Should(WithTransform(countEndpoints, BeNumerically(">", 0)))
+
+			Expect(managers.Active[0].Url).To(ContainSubstring(am_path + "/api/v1/alerts"))
 		})
 	})
 
