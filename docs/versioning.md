@@ -6,8 +6,6 @@ This document describes the versioning convention used in Bitnami Kubernetes Pro
 
 ## Summary
 
-Semantic Versioning (semver) claims the following:
-
 Given a version number MAJOR.MINOR.PATCH, increment the:
 
 1. MAJOR version when you make incompatible API changes.
@@ -20,4 +18,4 @@ BKPR consists of a series of Kubernetes manifests written in *jsonnet* and an ac
 
 * Security fixes will increment the PATCH version.
 * Bug fixes, as long as the `kubeprod` binary and accompanying manifests are backwards compatible, will increment the MINOR version.
-* Anything else will incrememnt the MAJOR version.
+* Anything else will increment the MAJOR version.
