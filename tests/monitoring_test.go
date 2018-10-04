@@ -90,7 +90,6 @@ var _ = Describe("Monitoring", func() {
 		It("should monitor container", func() {
 			var series []Series
 			Eventually(func() ([]Series, error) {
-				var err error
 				selector := fmt.Sprintf("kube_pod_container_info{namespace=\"%s\",container=\"%s\"}", ns, deploy.Spec.Template.Spec.Containers[0].Name)
 				params := map[string]string{"match[]": selector}
 				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "prometheus", "9090", "api/v1/series", params).DoRaw()
@@ -115,7 +114,6 @@ var _ = Describe("Monitoring", func() {
 		It("should discover alertmanagers in the cluster", func() {
 			var managers alertmanager
 			Eventually(func() ([]endpoint, error) {
-				var err error
 				params := map[string]string{}
 				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "prometheus", "9090", "api/v1/alertmanagers", params).DoRaw()
 				if err != nil {
@@ -145,7 +143,6 @@ var _ = Describe("Monitoring", func() {
 		It("should detect the crashing container", func() {
 			var series []Series
 			Eventually(func() ([]Series, error) {
-				var err error
 				selector := fmt.Sprintf("ALERTS{namespace=\"%s\",container=\"%s\",alertname=\"%s\",alertstate=\"firing\"}", ns, deploy.Spec.Template.Spec.Containers[0].Name, am_alertname)
 				params := map[string]string{"match[]": selector}
 				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "prometheus", "9090", "api/v1/series", params).DoRaw()
@@ -170,7 +167,6 @@ var _ = Describe("Monitoring", func() {
 		It("alertmanager api reports the crashing container", func() {
 			var alerts []alert
 			Eventually(func() ([]alert, error) {
-				var err error
 				filter := fmt.Sprintf("\"namespace=%s\",\"container=%s\",\"alertname=%s\"}", ns, deploy.Spec.Template.Spec.Containers[0].Name, am_alertname)
 				params := map[string]string{"active": "true", "filter": filter}
 				resultRaw, err := c.CoreV1().Services("kubeprod").ProxyGet("http", "alertmanager", "9093", am_path+"/api/v1/alerts", params).DoRaw()
