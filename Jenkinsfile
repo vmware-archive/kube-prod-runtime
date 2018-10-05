@@ -146,7 +146,7 @@ spec:
             if (env.TAG_NAME) {
                 withGo() {
                     withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                        withCredentials([usernamePassword(credentialsId: 'bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                        withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
                             sh "make release-notes VERSION=${env.TAG_NAME}"
                         }
                         stash includes: 'Release_Notes.md', name: 'release-notes'
@@ -351,7 +351,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
 
                             sh "make dist VERSION=${env.TAG_NAME}"
 
-                            withCredentials([usernamePassword(credentialsId: 'bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                            withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
                                 sh "make publish VERSION=${env.TAG_NAME}"
                             }
                         }
