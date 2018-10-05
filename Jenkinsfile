@@ -41,6 +41,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
 
                 unstash 'binary'
                 unstash 'manifests'
+                unstash 'tests'
 
                 sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
 
@@ -73,7 +74,6 @@ done
                 }
 
                 sh 'go get github.com/onsi/ginkgo/ginkgo'
-                unstash 'tests'
                 dir('tests') {
                     try {
                         ansiColor('xterm') {
@@ -310,7 +310,8 @@ az aks create                      \
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
 (import "manifests/platforms/${platform}.jsonnet") {
   config:: import "kubeprod-autogen.json",
-  letsencrypt_environment: "staging"
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
 }
 """
                                             ])
