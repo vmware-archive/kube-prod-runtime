@@ -58,8 +58,7 @@ var _ = Describe("Logging", func() {
 	})
 
 	AfterEach(func() {
-		// disable namespace deletion due to timeout issue experienced on AKS, TODO: re-enable
-		// deleteNsOrDie(c.CoreV1(), ns)
+		deleteNs(c.CoreV1(), ns)
 	})
 
 	JustBeforeEach(func() {

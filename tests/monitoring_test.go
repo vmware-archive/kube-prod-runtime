@@ -75,7 +75,7 @@ var _ = Describe("Monitoring", func() {
 	})
 
 	AfterEach(func() {
-		// deleteNsOrDie(c.CoreV1(), ns)
+		deleteNs(c.CoreV1(), ns)
 	})
 
 	JustBeforeEach(func() {
