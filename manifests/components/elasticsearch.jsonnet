@@ -1,7 +1,7 @@
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.4-r55";
+local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.12-r2";
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
