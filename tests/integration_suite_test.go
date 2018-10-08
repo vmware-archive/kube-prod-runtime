@@ -70,6 +70,19 @@ func deleteNsOrDie(c corev1.NamespacesGetter, ns string) {
 	}
 }
 
+// `deleteNs`  attempts to delete a namespace without panicing on errors.
+// Generally `deleteNsOrDie` should be used for the namespace deletion, but is
+// known to fail on AKS due to connection timeout issues.
+func deleteNs(c corev1.NamespacesGetter, ns string) {
+	if ns == "" {
+		return
+	}
+	err := c.Namespaces().Delete(ns, &metav1.DeleteOptions{})
+	if err != nil {
+		fmt.Println(err.Error())
+	}
+}
+
 func decodeFile(decoder runtime.Decoder, path string) (runtime.Object, error) {
 	buf, err := ioutil.ReadFile(path)
 	if err != nil {
