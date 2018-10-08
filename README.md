@@ -11,6 +11,10 @@ BKPR is available for GKE and AKS clusters.
 * [Quickstart in AKS](docs/quickstart-aks.md)
 * Quickstart in GKE
 
+## Versioning
+
+The versioning used in BKPR is described [here](docs/versioning.md).
+
 ## Components
 
 ### Monitoring
