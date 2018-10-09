@@ -7,7 +7,7 @@ A: The Bitnami Kubernetes Production Runtime ([BKPR](https://kubeprod.io)) is a 
 At the time of this writing, BKPR supports [Azure Kubernetes Service](https://azure.microsoft.com/en-us/services/kubernetes-service/) and [Google Kubernetes Engine](https://cloud.google.com/kubernetes-engine/) but in the future other Kubernetes platforms will be supported.
 
 #### Q: What is the difference between BKPR and `kubeprod`?
-A: BKPR consists of a collection of Kubernetes manifests written in *jsonnet* plus the accompanying `kubeprod` binary which deals with all the platform-specific details, evaluates the *jsonnet* manifests and executes them.
+A: BKPR consists of a collection of Kubernetes manifests written in *jsonnet* plus the accompanying `kubeprod` binary which deals with all the platform-specific details, evaluates the *jsonnet* manifests and applies them to the existing Kubernetes cluster.
 
 #### Q: Does BKPR support support Helm?
 A: Yes, indeed. BKPR only adds functionality to an existing Kubernetes cluster while keeping compatibility with other frameworks like Helm.
