@@ -1,0 +1,19 @@
+apiVersion: apps/v1beta1
+kind: Deployment
+metadata:
+  name: echomon
+  labels:
+    name: echomon
+spec:
+  template:
+    metadata:
+      labels:
+        name: echomon
+    spec:
+      containers:
+        - name: echomon
+          image: busybox
+          command:
+          - sh
+          - -c
+          - while true; do echo "Hello, Prometheus!"; sleep 1; done

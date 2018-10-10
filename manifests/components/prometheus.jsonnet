@@ -9,8 +9,12 @@ local path_join(prefix, suffix) = (
 
 local PROMETHEUS_IMAGE = "bitnami/prometheus:2.3.2-r41";
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
-local CONFIGMAP_RELOADER_IMAGE = "jimmidyson/configmap-reload:v0.2.2";
 local PROMETHEUS_PORT = 9090;
+
+local ALERTMANAGER_IMAGE = "bitnami/alertmanager:0.15.2-r36";
+local ALERTMANAGER_PORT = 9093;
+
+local CONFIGMAP_RELOADER_IMAGE = "jimmidyson/configmap-reload:v0.2.2";
 
 // Builds the `webhook-url` used by a container to trigger a reload
 // after a ConfigMap change
@@ -123,8 +127,6 @@ local get_cm_web_hook_url = function(port, path) (
     },
     "monitoring.yml": kubecfg.manifestYaml(self.monitoring_),
   },
-
-  am_config:: (import "alertmanager-config.jsonnet"),
 
   prometheus: {
     local prom = self,
@@ -270,6 +272,8 @@ local get_cm_web_hook_url = function(port, path) (
     },
   },
 
+  am_config:: (import "alertmanager-config.jsonnet"),
+
   alertmanager: {
     local am = self,
 
@@ -292,7 +296,7 @@ local get_cm_web_hook_url = function(port, path) (
           metadata+: {
             annotations+: {
               "prometheus.io/scrape": "true",
-              "prometheus.io/port": "9093",
+              "prometheus.io/port": std.toString(ALERTMANAGER_PORT),
               "prometheus.io/path": path_join($.ingress.am_path, "metrics"),
             },
           },
@@ -307,21 +311,21 @@ local get_cm_web_hook_url = function(port, path) (
             containers_+: {
               default: kube.Container("alertmanager") {
                 local this = self,
-                image: "bitnami/alertmanager:0.15.2-r36",
+                image: ALERTMANAGER_IMAGE,
                 args_+: {
                   "config.file": this.volumeMounts_.config.mountPath + "/config.yml",
                   "storage.path": this.volumeMounts_.storage.mountPath,
                   "web.external-url": $.ingress.am_url,
                 },
                 ports_+: {
-                  alertmanager: {containerPort: 9093},
+                  alertmanager: {containerPort: ALERTMANAGER_PORT},
                 },
                 volumeMounts_+: {
                   config: {mountPath: "/opt/bitnami/alertmanager/conf", readOnly: true},
                   storage: {mountPath: "/opt/bitnami/alertmanager/data"},
                 },
                 livenessProbe+: {
-                  httpGet: {path: path_join($.ingress.am_path, "-/healthy"), port: 9093},
+                  httpGet: {path: path_join($.ingress.am_path, "-/healthy"), port: ALERTMANAGER_PORT},
                   initialDelaySeconds: 60,
                   failureThreshold: 10,
                 },
@@ -335,7 +339,7 @@ local get_cm_web_hook_url = function(port, path) (
                 image: CONFIGMAP_RELOADER_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
-                  "webhook-url": get_cm_web_hook_url(9093, $.ingress.am_path),
+                  "webhook-url": get_cm_web_hook_url(ALERTMANAGER_PORT, $.ingress.am_path),
                   "webhook-method": "POST",
                 },
                 volumeMounts_+: {

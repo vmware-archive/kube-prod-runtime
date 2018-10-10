@@ -41,6 +41,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
 
                 unstash 'binary'
                 unstash 'manifests'
+                unstash 'tests'
 
                 sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
 
@@ -73,7 +74,6 @@ done
                 }
 
                 sh 'go get github.com/onsi/ginkgo/ginkgo'
-                unstash 'tests'
                 dir('tests') {
                     try {
                         ansiColor('xterm') {
@@ -146,7 +146,7 @@ spec:
             if (env.TAG_NAME) {
                 withGo() {
                     withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                        withCredentials([usernamePassword(credentialsId: 'bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                        withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
                             sh "make release-notes VERSION=${env.TAG_NAME}"
                         }
                         stash includes: 'Release_Notes.md', name: 'release-notes'
@@ -310,7 +310,8 @@ az aks create                      \
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
 (import "manifests/platforms/${platform}.jsonnet") {
   config:: import "kubeprod-autogen.json",
-  letsencrypt_environment: "staging"
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
 }
 """
                                             ])
@@ -351,7 +352,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
 
                             sh "make dist VERSION=${env.TAG_NAME}"
 
-                            withCredentials([usernamePassword(credentialsId: 'bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                            withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
                                 sh "make publish VERSION=${env.TAG_NAME}"
                             }
                         }
