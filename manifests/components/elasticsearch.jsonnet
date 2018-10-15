@@ -15,6 +15,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
 {
   p:: "",
+  replicas:: 3,
   min_master_nodes:: 2,
 
   labels:: {
@@ -65,7 +66,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     local this = self,
     spec+: {
       podManagementPolicy: "Parallel",
-      replicas: 3,
+      replicas: $.replicas,
       updateStrategy: { type: "RollingUpdate" },
       template+: {
         metadata+: {
@@ -166,6 +167,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
             elasticsearch_logging_init: kube.Container("elasticsearch-logging-init") {
               image: "alpine:3.6",
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
+              // NOTE: copied verbatim from https://www.elastic.co/guide/en/elasticsearch/reference/5.6/vm-max-map-count.html
               command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"],
               securityContext: {
                 privileged: true,
