@@ -36,7 +36,7 @@ To assure persistence of the underlying Elasticsearch storage, each pod relies o
 
 ### Overrides
 
-While it is possible to override or change the behavior of technically any of Elasticsearch attributes, only the following overrides are supported:
+While it is technically possible to override or change the behavior of any of Elasticsearch attributes, only the following overrides are supported:
 
 #### Override pod replicas
 
