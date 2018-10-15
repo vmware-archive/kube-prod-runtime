@@ -21,6 +21,8 @@ There are two containers running inside each of these pods:
 
 In addition to these containers, there is also an special init container, `elasticsearch-logging-init`, which is required to reconfigure the `max_map_count` kernel, parameter for the entire pod and is stated by the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/5.6/vm-max-map-count.html).
 
+Finally, a headless Kubernetes service named `elasticsearch-logging`, which is used to allow other components like Kibana or Fluentd access to the Elasticsearch cluster, but also used for discovery of Elasticsearch nodes in the cluster.
+
 #### Networking
 
 Elasticsearch uses the default network configuration:
