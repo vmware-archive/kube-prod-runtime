@@ -50,19 +50,19 @@ The following matrix shows which Kubernetes versions are supported in AKS and GK
 |      1.1     |         1.9        |      Yes     |      Yes     |
 |      1.1     |         1.10       |      Yes     |      Yes     |
 
-### Components Version Support
+### Components Version Support for BKPR 1.0
 
-The following matrix shows which versions of each component are used and supported in the curerent releases of BKPR:
+The following matrix shows which versions of each component are used and supported in BKPR 1.0:
 
-| BKPR release |   Component   |          Release |
-|:------------:|:-------------:|-----------------:|
-|      1.0     |   Prometheus  |            2.3.2 |
-|      1.0     |     Kibana    |           5.6.12 |
-|      1.0     | Elasticsearch |           5.6.12 |
-|      1.0     |  cert-manager |            0.3.2 |
-|      1.0     |  alertmanager |           0.15.2 |
-|      1.0     |  ExternalDNS  |            0.5.4 |
-|      1.0     | nginx-ingress |           0.19.0 |
-|      1.0     |  oauth2_proxy | 0.20180625.74543 |
-|      1.0     |    heapster   |            1.5.2 |
-|      1.0     |    fluentd    |            1.2.2 |
+|   Component   |          Release |
+|:-------------:|-----------------:|
+|   Prometheus  |            2.3.2 |
+|     Kibana    |           5.6.12 |
+| Elasticsearch |           5.6.12 |
+|  cert-manager |            0.3.2 |
+|  alertmanager |           0.15.2 |
+|  ExternalDNS  |            0.5.4 |
+| nginx-ingress |           0.19.0 |
+|  oauth2_proxy | 0.20180625.74543 |
+|    heapster   |            1.5.2 |
+|    fluentd    |            1.2.2 |
