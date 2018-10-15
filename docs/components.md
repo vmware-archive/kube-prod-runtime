@@ -72,3 +72,72 @@ Kibana connects to the Elasticsearch cluster via the `elasticsearch-logging` Kub
 #### Storage
 
 Kibana does not rely on any persistent storage.
+
+## Prometheus
+
+[Prometheus](https://prometheus.io/) is a popular open-source monitoring system and time series database written in Go. It features a multi-dimensional data model, a flexible query language, efficient time series database and modern alerting approach and integrates aspects all the way from client-side instrumentation to alerting.
+
+### Implementation
+
+BKPR uses Prometheus 2.3.2 as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod:
+
+* `prometheus-0`
+
+under the `kubeprod` namespace.
+
+There are two containers running inside this pod:
+
+* `prometheus`, which implements Prometheus, and runs as UID `1001`.
+* `configmap-reload`, a sidecar container that will instruct Prometheus to reload its configuration it has been updated. See the section named Configuration reloading below.
+
+### Configuration
+
+Prometheus configuration is split across the two following files:
+
+* `manifests/components/prometheus-config.jsonnet`, which describes the Kubernetes objects that are scraped (e.g. pods, ingresses, nodes, etc.)
+* `manifests/components/prometheus.jsonnet`, which contains the set of monitoring rules and alerts.
+
+This configuration is assembled into a Kubernetes ConfigMap and exposed inside the `prometheus` container as several YAML configuration files, like `basic.yaml`, `monitoring.yaml` and `prometheus.yanl`.
+
+#### Configuration reloading
+
+The `configmap-reload` container watches for updates to the Kubernetes ConfigMap that describes the Prometheus configuration. When this ConfigMap is updated, the `configmap-relaoder` will issue the following HTTP request to Prometheus, which cause a configuration reload: `http://localhost:9090/-/reload`.
+
+#### Networking
+
+Prometheus Kubernetes Service uses the default port:
+
+* Port `9090/tcp`
+
+#### Storage
+
+To assure persistence of the timeseries database, among other things, each pod relies on a Kubernetes PersistentVolume named `data-prometheus-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated storage based on the following formula: `1.5 * retention_seconds * samples_per_second * bytes_per_sample / 1000000`, where:
+
+* `retention_seconds` defaults to 183 days (in seconds)
+* `samples_per_second` defaults to `166.66`
+* `bytes_per_sample` defaults to `2`
+
+Or about 8GiB of disk space. These parameter can be tweaked. Please read the Overrides section below.
+
+### Overrides
+
+While it is technically possible to override or change the behavior of any of Prometheus attributes, only the following overrides are supported:
+
+#### Override storage parameters
+
+The following example shows how to override the retention days, estimated number of timeseries, bytes per sample and overhead factor at the same time.
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/aks+k8s-1.9.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    prometheus+: {
+        retention_days:: 366,
+        time_series:: 10000,  // Wild guess
+        bytes_per_sample:: 2,
+        overhead_factor:: 1.5,
+    }
+}
+```

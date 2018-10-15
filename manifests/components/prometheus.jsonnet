@@ -33,6 +33,11 @@ local get_cm_web_hook_url = function(port, path) (
     },
   },
 
+  retention_days:: 366/2,
+  time_series:: 10000,  // Wild guess
+  bytes_per_sample:: 2,
+  overhead_factor:: 1.5,
+
   ingress: utils.AuthIngress($.p + "prometheus") + $.metadata {
     local this = self,
     host:: error "host is required",
@@ -177,14 +182,10 @@ local get_cm_web_hook_url = function(port, path) (
             //  sample. Thus, to plan the capacity of a Prometheus server,
             //  you can use the rough formula:
             //  needed_disk_space = retention_time_seconds * ingested_samples_per_second * bytes_per_sample
-            retention_days:: prom.deploy.spec.template.spec.containers_.default.args_.retention_days,
-            retention_secs:: self.retention_days * 86400,
-            time_series:: 10000, // wild guess
-            samples_per_sec:: self.time_series / $.config.global.scrape_interval_secs,
-            bytes_per_sample:: 2,
-            needed_space:: self.retention_secs * self.samples_per_sec * self.bytes_per_sample,
-            overhead_factor:: 1.5,
-            storage: "%dMi" % [self.overhead_factor * self.needed_space / 1e6],
+            samples_per_sec:: $.time_series / $.config.global.scrape_interval_secs,
+            retention_secs:: $.retention_days * 86400,
+            needed_space:: self.retention_secs * self.samples_per_sec * $.bytes_per_sample,
+            storage: "%dMi" % [$.overhead_factor * self.needed_space / 1e6],
           },
         },
         template+: {
@@ -217,8 +218,7 @@ local get_cm_web_hook_url = function(port, path) (
                   "web.external-url": $.ingress.prom_url,
 
                   "config.file": this.volumeMounts_.config.mountPath + "/prometheus.yml",
-                  retention_days:: 366/2,
-                  "storage.tsdb.retention": "%dd" % self.retention_days,
+                  "storage.tsdb.retention": "%dd" % $.retention_days,
 
                   // These are unmodified upstream console files. May
                   // want to ship in config instead.
