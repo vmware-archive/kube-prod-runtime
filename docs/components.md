@@ -66,7 +66,7 @@ All these Kubernetes resources live under the `kubeprod` namespace.
 
 #### Networking
 
-Kibana exposes port `5601/tcp` internally to the Kubernetes cluster, but allows access from the Internet via HTTP/S by means of a Kubernetes Ingress controller.
+Kibana exposes port `5601/tcp` internally to the Kubernetes cluster, but allows external access via HTTP/S by means of a Kubernetes Ingress controller.
 Kibana connects to the Elasticsearch cluster via the `elasticsearch-logging` Kubernetes Service defined in the Elasticsearch manifest.
 
 #### Storage
