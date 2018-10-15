@@ -53,3 +53,22 @@ $ cat kubeprod-manifest.jsonnet
     }
 }
 ```
+
+## Kibana
+
+[Kibana](https://www.elastic.co/products/kibana) lets you visualize your Elasticsearch data and navigate the Elastic Stack.
+
+### Implementation
+
+BKPR uses Kibana 5.6.12 as [packaged by Bitnami](https://hub.docker.com/r/bitnami/kibana/). By default it runs 1 non-root pod named `kibana` and also a Kubernetes ingress resource named `kibana-logging` which allows end-user access to Kibana from the Internet. BKPR implements automatic DNS name registration for the `kibana-logging` ingress resource based on the DNS suffix name specified when installing BKPR and also HTTP/S support (see cert-manager component for automatic management of X.509 certificates via Letsencrypt).
+
+All these Kubernetes resources live under the `kubeprod` namespace.
+
+#### Networking
+
+Kibana exposes port `5601/tcp` internally to the Kubernetes cluster, but allows access from the Internet via HTTP/S by means of a Kubernetes ingress controller.
+Kibana connects to the Elasticsearch cluster via the `elasticsearch-logging` Kubernetes service defined in the Elasticsearch manifest.
+
+#### Storage
+
+Kibana does not rely on any persistent storage.
