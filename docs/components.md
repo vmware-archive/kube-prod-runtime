@@ -25,7 +25,7 @@ Finally, a headless Kubernetes Service named `elasticsearch-logging`, which is u
 
 #### Networking
 
-Elasticsearch uses the default network configuration:
+Elasticsearch Kubernetes Service uses default Elasticsearch ports:
 
 * Port `9200/tcp`, used for end-user, HTTP-based access
 * Port `9300/tcp`, used for internal communication between Elasticsearch nodes within the cluster
