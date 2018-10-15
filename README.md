@@ -43,8 +43,12 @@ The following matrix shows which Kubernetes versions are supported in AKS and GK
 
 | BKPR release | Kubernetes version | AKS support? | GKE support? |
 |:------------:|:------------------:|:------------:|:------------:|
-|      1.0     |         1.8        |      Yes     |      Yes     |
+|      1.0     |         1.8        |      Yes     |      No      |
 |      1.0     |         1.9        |      Yes     |      Yes     |
+|      1.0     |         1.10       |      No      |      No      |
+|      1.1     |         1.8        |      No      |      No      |
+|      1.1     |         1.9        |      Yes     |      Yes     |
+|      1.1     |         1.10       |      Yes     |      Yes     |
 
 ### Components Version Support
 
