@@ -12,8 +12,7 @@ ifndef GITHUB_TOKEN
 endif
 	git cat-file -p $(VERSION) | tail -n +6 > Release_Notes.md
 	cat jenkins/Release_Notes.md.tmpl >> Release_Notes.md
-	PREV_VERSION=$$(git describe --abbrev=0 --tags $$(git rev-list --tags --skip=1 --max-count=1)) ; \
-	echo $${PREV_VERSION} ; \
+	PREV_VERSION=$$(git -c 'versionsort.suffix=-' tag --list  --sort=-v:refname | grep -v '\-rc' | head -n2 | tail -n1) ; \
 	for pr in $$(git log $${PREV_VERSION}..$(VERSION) --pretty=format:"%s" | grep "Merge pull request" | cut -d"#" -f2 | cut -d' ' -f1); do \
 		wget -q --header "Authorization: token $${GITHUB_TOKEN}" "https://api.github.com/repos/$(GITHUB_USER)/$(GITHUB_REPO)/pulls/$${pr}" -O - | \
 			jq -r '[.number,.title,.user.login] | "- \(.[1]) (#\(.[0])) - @\(.[2])"' >> Release_Notes.md ; \

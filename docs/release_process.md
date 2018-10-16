@@ -88,7 +88,7 @@ The CI infrastructure will automatically create a tagged Github release and the 
 
 The next several days should be invested in testing and stabilizing the release candidate. This time should be spent testing and finding ways in which the release might have caused various features or upgrade environments to have issues.
 
-During this phase, the `$RELEASE_BRANCH_NAME` branch will keep evolving as you will produce new release candidates. Each time you'll want to produce a new release candidate, you will start by adding commits to the branch by cherry-picking from `master`:
+During this phase, the `$RELEASE_BRANCH_NAME` branch will keep evolving as you will produce new release candidates. Each time you want to produce a new release candidate, you will start by adding commits to the branch by cherry-picking from `master`:
 
 ```bash
 git cherry-pick -x <commit_id>
