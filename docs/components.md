@@ -6,7 +6,7 @@ Elasticsearch is a distributed, RESTful search and analytics engine capable of s
 
 ### Implementation
 
-BKPR uses Elasticsearch 5.6.12 as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods named:
+BKPR uses Elasticsearch as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods named:
 
 * `elasticsearch-logging-0`
 * `elasticsearch-logging-1`
@@ -60,7 +60,7 @@ $ cat kubeprod-manifest.jsonnet
 
 ### Implementation
 
-BKPR uses Kibana 5.6.12 as [packaged by Bitnami](https://hub.docker.com/r/bitnami/kibana/). By default it runs 1 non-root pod named `kibana` and also a Kubernetes Ingress resource named `kibana-logging` which allows end-user access to Kibana from the Internet. BKPR implements automatic DNS name registration for the `kibana-logging` Ingress resource based on the DNS suffix name specified when installing BKPR and also HTTP/S support (see cert-manager component for automatic management of X.509 certificates via Letsencrypt).
+BKPR uses Kibana as [packaged by Bitnami](https://hub.docker.com/r/bitnami/kibana/). By default it runs 1 non-root pod named `kibana` and also a Kubernetes Ingress resource named `kibana-logging` which allows end-user access to Kibana from the Internet. BKPR implements automatic DNS name registration for the `kibana-logging` Ingress resource based on the DNS suffix name specified when installing BKPR and also HTTP/S support (see cert-manager component for automatic management of X.509 certificates via Letsencrypt).
 
 All these Kubernetes resources live under the `kubeprod` namespace.
 
@@ -79,7 +79,7 @@ Kibana is a stateless component and therefore does not have any persistent stora
 
 ### Implementation
 
-BKPR uses Prometheus 2.3.2 as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod:
+BKPR uses Prometheus as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod:
 
 * `prometheus-0`
 
@@ -88,7 +88,7 @@ under the `kubeprod` namespace.
 There are two containers running inside this pod:
 
 * `prometheus`, which implements Prometheus, and runs as UID `1001`.
-* `configmap-reload`, a sidecar container that will instruct Prometheus to reload its configuration it has been updated. See the section named Configuration reloading below.
+* `configmap-reload`, a sidecar container that will instruct Prometheus to reload its configuration if it has been updated. See the section named Configuration reloading below.
 
 ### Configuration
 
@@ -111,7 +111,7 @@ Prometheus Kubernetes Service uses the default port:
 
 #### Storage
 
-To assure persistence of the timeseries database, among other things, each pod relies on a Kubernetes PersistentVolume named `data-prometheus-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated storage based on the following formula: `1.5 * retention_seconds * samples_per_second * bytes_per_sample / 1000000`, where:
+To assure persistence of the timeseries database, each pod relies on a Kubernetes PersistentVolume named `data-prometheus-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated storage based on the following formula: `1.5 * retention_seconds * samples_per_second * bytes_per_sample / 1000000`, where:
 
 * `retention_seconds` defaults to 183 days (in seconds)
 * `samples_per_second` defaults to `166.66`
