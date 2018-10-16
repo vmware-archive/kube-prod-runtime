@@ -38,6 +38,30 @@ local get_cm_web_hook_url = function(port, path) (
   bytes_per_sample:: 2,
   overhead_factor:: 1.5,
 
+  # Default monitoring rules
+  monitoring_rules:: [
+    {
+      alert: "PrometheusBadConfig",
+      expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
+      "for": "10m",
+      labels: {severity: "critical"},
+      annotations: {
+        summary: "Prometheus failed to reload config",
+        description: "Config error with prometheus, see container logs",
+      },
+    },
+    {
+      alert: "AlertmanagerBadConfig",
+      expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
+      "for": "10m",
+      labels: {severity: "critical"},
+      annotations: {
+        summary: "Alertmanager failed to reload config",
+        description: "Config error with alertmanager, see container logs",
+      },
+    },
+  ],
+
   ingress: utils.AuthIngress($.p + "prometheus") + $.metadata {
     local this = self,
     host:: error "host is required",
@@ -105,28 +129,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "monitoring.rules",
-          rules: [
-            {
-              alert: "PrometheusBadConfig",
-              expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
-              "for": "10m",
-              labels: {severity: "critical"},
-              annotations: {
-                summary: "Prometheus failed to reload config",
-                description: "Config error with prometheus, see container logs",
-              },
-            },
-            {
-              alert: "AlertmanagerBadConfig",
-              expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
-              "for": "10m",
-              labels: {severity: "critical"},
-              annotations: {
-                summary: "Alertmanager failed to reload config",
-                description: "Config error with alertmanager, see container logs",
-              },
-            },
-          ],
+          rules: $.monitoring_rules,
         },
       ],
     },

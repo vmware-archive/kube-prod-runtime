@@ -141,3 +141,30 @@ $ cat kubeprod-manifest.jsonnet
     }
 }
 ```
+
+#### Override for additional rules
+
+The following example shows how to add a additional monitoring rules. The default configuration shipped with Prometheus brings in two different groups of rules, namely `basic.rules` and `monitoring.rules`, but you can create additional groups if you need to. Next we show how to add an additional monitoring rule:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/aks+k8s-1.9.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    prometheus+: {
+        monitoring_rules+: [
+            {
+                alert: "ElasticsearchDown",
+                expr: "sum(elasticsearch_cluster_health_up) < 2",
+                "for": "10m",
+                labels: {severity: "critical"},
+                annotations: {
+                    summary: "Elastichsearch is unhealthy",
+                    description: "Elasticsearch cluster quorum is not healthy",
+                },
+            },
+        ]
+    }
+}
+```
