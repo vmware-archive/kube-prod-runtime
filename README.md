@@ -60,7 +60,7 @@ The following matrix shows which versions of each component are used and support
 |     Kibana    |           5.6.12 |
 | Elasticsearch |           5.6.12 |
 |  cert-manager |            0.3.2 |
-|  alertmanager |           0.15.2 |
+|  Alertmanager |           0.15.2 |
 |  ExternalDNS  |            0.5.4 |
 | nginx-ingress |           0.19.0 |
 |  oauth2_proxy | 0.20180625.74543 |
