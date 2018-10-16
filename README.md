@@ -65,4 +65,4 @@ The following matrix shows which versions of each component are used and support
 | nginx-ingress |           0.19.0 |
 |  oauth2_proxy | 0.20180625.74543 |
 |    Heapster   |            1.5.2 |
-|    fluentd    |            1.2.2 |
+|    Fluentd    |            1.2.2 |
