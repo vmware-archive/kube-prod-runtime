@@ -6,13 +6,7 @@ Elasticsearch is a distributed, RESTful search and analytics engine capable of s
 
 ### Implementation
 
-BKPR uses Elasticsearch as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods named:
-
-* `elasticsearch-logging-0`
-* `elasticsearch-logging-1`
-* `elasticsearch-logging-2`
-
-all under the `kubeprod` namespace, forming an Elasticsearch cluster named `elasticsearch-cluster`.
+BKPR uses Elasticsearch as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods named as `elasticsearch-logging-%i` (where `%i` is the pod index) under the `kubeprod` namespace, forming an Elasticsearch cluster named `elasticsearch-cluster`.
 
 There are two containers running inside each of these pods:
 
@@ -79,9 +73,7 @@ Kibana is a stateless component and therefore does not have any persistent stora
 
 ### Implementation
 
-BKPR uses Prometheus as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod:
-
-* `prometheus-0`
+BKPR uses Prometheus as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `prometheus-0`.
 
 under the `kubeprod` namespace.
 
