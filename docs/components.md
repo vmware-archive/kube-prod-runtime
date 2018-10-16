@@ -71,7 +71,7 @@ Kibana connects to the Elasticsearch cluster via the `elasticsearch-logging` Kub
 
 #### Storage
 
-Kibana does not rely on any persistent storage.
+Kibana is a stateless component and therefore does not have any persistent storage requirements.
 
 ## Prometheus
 
