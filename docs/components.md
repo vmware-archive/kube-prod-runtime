@@ -12,7 +12,7 @@ BKPR uses Elasticsearch 5.6.12 as [packaged by Bitnami](https://hub.docker.com/r
 * `elasticsearch-logging-1`
 * `elasticsearch-logging-2`
 
-all under the `kubeprod` namespace, forming an Elastic search cluster named `elasticsearch-cluster`.
+all under the `kubeprod` namespace, forming an Elasticsearch cluster named `elasticsearch-cluster`.
 
 There are two containers running inside each of these pods:
 
