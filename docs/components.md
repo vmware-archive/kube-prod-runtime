@@ -73,14 +73,33 @@ Kibana is a stateless component and therefore does not have any persistent stora
 
 ### Implementation
 
-BKPR uses Prometheus as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `prometheus-0`.
+BKPR uses Prometheus as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `prometheus-0` under the `kubeprod` namespace.
 
-under the `kubeprod` namespace.
+Prometheus scrapes several elements for relevant data which is stored as metrics in timeseries and can be queried using [Prometheus query language](https://prometheus.io/docs/prometheus/latest/querying/basics/) from the Prometheus console which is is externally accessible at `https://prometheus.${dns-zone}`, where `${dns-zone}` is the literal for the DNS zone specified when BKPR was installed.
 
-There are two containers running inside this pod:
+#### Scraping
 
-* `prometheus`, which implements Prometheus, and runs as UID `1001`.
-* `configmap-reload`, a sidecar container that will instruct Prometheus to reload its configuration if it has been updated. See the section named Configuration reloading below.
+Among the elements scraped by our default Prometheus configuration:
+
+* API servers
+* Nodes
+* Ingress and Service resources, which are probed using Prometheus Blackbox exporter
+* Pods
+
+#### Kubernetes annotations
+
+The following Kubernetes annotations on pods allow a fine control of the scraping process:
+
+* `prometheus.io/scrape`: whether to include the pod or not in the scraping process
+* `prometheus.io/path`: required if the metrics path is not `/metrics`
+* `prometheus.io/port`: required if the pod must be scraped on the indicated port instead of the pod’s declared ports
+
+#### Synthetic Labels
+
+Our default configuration adds two synthetic labels to help with querying data:
+
+* `kubernetes_namespace` is the Kubernetes namespace of the pod the metric comes from. This label can be used to distinguish between the same component running in two separate namespaces.
+* `kubernetes_pod_name` is the name of the pod the metric comes from. This label can be used to distinguish between metrics from different pods of the same Deployment or DaemonSet.
 
 ### Configuration
 
@@ -89,11 +108,11 @@ Prometheus configuration is split across the two following files:
 * `manifests/components/prometheus-config.jsonnet`, which describes the Kubernetes objects that are scraped (e.g. pods, ingresses, nodes, etc.)
 * `manifests/components/prometheus.jsonnet`, which contains the set of monitoring rules and alerts.
 
-This configuration is assembled into a Kubernetes ConfigMap and exposed inside the `prometheus` container as several YAML configuration files, like `basic.yaml`, `monitoring.yaml` and `prometheus.yanl`.
+This configuration is assembled into a Kubernetes ConfigMap and injected into the Prometheus container as several YAML configuration files, named `basic.yaml`, `monitoring.yaml` and `prometheus.yanl`.
 
 #### Configuration reloading
 
-The `configmap-reload` container watches for updates to the Kubernetes ConfigMap that describes the Prometheus configuration. When this ConfigMap is updated, the `configmap-relaoder` will issue the following HTTP request to Prometheus, which cause a configuration reload: `http://localhost:9090/-/reload`.
+Inside a Prometheus pod there is a container named `configmap-reload` that watches for updates to the Kubernetes ConfigMap that describes the Prometheus configuration. When this Kubernetes ConfigMap is updated, `configmap-relaoder` will issue the following HTTP request to Prometheus, which cause a configuration reload: `http://localhost:9090/-/reload`.
 
 #### Networking
 
