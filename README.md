@@ -37,20 +37,9 @@ The versioning used in BKPR is described [here](docs/versioning.md).
 
 ## Release Compatibility
 
-### Kubernetes Version Support matrix
-
-The following matrix shows which Kubernetes versions are supported in AKS and GKE in the current releases of BKPR:
-
-| BKPR release | Kubernetes version | AKS support? | GKE support? |
-|:------------:|:------------------:|:------------:|:------------:|
-|      1.0     |         1.8        |      Yes     |      No      |
-|      1.0     |         1.9        |      Yes     |      Yes     |
-|      1.0     |         1.10       |      No      |      No      |
-|      1.1     |         1.8        |      No      |      No      |
-|      1.1     |         1.9        |      Yes     |      Yes     |
-|      1.1     |         1.10       |      Yes     |      Yes     |
-
 ### Kubernetes Version Support matrix for BKPR 1.0
+
+The following matrix shows which Kubernetes versions are supported in AKS and GKE in BKPR 1.0:
 
 | Kubernetes version |  AKS  |  GKE  |
 |:------------------:|:-----:|:-----:|
