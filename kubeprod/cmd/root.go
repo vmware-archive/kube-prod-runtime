@@ -42,8 +42,8 @@ func init() {
 }
 
 var RootCmd = &cobra.Command{
-	Use:           "kube-prod-runtime-installer",
-	Short:         "Install the Bitnami Production Runtime for Kubernetes",
+	Use:           "kubeprod",
+	Short:         "Install the Bitnami Kubernetes Production Runtime",
 	SilenceErrors: true,
 	SilenceUsage:  true,
 	PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
