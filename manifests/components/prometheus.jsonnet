@@ -34,7 +34,7 @@ local get_cm_web_hook_url = function(port, path) (
   },
 
   retention_days:: 366/2,
-  time_series:: 10000,  // Wild guess
+  time_series:: 10000,
   bytes_per_sample:: 2,
   overhead_factor:: 1.5,
 
