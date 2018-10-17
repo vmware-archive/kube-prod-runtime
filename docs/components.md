@@ -146,9 +146,7 @@ $ cat kubeprod-manifest.jsonnet
     // Place your overrides here
     prometheus+: {
         retention_days:: 366,
-        time_series:: 10000,  // Wild guess
-        bytes_per_sample:: 2,
-        overhead_factor:: 1.5,
+        storage:: 16384,  // (in Mi)
     }
 }
 ```

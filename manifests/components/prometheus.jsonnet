@@ -33,10 +33,18 @@ local get_cm_web_hook_url = function(port, path) (
     },
   },
 
+  // https://prometheus.io/docs/prometheus/2.0/storage/#operational-aspects
+  //  On average, Prometheus uses only around 1-2 bytes per sample. Thus, to
+  // plan the capacity of a Prometheus server, you can use the rough formula:
+  //  needed_disk_space = retention_seconds * ingested_samples_per_second * bytes_per_sample
+  local time_series = 10000,
+  local bytes_per_sample = 2,
+  local retention_seconds = self.retention_days * 86400,
+  local ingested_samples_per_second = time_series / $.config.global.scrape_interval_secs,
+  local needed_space = retention_seconds * ingested_samples_per_second * bytes_per_sample,
+
   retention_days:: 366/2,
-  time_series:: 10000,
-  bytes_per_sample:: 2,
-  overhead_factor:: 1.5,
+  storage:: 1.5 * needed_space / 1e6,
 
   # Default monitoring rules
   monitoring_rules:: [
@@ -180,15 +188,7 @@ local get_cm_web_hook_url = function(port, path) (
       spec+: {
         volumeClaimTemplates_: {
           data: {
-            // https://prometheus.io/docs/prometheus/2.0/storage/#operational-aspects
-            //  On average, Prometheus uses only around 1-2 bytes per
-            //  sample. Thus, to plan the capacity of a Prometheus server,
-            //  you can use the rough formula:
-            //  needed_disk_space = retention_time_seconds * ingested_samples_per_second * bytes_per_sample
-            samples_per_sec:: $.time_series / $.config.global.scrape_interval_secs,
-            retention_secs:: $.retention_days * 86400,
-            needed_space:: self.retention_secs * self.samples_per_sec * $.bytes_per_sample,
-            storage: "%dMi" % [$.overhead_factor * self.needed_space / 1e6],
+            storage: "%dMi" % $.storage,
           },
         },
         template+: {
