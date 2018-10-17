@@ -38,7 +38,7 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   az account set --subscription <azure-subscription-id>
   ```
 
-If your Azure account has more than one subscription, set the default subscription for future operations. Update the `<azure-subscription-id>` placeholder in the command above with the ID of the subscription you’d like to use.
+  If your Azure account has more than one subscription, set the default subscription for future operations. Update the `<azure-subscription-id>` placeholder in the command above with the ID of the subscription you’d like to use.
 
 * Create the resource group for AKS:
 
@@ -151,32 +151,32 @@ kubeprod install aks \
 
 * Once BKPR has been deployed to your cluster, wait for all pods to start running and all TLS certificates to be issued before using BKPR.  To check that all pods are running, use the command below:
 
-```bash
-kubectl get pods -n kubeprod
-``` 
+  ```bash
+  kubectl get pods -n kubeprod
+  ``` 
 
-BKPR uses `cert-manager` to requests TLS certificates for Kibana and Prometheus. To check the certificate objects that were created, use the command below:
+  BKPR uses `cert-manager` to requests TLS certificates for Kibana and Prometheus. To check the certificate objects that were created, use the command below:
 
-```console
-kubectl get certificates -n kubeprod
-NAME                 AGE
-kibana-logging-tls   3h
-prometheus-tls       3h
-```
+  ```console
+  kubectl get certificates -n kubeprod
+  NAME                 AGE
+  kibana-logging-tls   3h
+  prometheus-tls       3h
+  ```
  
-To check whether the TLS certificates have been successfully issued, use the command below:
+  To check whether the TLS certificates have been successfully issued, use the command below:
 
-```console
-kubectl describe certificate -n kubeprod kibana-logging-tls
-...
-  Conditions:
-    Last Transition Time:  2018-07-06T09:58:34Z
-    Message:               Certificate issued successfully
-    Reason:                CertIssued
-    Status:                True
-    Type:                  Ready
-...
-```
+  ```console
+  kubectl describe certificate -n kubeprod kibana-logging-tls
+  ...
+    Conditions:
+      Last Transition Time:  2018-07-06T09:58:34Z
+      Message:               Certificate issued successfully
+      Reason:                CertIssued
+      Status:                True
+      Type:                  Ready
+  ...
+  ```
 
 * The final step is to update DNS records. The `kubeprod install aks` command sets up a DNS zone for your domain (specified in the `AZURE_DNS_ZONE` environment variable) if it doesn't exist yet. Then, it writes a list of nameservers to the standard output. You must use these nameservers to set up DNS records for your domain. For example:
 
