@@ -8,16 +8,12 @@ BKPR uses Fluentd to collect container logs from all containers from all namespa
 
 ### Implementation
 
-BKPR uses Elasticsearch as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods named as `elasticsearch-logging-%i` (where `%i` is the pod index) under the `kubeprod` namespace, forming an Elasticsearch cluster named `elasticsearch-cluster`.
+BKPR uses Elasticsearch as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods under the `kubeprod` namespace forming an Elasticsearch cluster named `elasticsearch-cluster`. It is implemented in the file `manifests/components/elasticsearch.jsonnet`. This manifest defines what an Elasticsearch pod and its nested containers look like:
 
-There are two containers running inside each of these pods:
+* An Elasticsearch node
+* A Prometheus exporter for collecting various metrics about Elasticsearch
 
-* `elasticsearch-logging`, which implements an Elasticsearch master node, and runs as UID `1001`.
-* `prom-exporter`, a Prometheus exporter for various metrics about ElasticSearch.
-
-In addition to these containers, there is also an special init container, `elasticsearch-logging-init`, which is required to reconfigure the `max_map_count` kernel, parameter for the entire pod and is stated by the [Elasticsearch documentation](https://www.elastic.co/guide/en/elasticsearch/reference/5.6/vm-max-map-count.html).
-
-Finally, a headless Kubernetes Service named `elasticsearch-logging`, which is used to allow other components like Kibana or Fluentd access to the Elasticsearch cluster, but also used for discovery of Elasticsearch nodes in the cluster.
+Inside the manifest there is also a Kubernetes Service declaration used to allow other components (Kibana and Fluentd) access to the Elasticsearch cluster, and also used by Elasticsearch itself to perform node discovery in the cluster.
 
 #### Networking
 
