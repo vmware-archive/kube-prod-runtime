@@ -118,13 +118,11 @@ Alternatively, if you have access to the BKPR project repository, you may choose
   make
   ```
 
-  By default, the `kubeprod` binary will be built at `$BKPR_SRC/kubeprod/bin/kubeprod`. We recommend moving it to `$GOPATH/bin`:
+  By default, the `kubeprod` binary will be built at `$BKPR_SRC/kubeprod/bin/kubeprod`. We recommend moving it to `$GOPATH/bin`, or to a directory listed in the `$PATH` environment variable, like `/usr/local/bin`:
 
   ```bash
   mv $BKPR_SRC/kubeprod/bin/kubeprod $GOPATH/bin
   ```
-
-  Alternatively, move the `kubeprod` binary into a directory listed in the `$PATH` environment variable, like `/usr/local/bin`.
 
 ### Step 3: Deploy BKPR
 BKPR bootstraps your AKS cluster with pre-configured services that make it easier to run, manage and monitor production workloads on Kubernetes. BKPR includes deployment extensions to automatically provide valid [Let's Encrypt TLS certificates](https://letsencrypt.org/) for apps and services running in your cluster, as well as to automatically configure logging and monitoring services for your Kubernetes workloads.
