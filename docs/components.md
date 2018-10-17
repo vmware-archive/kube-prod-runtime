@@ -4,6 +4,8 @@
 
 [Elasticsearch](https://elastic.co/products/elasticsearch) is a distributed, RESTful search and analytics engine capable of solving a growing number of use cases. As the heart of the Elastic Stack, it centrally stores your data so you can discover the expected and uncover the unexpected.
 
+BKPR uses Fluentd to collect container logs from all containers from all namespaces, and also system logs from the underlying Kubernetes infrastructure (read the FLuentd section for a more detailed explanantion of which system logs are ingested). This data is stored in Elasticsearch and can be queried using Kibana.
+
 ### Implementation
 
 BKPR uses Elasticsearch as [packaged by Bitnami](https://hub.docker.com/r/bitnami/elasticsearch/). By default it runs 3 non-root pods named as `elasticsearch-logging-%i` (where `%i` is the pod index) under the `kubeprod` namespace, forming an Elasticsearch cluster named `elasticsearch-cluster`.
