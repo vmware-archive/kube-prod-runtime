@@ -58,11 +58,11 @@ The following matrix shows which Kubernetes versions are supported in AKS and GK
 |        `1.9`       |  Yes  |  Yes  |
 |        `1.10`      |  No   |  No   |
 
-### Components Version Support for BKPR 1.0
+### Components Version Support
 
-The following matrix shows which versions of each component are used and supported in BKPR 1.0:
+The following matrix shows which versions of each component are used and supported in the most recent releases of BKPR:
 
-|   Component   |            Release |
+|   Component   |          BKPR 1.0  |
 |:-------------:|-------------------:|
 |   Prometheus  |            `2.3.2` |
 |     Kibana    |           `5.6.12` |
