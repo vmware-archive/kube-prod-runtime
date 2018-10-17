@@ -138,14 +138,14 @@ Follow the steps below:
 
 * Run `kubeprod` from the directory you just created:
 
-```bash
-kubeprod install aks \
-  --email <email-address> \
-  --manifests $BKPR_SRC/manifests \
-  --platform aks+k8s-1.9 \
-  --dns-zone "${AZURE_DNS_ZONE}" \
-  --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}" 
-```
+  ```bash
+  kubeprod install aks \
+    --email <email-address> \
+    --manifests $BKPR_SRC/manifests \
+    --platform aks+k8s-1.9 \
+    --dns-zone "${AZURE_DNS_ZONE}" \
+    --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}" 
+  ```
 
   Replace the `<email-address>` placeholder in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
 
