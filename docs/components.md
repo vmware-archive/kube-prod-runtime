@@ -50,6 +50,8 @@ $ cat kubeprod-manifest.jsonnet
 
 [Kibana](https://www.elastic.co/products/kibana) lets you visualize your Elasticsearch data and navigate the Elastic Stack.
 
+Kibana is externally accessible at `https://kibana.${dns-zone}` where `${dns-zone}` is the literal for the DNS zone specified when BKPR was installed.
+
 ### Implementation
 
 BKPR uses Kibana as [packaged by Bitnami](https://hub.docker.com/r/bitnami/kibana/). By default it runs 1 non-root pod named `kibana` and also a Kubernetes Ingress resource named `kibana-logging` which allows end-user access to Kibana from the Internet. BKPR implements automatic DNS name registration for the `kibana-logging` Ingress resource based on the DNS suffix name specified when installing BKPR and also HTTP/S support (see cert-manager component for automatic management of X.509 certificates via Letsencrypt).
