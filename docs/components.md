@@ -28,7 +28,7 @@ To assure persistence of the underlying Elasticsearch storage, each pod relies o
 
 ### Overrides
 
-While it is technically possible to override or change the behavior of any of Elasticsearch attributes, only the following overrides are supported:
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override pod replicas
 
@@ -111,7 +111,7 @@ Or about 8GiB of disk space. These parameter can be tweaked. Please read the Ove
 
 ### Overrides
 
-While it is technically possible to override or change the behavior of any of Prometheus attributes, only the following overrides are supported:
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override storage parameters
 
