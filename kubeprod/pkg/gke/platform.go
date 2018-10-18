@@ -17,6 +17,7 @@ import (
 	crm "google.golang.org/api/cloudresourcemanager/v1"
 	dns "google.golang.org/api/dns/v1"
 	gensupport "google.golang.org/api/gensupport"
+	"google.golang.org/api/googleapi"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
@@ -66,6 +67,11 @@ func prompt(question, def string) (string, error) {
 		result = def
 	}
 	return result, nil
+}
+
+func hasGoogStatusCode(err error, code int) bool {
+	e, ok := err.(*googleapi.Error)
+	return ok && e.Code == code
 }
 
 var notAlnumRe = regexp.MustCompile("[^a-z0-9]+")
@@ -155,12 +161,36 @@ func config(cmd *cobra.Command, conf *GKEConfig) error {
 			conf.ExternalDNS.Project = project
 		}
 
-		if conf.ExternalDNS.Credentials == "" {
-			googClient, err := google.DefaultClient(ctx, dns.CloudPlatformScope, crm.CloudPlatformScope)
-			if err != nil {
-				return fmt.Errorf("failed to initialise Google API client: %v", err)
-			}
+		googClient, err := google.DefaultClient(ctx, dns.CloudPlatformScope, crm.CloudPlatformScope)
+		if err != nil {
+			return fmt.Errorf("failed to initialise Google API client: %v", err)
+		}
 
+		dnsService, err := dns.New(googClient)
+		if err != nil {
+			return fmt.Errorf("failed to initialise Google DNS API client: %v", err)
+		}
+
+		zone, err := dnsService.ManagedZones.
+			Create(conf.ExternalDNS.Project, &dns.ManagedZone{
+				Name:        accountID("bkpr-" + conf.DnsZone),
+				DnsName:     conf.DnsZone + ".",
+				Description: "Created by BKPR installer",
+			}).
+			Context(ctx).
+			Do()
+		if err != nil {
+			if hasGoogStatusCode(err, http.StatusConflict) {
+				log.Infof("Using existing Google DNS zone %q", conf.DnsZone)
+			} else {
+				return fmt.Errorf("failed to create Google managed-zone %q: %v", conf.DnsZone, err)
+			}
+		} else {
+			log.Infof("Created Google managed-zone %q", conf.DnsZone)
+			log.Infof("You will need to ensure glue records exist for %s pointing to NS %v", conf.DnsZone, zone.NameServers)
+		}
+
+		if conf.ExternalDNS.Credentials == "" {
 			client, err := admin.NewIamClient(ctx)
 			if err != nil {
 				return fmt.Errorf("failed to intialise Google IAM client: %v", err)
