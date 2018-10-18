@@ -30,7 +30,7 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
 
   ```bash
   az account list -o table
-  ``` 
+  ```
 
 * Set the default subscription account:
 
@@ -78,10 +78,17 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   kubectl get nodes
   ```
 
-## Step 2: Install `kubeprod`
-In this section, you will download and install the `kubeprod` binary on your local system.
+## Step 2: Download BKPR
+Download the latest stable version of the BKPR release for your operating system from the [releases](https://github.com/bitnami/kube-prod-runtime/releases) page and extract it's contents.
 
+For example, to download and install BKPR release `vX.Y.Z` on Linux:
 
+  ```bash
+  wget https://github.com/bitnami/kube-prod-runtime/releases/download/vX.Y.Z/kubeprod-vX.Y.Z-linux-amd64.tar.gz
+  tar xf kubeprod-vX.Y.Z-linux-amd64.tar.gz
+  chmod +x kubeprod
+  sudo mv kubeprod /usr/local/bin/
+  ```
 
 ### Step 3: Deploy BKPR
 BKPR bootstraps your AKS cluster with pre-configured services that make it easier to run, manage and monitor production workloads on Kubernetes. BKPR includes deployment extensions to automatically provide valid [Let's Encrypt TLS certificates](https://letsencrypt.org/) for apps and services running in your cluster, as well as to automatically configure logging and monitoring services for your Kubernetes workloads.
@@ -100,10 +107,10 @@ Follow the steps below:
   ```bash
   kubeprod install aks \
     --email <email-address> \
-    --manifests $BKPR_SRC/manifests \
+    --manifests ./manifests \
     --platform aks+k8s-1.9 \
     --dns-zone "${AZURE_DNS_ZONE}" \
-    --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}" 
+    --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}"
   ```
 
   Replace the `<email-address>` placeholder in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
@@ -112,7 +119,7 @@ Follow the steps below:
 
   ```bash
   kubectl get pods -n kubeprod
-  ``` 
+  ```
 
   BKPR uses `cert-manager` to requests TLS certificates for Kibana and Prometheus. To check the certificate objects that were created, use the command below:
 
@@ -122,7 +129,7 @@ Follow the steps below:
   kibana-logging-tls   3h
   prometheus-tls       3h
   ```
- 
+
   To check whether the TLS certificates have been successfully issued, use the command below:
 
   ```console
