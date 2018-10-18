@@ -77,7 +77,7 @@ git push origin $RELEASE_BRANCH_NAME
 
 Check the [build status](https://jenkins-bkpr.nami.run/blue/organizations/jenkins/kube-prod-runtime/branches) of the release branch and make sure the CI jobs have passed successfully before proceeding.
 
-Invite other contributors to review the changes in the branch to ensure that all required changes are committed to the branch.
+Invite other [maintainers](../MAINTAINERS) to review the changes in the branch to ensure that all required changes are committed.
 
 ## Step 3: Create a release candidate
 
