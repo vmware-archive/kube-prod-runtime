@@ -24,7 +24,7 @@ Elasticsearch Kubernetes Service uses default Elasticsearch ports:
 
 #### Storage
 
-To assure persistence of the underlying Elasticsearch storage, each pod relies on a Kubernetes PersistentVolume named `data-elasticsearch-logging-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated 100Gi of storage.
+To assure durability of the underlying Elasticsearch storage, each pod relies on a Kubernetes PersistentVolume named `data-elasticsearch-logging-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated 100Gi of storage.
 
 ### Overrides
 
@@ -75,7 +75,7 @@ Kibana is a stateless component and therefore does not have any persistent stora
 
 BKPR uses Prometheus as [packaged by Bitnami](https://hub.docker.com/r/bitnami/prometheus/). It is implemented as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `prometheus-0` under the `kubeprod` namespace.
 
-Prometheus scrapes several elements for relevant data which is stored as metrics in timeseries and can be queried using [Prometheus query language](https://prometheus.io/docs/prometheus/latest/querying/basics/) from the Prometheus console which is is externally accessible at `https://prometheus.${dns-zone}`, where `${dns-zone}` is the literal for the DNS zone specified when BKPR was installed.
+Prometheus scrapes several elements for relevant data which is stored as metrics in timeseries and can be queried using [Prometheus query language](https://prometheus.io/docs/prometheus/latest/querying/basics/) from the Prometheus console.  The prometheus console is externally accessible at `https://prometheus.${dns-zone}`, where `${dns-zone}` is the literal for the DNS zone specified when BKPR was installed.
 
 #### Scraping
 
@@ -86,13 +86,15 @@ Among the elements scraped by our default Prometheus configuration:
 * Ingress and Service resources, which are probed using Prometheus Blackbox exporter
 * Pods
 
-#### Kubernetes annotations
+#### Kubernetes Annotations
 
 The following Kubernetes annotations on pods allow a fine control of the scraping process:
 
 * `prometheus.io/scrape`: whether to include the pod or not in the scraping process
 * `prometheus.io/path`: required if the metrics path is not `/metrics`
 * `prometheus.io/port`: required if the pod must be scraped on the indicated port instead of the pod’s declared ports
+
+Adding these annotations to your own pods will cause Prometheus to also collect metrics from your service.
 
 #### Synthetic Labels
 
@@ -136,7 +138,7 @@ The following deployment parameters are supported, tested, and will be honoured 
 
 #### Override storage parameters
 
-The following example shows how to override the retention days, estimated number of timeseries, bytes per sample and overhead factor at the same time.
+The following example shows how to override the retention days and storage volume size.
 
 ```
 $ cat kubeprod-manifest.jsonnet
@@ -153,7 +155,7 @@ $ cat kubeprod-manifest.jsonnet
 
 #### Override for additional rules
 
-The following example shows how to add a additional monitoring rules. The default configuration shipped with Prometheus brings in two different groups of rules, namely `basic.rules` and `monitoring.rules`, but you can create additional groups if you need to. Next we show how to add an additional monitoring rule:
+The following example shows how to add additional monitoring rules. The default configuration shipped with Prometheus brings in two different groups of rules, namely `basic.rules` and `monitoring.rules`, but you can create additional groups if you need to. Next we show how to add an additional monitoring rule:
 
 ```
 $ cat kubeprod-manifest.jsonnet
@@ -162,9 +164,8 @@ $ cat kubeprod-manifest.jsonnet
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     prometheus+: {
-        monitoring_rules+: [
-            {
-                alert: "ElasticsearchDown",
+        monitoring_rules+: {
+            ElasticsearchDown: {
                 expr: "sum(elasticsearch_cluster_health_up) < 2",
                 "for": "10m",
                 labels: {severity: "critical"},
@@ -173,7 +174,7 @@ $ cat kubeprod-manifest.jsonnet
                     description: "Elasticsearch cluster quorum is not healthy",
                 },
             },
-        ]
+        },
     }
 }
 ```

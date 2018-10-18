@@ -47,9 +47,27 @@ local get_cm_web_hook_url = function(port, path) (
   storage:: 1.5 * needed_space / 1e6,
 
   # Default monitoring rules
-  monitoring_rules:: [
-    {
-      alert: "PrometheusBadConfig",
+  basic_rules:: {
+    K8sApiUnavailable: {
+      expr: "max(up{job=\"kubernetes_apiservers\"}) != 1",
+      "for": "10m",
+      annotations: {
+        summary: "Kubernetes API is unavailable",
+        description: "Kubernetes API is not responding",
+      },
+    },
+    CrashLooping: {
+      expr: "sum(rate(kube_pod_container_status_restarts[15m])) BY (namespace, container) * 3600 > 0",
+      "for": "1h",
+      labels: {severity: "notice"},
+      annotations: {
+        summary: "Frequently restarting container",
+        description: "{{$labels.namespace}}/{{$labels.container}} is restarting {{$value}} times per hour",
+      },
+    },
+  },
+  monitoring_rules:: {
+    PrometheusBadConfig: {
       expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
       "for": "10m",
       labels: {severity: "critical"},
@@ -58,8 +76,7 @@ local get_cm_web_hook_url = function(port, path) (
         description: "Config error with prometheus, see container logs",
       },
     },
-    {
-      alert: "AlertmanagerBadConfig",
+    AlertmanagerBadConfig: {
       expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
       "for": "10m",
       labels: {severity: "critical"},
@@ -68,7 +85,7 @@ local get_cm_web_hook_url = function(port, path) (
         description: "Config error with alertmanager, see container logs",
       },
     },
-  ],
+  },
 
   ingress: utils.AuthIngress($.p + "prometheus") + $.metadata {
     local this = self,
@@ -108,27 +125,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "basic.rules",
-          rules: [
-            {
-              alert: "K8sApiUnavailable",
-              expr: "max(up{job=\"kubernetes_apiservers\"}) != 1",
-              "for": "10m",
-              annotations: {
-                summary: "Kubernetes API is unavailable",
-                description: "Kubernetes API is not responding",
-              },
-            },
-            {
-              alert: "CrashLooping",
-              expr: "sum(rate(kube_pod_container_status_restarts[15m])) BY (namespace, container) * 3600 > 0",
-              "for": "1h",
-              labels: {severity: "notice"},
-              annotations: {
-                summary: "Frequently restarting container",
-                description: "{{$labels.namespace}}/{{$labels.container}} is restarting {{$value}} times per hour",
-              },
-            },
-          ],
+          rules: [{alert: kv[0]} + kv[1] for kv in kube.objectItems($.basic_rules)],
         },
       ],
     },
@@ -137,7 +134,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "monitoring.rules",
-          rules: $.monitoring_rules,
+          rules: [{alert: kv[0]} + kv[1], for kv in kube.objectItems($.monitoring_rules)],
         },
       ],
     },
