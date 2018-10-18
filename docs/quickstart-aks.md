@@ -79,50 +79,9 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   ```
 
 ## Step 2: Install `kubeprod`
-In this section, you will install the `kubeprod` binary on your local system. You have the option of either downloading and installing a pre-compiled binary or building the binary from source.
+In this section, you will download and install the `kubeprod` binary on your local system.
 
-### Install a pre-compiled `kubeprod` binary
 
-Download the latest release of the `kubeprod` binary and the accompanying manifests and add it to your `$PATH`.
-
-### Build `kubeprod` from source
-
-Alternatively, if you have access to the BKPR project repository, you may choose to build the `kubeprod` binary from the source code.
-
-#### Prerequisites
-
-* [Git](https://git-scm.com/downloads)
-* [Make](https://www.gnu.org/software/make/)
-* [Go programming language](https://golang.org/dl/)
-
-#### Build instructions
-
-* Set up your environment variables:
-
-  ```bash
-  export GOPATH=$HOME/go
-  export PATH=$GOPATH/bin:$PATH
-  export BKPR_SRC=$GOPATH/src/github.com/bitnami/kube-prod-runtime
-  ```
-
-* Download the BKPR sources:
-
-  ```bash
-  git clone git@github.com:bitnami/kube-prod-runtime.git $BKPR_SRC
-  ```
-
-* Build the `kubeprod` binary:
-
-  ```bash
-  cd $BKPR_SRC/kubeprod
-  make
-  ```
-
-  By default, the `kubeprod` binary will be built at `$BKPR_SRC/kubeprod/bin/kubeprod`. We recommend moving it to `$GOPATH/bin`, or to a directory listed in the `$PATH` environment variable, like `/usr/local/bin`:
-
-  ```bash
-  mv $BKPR_SRC/kubeprod/bin/kubeprod $GOPATH/bin
-  ```
 
 ### Step 3: Deploy BKPR
 BKPR bootstraps your AKS cluster with pre-configured services that make it easier to run, manage and monitor production workloads on Kubernetes. BKPR includes deployment extensions to automatically provide valid [Let's Encrypt TLS certificates](https://letsencrypt.org/) for apps and services running in your cluster, as well as to automatically configure logging and monitoring services for your Kubernetes workloads.
