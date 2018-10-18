@@ -1,195 +1,158 @@
-# BKPR on Azure Kubernetes Service
+# Quickstart: BKPR on Azure Kubernetes Service (AKS)
 
 ## Introduction
 The Bitnami Kubernetes Production Runtime (BKPR) makes it easy to run production workloads in Kubernetes by providing a collection of ready to run, pre-integrated services for logging, monitoring and certificate management and other infrastructure tools.
 
-This document walks through setting up an AKS cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) in the cluster.
+This document walks you through setting up an Azure Kubernetes Service (AKS) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) to that cluster.
 
 ## Prerequisites
 * [Microsoft Azure account](https://azure.microsoft.com)
-* [Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
+* [Microsoft Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 
-## Cluster setup
-In this section we deploy an Azure Kubernetes Service (AKS) cluster using the Azure CLI.
+## Step 1: Set up the cluster
+In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using the Azure CLI.
 
-* Login to your azure account by executing `az login` and follow the onscreen instructions to complete the login.
-* Create environment variables for the cluster name, resource group and DNS zone
+* Log in to your Microsoft Azure account by executing `az login`. Follow the onscreen instructions to complete the login process.
+* Create environment variables for the cluster name, resource group and DNS zone, as shown below:
 
-```bash
-export AKS_CLUSTER_NAME=my-aks-cluster
-export AZURE_RESOURCE_GROUP_NAME=my-kubeprod-group
-export AZURE_DNS_ZONE=example.com
-```
+  ```bash
+  export AKS_CLUSTER_NAME=my-aks-cluster
+  export AZURE_RESOURCE_GROUP_NAME=my-kubeprod-group
+  export AZURE_DNS_ZONE=example.com
+  ```
 
-The value of `AKS_CLUSTER_NAME` is used to set the name of the AKS cluster, `AZURE_RESOURCE_GROUP_NAME` specifies the name of the Azure resource group under which the cluster will be created and the `AZURE_DNS_ZONE` specifies the DNS suffix for the externally visible websites and services deployed in the cluster.
+  The `AKS_CLUSTER_NAME` variable sets the name of the AKS cluster, `AZURE_RESOURCE_GROUP_NAME` specifies the name of the Azure resource group under which the cluster will be created, and `AZURE_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
 
-Please update the values of these environment variables as per your requirements. In the remainder of this document we will assume the above configuration for convenience.
+  Update the values of these environment variables as per your requirements. The remaining steps will assume the values shown above.
 
-* List your azure subscriptions
+* List your Microsoft Azure subscriptions:
 
-```bash
-az account list -o table
-``` 
+  ```bash
+  az account list -o table
+  ```
 
-* Set the default subscription account
+* Set the default subscription account:
 
-```bash
-az account set --subscription <azure-subscription-id>
-```
+  ```bash
+  az account set --subscription <azure-subscription-id>
+  ```
 
-If your Azure account is subscribed to more than one subscription it's convenient to set the default subscription ID. Update the `<azure-subscription-id>` placeholder in the command above with the ID of the subscription you’d like to use.
+  If your Azure account has more than one subscription, set the default subscription for future operations. Update the `<azure-subscription-id>` placeholder in the command above with the ID of the subscription you’d like to use.
 
-* Create the resource group for AKS
+* Create the resource group for AKS:
 
-```bash
-az group create --name ${AZURE_RESOURCE_GROUP_NAME} --location <azure-region>
-```
+  ```bash
+  az group create --name ${AZURE_RESOURCE_GROUP_NAME} --location <azure-region>
+  ```
 
-Update the `<azure-region>` placeholder in the command above with the Azure region code (eg. `eastus`) for creation of the Azure Resource Group.
+  Update the `<azure-region>` placeholder in the command above with the Azure region code (eg. `eastus`).
 
-* Create the AKS cluster
+* Create the AKS cluster:
 
-```bash
-az aks create \
-  --resource-group "${AZURE_RESOURCE_GROUP_NAME}" \
-  --name "${AKS_CLUSTER_NAME}" \
-  --node-count 3 \
-  --node-vm-size Standard_DS2_v2 \
-  --ssh-key-value ~/.ssh/id_rsa.pub \
-  --kubernetes-version 1.9.10 --verbose
-```
+  ```bash
+  az aks create \
+    --resource-group "${AZURE_RESOURCE_GROUP_NAME}" \
+    --name "${AKS_CLUSTER_NAME}" \
+    --node-count 3 \
+    --node-vm-size Standard_DS2_v2 \
+    --ssh-key-value ~/.ssh/id_rsa.pub \
+    --kubernetes-version 1.9.10 --verbose
+  ```
 
-Provisioning a AKS cluster can take a long time to complete. Please be patient while the request is being processed.
+  Provisioning a AKS cluster can take a long time to complete. Please be patient while the request is being processed.
 
-* Configure `kubectl` to use the new cluster
+* Configure `kubectl` to use the new cluster:
 
-```bash
-az aks get-credentials \
-  --resource-group "${AZURE_RESOURCE_GROUP_NAME}" \
-  --name "${AKS_CLUSTER_NAME}"
-```
+  ```bash
+  az aks get-credentials \
+    --resource-group "${AZURE_RESOURCE_GROUP_NAME}" \
+    --name "${AKS_CLUSTER_NAME}"
+  ```
 
-This command configures the AKS cluster in `~/.kube/config` using the name specified by `${AKS_CLUSTER_NAME}` and makes it the default context.
+  This command configures the AKS cluster in `~/.kube/config` using the name specified by `${AKS_CLUSTER_NAME}` and makes it the default context.
 
-* Verify that your cluster is up and running
+* Verify that your cluster is up and running:
 
-```bash
-kubectl get nodes
-```
+  ```bash
+  kubectl get nodes
+  ```
 
-## Installing BKPR
-In this section we walk through building the kubeprod binary and use it to install the BKPR components to the AKS cluster.
+## Step 2: Download BKPR
+Download the latest stable version of the BKPR release for your operating system from the [releases](https://github.com/bitnami/kube-prod-runtime/releases) page and extract it's contents.
 
-### Install the `kubeprod` binary
+For example, to download and install BKPR release `vX.Y.Z` on Linux:
 
-Download the latest release of the `kubeprod` binary and the accompanying manifests and add it to your `$PATH`.
+  ```bash
+  wget https://github.com/bitnami/kube-prod-runtime/releases/download/vX.Y.Z/kubeprod-vX.Y.Z-linux-amd64.tar.gz
+  tar xf kubeprod-vX.Y.Z-linux-amd64.tar.gz
+  chmod +x kubeprod
+  sudo mv kubeprod /usr/local/bin/
+  ```
 
-### Building `kubeprod` from source
+### Step 3: Deploy BKPR
+BKPR bootstraps your AKS cluster with pre-configured services that make it easier to run, manage and monitor production workloads on Kubernetes. BKPR includes deployment extensions to automatically provide valid [Let's Encrypt TLS certificates](https://letsencrypt.org/) for apps and services running in your cluster, as well as to automatically configure logging and monitoring services for your Kubernetes workloads.
 
-Alternatively, if you have access to the BKPR project repository, you may choose to build the `kubeprod` binary instead of using a pre-built binary, as described in the next section. You may skip this section if you are using a binary distribution of BKPR.
+Follow the steps below:
 
-#### Prerequisites
+* Create a directory where `kubeprod` will deploy the following files:
 
-* [Git](https://git-scm.com/downloads)
-* [Make](https://www.gnu.org/software/make/)
-* [Go programming language](https://golang.org/dl/)
+  * `kubeprod-manifest.jsonnet`: The cluster-specific entry point which is used by `kubeprod` and `kubecfg`
+  * `kubeprod-autogen.json`: A JSON configuration file for the cluster. This file might contain sensitive information (secrets, passwords, tokens, etc.) so it is highly recommended to not store it under any revision control system.
 
-#### Build instructions
+  When `kubeprod` runs, it performs various platform-specific steps. For example, when bootstrapping BKPR on an AKS cluster, `kubeprod`  creates some Kubernetes objects in Azure. [Find more detailed information about these objects](aks/objects.md). Subsequently, `kubeprod` generates the `kubeprod-manifest.jsonnet` and `kubeprod-autogen.json` files and then performs a `kubecfg update` using the cluster-specific `kubeprod-manifest.jsonnet` file generated as the entry point. BKPR deploys everything into the `kubeprod` namespace.
 
-* Set up your environment variables
+* Run `kubeprod` from the directory you just created:
 
-```bash
-export GOPATH=$HOME/go
-export PATH=$GOPATH/bin:$PATH
-export BKPR_SRC=$GOPATH/src/github.com/bitnami/kube-prod-runtime
-```
+  ```bash
+  kubeprod install aks \
+    --email <email-address> \
+    --manifests ./manifests \
+    --platform aks+k8s-1.9 \
+    --dns-zone "${AZURE_DNS_ZONE}" \
+    --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}"
+  ```
 
-* Download the BKPR sources
+  Replace the `<email-address>` placeholder in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
 
-```bash
-git clone git@github.com:bitnami/kube-prod-runtime.git $BKPR_SRC
-```
+* Once BKPR has been deployed to your cluster, wait for all pods to start running and all TLS certificates to be issued before using BKPR.  To check that all pods are running, use the command below:
 
-* Build the `kubeprod` binary
+  ```bash
+  kubectl get pods -n kubeprod
+  ```
 
-```bash
-cd $BKPR_SRC/kubeprod
-make
-```
+  BKPR uses `cert-manager` to requests TLS certificates for Kibana and Prometheus. To check the certificate objects that were created, use the command below:
 
-The `kubeprod` binary will be located at `$BKPR_SRC/kubeprod/bin/kubeprod`, and we recommend to move it under `$GOPATH/bin`:
+  ```console
+  kubectl get certificates -n kubeprod
+  NAME                 AGE
+  kibana-logging-tls   3h
+  prometheus-tls       3h
+  ```
 
-```bash
-mv $BKPR_SRC/kubeprod/bin/kubeprod $GOPATH/bin
-```
+  To check whether the TLS certificates have been successfully issued, use the command below:
 
-Alternatively, move the `kubeprod` binary into a directory listed in the `$PATH` environment variable, like `/usr/local/bin`.
+  ```console
+  kubectl describe certificate -n kubeprod kibana-logging-tls
+  ...
+    Conditions:
+      Last Transition Time:  2018-07-06T09:58:34Z
+      Message:               Certificate issued successfully
+      Reason:                CertIssued
+      Status:                True
+      Type:                  Ready
+  ...
+  ```
 
-### Deploy BKPR
-BKPR bootstraps your AKS cluster with pre-configured services that make it easier to run, manage and monitor production workloads on Kubernetes. BKPR includes deployment extensions to automatically provide valid LetsEncrypt TLS certificates for apps and services running in your cluster as well as automatically configure logging and monitoring services for your Kubernetes workloads.
+* The final step is to update DNS records. The `kubeprod install aks` command sets up a DNS zone for your domain (specified in the `AZURE_DNS_ZONE` environment variable) if it doesn't exist yet. Then, it writes a list of nameservers to the standard output. You must use these nameservers to set up DNS records for your domain. For example:
 
-Before running `kubeprod` to bootstrap BKPR, create a directory where `kubeprod` will deploy the following files:
+  ```console
+  INFO  You will need to ensure glue records exist for example.com pointing to NS [ns1-01.azure-dns.com. ns2-01.azure-dns.net. ns3-01.azure-dns.org. ns4-01.azure-dns.info.]
+  ```
 
-* `kubeprod-manifest.jsonnet`: the cluster-specific entry point which is used by `kubeprod` and `kubecfg`
-* `kubeprod-autogen.json`: a JSON configuration file for the cluster. This file might contain sensitive information (secrets, passwords, tokens, etc.) so it is highly recommended to not store it under any revision control system.
+  Ensure you have updated these records at the domain registrar before proceeding. This is a required step for the automatic TLS certificate provisioning.
 
-When `kubeprod` runs, it performs some platform-specific steps. For example, when bootstrapping BKPR in AKS (Azure Kubernetes), `kubeprod` will create some objects in Azure. For more detailed information about these objects, refer to [here](aks/objects.md).
+## Step 4: Use logging and monitoring
+BKPR pre-configures an ELK stack for log collection, visualization and analysis. The Kibana dashboard can be accessed by visiting `https://kibana.${AZURE_DNS_ZONE}` in your Web browser.
 
-Afterwards, `kubeprod` generates the `kubeprod-manifest.jsonnet` and `kubeprod-autogen.json` files and then will perform a `kubecfg update` using the cluster-specific `kubeprod-manifest.jsonnet` file generated as the entry point.
-
-Run `kubeprod` from the directory you just created.
-
-```bash
-kubeprod install aks \
-  --email <email-address> \
-  --manifests $BKPR_SRC/manifests \
-  --platform aks+k8s-1.9 \
-  --dns-zone "${AZURE_DNS_ZONE}" \
-  --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}" 
-```
-
-Replace the `<email-address>` in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
-
-Once BKPR has been deployed to your cluster, you will need to wait for all pods to be running and TLS certificates to be issued to be able to use BKPR. BKPR deploys everything into the `kubeprod` namespace. Check that all pods are successfully running:
-
-```bash
-kubectl get pods -n kubeprod
-``` 
-
-BKPR uses `cert-manager` to requests TLS certificates for Kibana and Prometheus. You can check the certificates objects that were created:
-
-```console
-kubectl get certificates -n kubeprod
-NAME                 AGE
-kibana-logging-tls   3h
-prometheus-tls       3h
-```
- 
-And check whether the TLS certificates were already successfully issued:
-
-```console
-kubectl describe certificate -n kubeprod kibana-logging-tls
-...
-  Conditions:
-    Last Transition Time:  2018-07-06T09:58:34Z
-    Message:               Certificate issued successfully
-    Reason:                CertIssued
-    Status:                True
-    Type:                  Ready
-...
-```
-
-* Update DNS records
-The `kubeprod install aks` command from the previous step sets up a DNS zone for your domain (specified in the `AZURE_DNS_ZONE` environment variable) if it doesn't exist yet. Then, it writes to the standard output a list of nameservers which you need to set up NS records for your domain. For example:
-
-```console
-INFO  You will need to ensure glue records exist for example.com pointing to NS [ns1-01.azure-dns.com. ns2-01.azure-dns.net. ns3-01.azure-dns.org. ns4-01.azure-dns.info.]
-```
-
-Ensure you have updated these records at the domain registrar before proceeding. This is a required step for the automatic TLS certificate provisioning.
-
-## Logging and Monitoring
-BKPR pre-configures a ELK stack for log collection, visualization and analysis. The Kibana dashboard can be accessed by visiting `https://kibana.${AZURE_DNS_ZONE}` in your Web browser.
-
-Prometheus metrics collection is also configured for performance monitoring and can be access by visiting `https://prometheus.${AZURE_DNS_ZONE}`.
+Prometheus metrics collection is also configured for performance monitoring. The Prometheus dashboard can be accessed by visiting `https://prometheus.${AZURE_DNS_ZONE}`.
