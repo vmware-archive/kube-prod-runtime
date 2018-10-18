@@ -19,6 +19,8 @@ import (
 var version = "(dev build)"
 
 func main() {
+	cmd.Version = version
+
 	if err := cmd.RootCmd.Execute(); err != nil {
 		// PersistentPreRunE may not have been run for early
 		// errors, like invalid command line flags.
