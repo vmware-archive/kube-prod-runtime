@@ -14,50 +14,46 @@ This document walks you through setting up an Azure Kubernetes Service (AKS) clu
 In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using the Azure CLI.
 
 * Log in to your Microsoft Azure account by executing `az login`. Follow the onscreen instructions to complete the login process.
-* Create environment variables for the cluster name, resource group and DNS zone, as shown below:
+* Configure the following  environment variables:
 
   ```bash
-  export AKS_CLUSTER_NAME=my-aks-cluster
-  export AZURE_RESOURCE_GROUP_NAME=my-kubeprod-group
+  export AZURE_SUBSCRIPTION_ID="xxxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+  export AZURE_REGION="eastus"
+  export AZURE_RESOURCE_GROUP=my-kubeprod-group
   export AZURE_DNS_ZONE=example.com
+  export AZURE_AKS_CLUSTER=my-aks-cluster
+  export AZURE_AKS_K8S_VERSION=1.9.10
   ```
 
-  The `AKS_CLUSTER_NAME` variable sets the name of the AKS cluster, `AZURE_RESOURCE_GROUP_NAME` specifies the name of the Azure resource group under which the cluster will be created, and `AZURE_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
-
-  Update the values of these environment variables as per your requirements. The remaining steps will assume the values shown above.
-
-* List your Microsoft Azure subscriptions:
-
-  ```bash
-  az account list -o table
-  ```
+  - `AZURE_SUBSCRIPTION_ID` specifies the Azure subscription id. `az account list -o table` lists your Microsoft Azure subscriptions.
+  - `AZURE_REGION` specifies the Azure region code.
+  - `AZURE_RESOURCE_GROUP` specifies the name of the Azure resource group in which resources should be created.
+  - `AZURE_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
+  - `AZURE_AKS_CLUSTER` specifies the name of the AKS cluster.
+  - `AZURE_AKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `az aks get-versions --location ${AZURE_REGION}` lists the versions available in your region.
 
 * Set the default subscription account:
 
   ```bash
-  az account set --subscription <azure-subscription-id>
+  az account set --subscription ${AZURE_SUBSCRIPTION_ID}
   ```
-
-  If your Azure account has more than one subscription, set the default subscription for future operations. Update the `<azure-subscription-id>` placeholder in the command above with the ID of the subscription you’d like to use.
 
 * Create the resource group for AKS:
 
   ```bash
-  az group create --name ${AZURE_RESOURCE_GROUP_NAME} --location <azure-region>
+  az group create --name ${AZURE_RESOURCE_GROUP} --location ${AZURE_REGION}
   ```
-
-  Update the `<azure-region>` placeholder in the command above with the Azure region code (eg. `eastus`).
 
 * Create the AKS cluster:
 
   ```bash
   az aks create \
-    --resource-group "${AZURE_RESOURCE_GROUP_NAME}" \
-    --name "${AKS_CLUSTER_NAME}" \
+    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --name "${AZURE_AKS_CLUSTER}" \
     --node-count 3 \
     --node-vm-size Standard_DS2_v2 \
     --ssh-key-value ~/.ssh/id_rsa.pub \
-    --kubernetes-version 1.9.10 --verbose
+    --kubernetes-version ${AZURE_AKS_K8S_VERSION} --verbose
   ```
 
   Provisioning a AKS cluster can take a long time to complete. Please be patient while the request is being processed.
@@ -66,11 +62,11 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
 
   ```bash
   az aks get-credentials \
-    --resource-group "${AZURE_RESOURCE_GROUP_NAME}" \
-    --name "${AKS_CLUSTER_NAME}"
+    --resource-group "${AZURE_RESOURCE_GROUP}" \
+    --name "${AZURE_AKS_CLUSTER}"
   ```
 
-  This command configures the AKS cluster in `~/.kube/config` using the name specified by `${AKS_CLUSTER_NAME}` and makes it the default context.
+  This command configures the AKS cluster in `~/.kube/config` using the name specified by `${AZURE_AKS_CLUSTER}` and makes it the default context.
 
 * Verify that your cluster is up and running:
 
@@ -79,16 +75,34 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   ```
 
 ## Step 2: Download BKPR
-Download the latest stable version of the BKPR release for your operating system from the [releases](https://github.com/bitnami/kube-prod-runtime/releases) page and extract it's contents.
+A BKPR release consists of a collection of Kubernetes manifests written in Jsonnet plus the accompanying `kubeprod` installer binary. The kubeprod binary deals with all the platform-specific details, evaluates the Jsonnet manifests, and applies them to the existing Kubernetes cluster.
 
-For example, to download and install BKPR release `vX.Y.Z` on Linux:
+BKPR releases are available for 64-bit versions of Linux, macOS and Windows platforms. Download the latest stable version for your platform of choice from the [releases](https://github.com/bitnami/kube-prod-runtime/releases) page.
+
+To download BKPR release `vX.Y.Z`, for example:
+
+On Linux:
 
   ```bash
-  wget https://github.com/bitnami/kube-prod-runtime/releases/download/vX.Y.Z/kubeprod-vX.Y.Z-linux-amd64.tar.gz
-  tar xf kubeprod-vX.Y.Z-linux-amd64.tar.gz
-  chmod +x kubeprod
-  sudo mv kubeprod /usr/local/bin/
+  curl -LO https://github.com/bitnami/kube-prod-runtime/releases/download/vX.Y.Z/bkpr-vX.Y.Z-linux-amd64.tar.gz
+  tar xf bkpr-vX.Y.Z-linux-amd64.tar.gz
   ```
+
+On macOS:
+
+  ```bash
+  curl -LO https://github.com/bitnami/kube-prod-runtime/releases/download/vX.Y.Z/bkpr-vX.Y.Z-darwin-amd64.tar.gz
+  tar xf bkpr-vX.Y.Z-darwin-amd64.tar.gz
+  ```
+
+To install the `kubeprod` binary:
+
+  ```bash
+  chmod +x bkpr-vX.Y.X/kubeprod
+  sudo mv bkpr-vX.Y.X/kubeprod /usr/local/bin/
+  ```
+
+The Jsonnet manifests from the release will be used in the next step.
 
 ### Step 3: Deploy BKPR
 BKPR bootstraps your AKS cluster with pre-configured services that make it easier to run, manage and monitor production workloads on Kubernetes. BKPR includes deployment extensions to automatically provide valid [Let's Encrypt TLS certificates](https://letsencrypt.org/) for apps and services running in your cluster, as well as to automatically configure logging and monitoring services for your Kubernetes workloads.
@@ -107,13 +121,13 @@ Follow the steps below:
   ```bash
   kubeprod install aks \
     --email <email-address> \
-    --manifests ./manifests \
-    --platform aks+k8s-1.9 \
+    --manifests <path-to-jsonnet-manifests>/manifests \
+    --platform aks+k8s-${AZURE_AKS_K8S_VERSION%.*} \
     --dns-zone "${AZURE_DNS_ZONE}" \
-    --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}"
+    --dns-resource-group "${AZURE_RESOURCE_GROUP}"
   ```
 
-  Replace the `<email-address>` placeholder in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
+  Replace `<path-to-jsonnet-manifests>` with the path to the BKPR release manifests directory extracted in the previous step. Additionally replace the `<email-address>` placeholder in the above command with your valid email address. The email address is used by BKPR in requests to Let's Encrypt to issue TLS certificates for your domain.
 
 * Once BKPR has been deployed to your cluster, wait for all pods to start running and all TLS certificates to be issued before using BKPR.  To check that all pods are running, use the command below:
 
