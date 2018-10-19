@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuite tests="1" failures="0" time="345.800598766">
+      <testcase name="Ingress with TLS should be reachable via https URL" classname="foo" time="345.796376306"></testcase>
+  </testsuite>
