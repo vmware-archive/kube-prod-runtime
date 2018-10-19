@@ -114,7 +114,7 @@ This configuration is assembled into a Kubernetes ConfigMap and injected into th
 
 #### Configuration reloading
 
-Inside a Prometheus pod there is a container named `configmap-reload` that watches for updates to the Kubernetes ConfigMap that describes the Prometheus configuration. When this Kubernetes ConfigMap is updated, `configmap-relaoder` will issue the following HTTP request to Prometheus, which cause a configuration reload: `http://localhost:9090/-/reload`.
+Inside a Prometheus pod there is a container named `configmap-reload` that watches for updates to the Kubernetes ConfigMap that describes the Prometheus configuration. When this Kubernetes ConfigMap is updated, `configmap-reloader` will issue the following HTTP request to Prometheus, which cause a configuration reload: `http://localhost:9090/-/reload`.
 
 #### Networking
 
