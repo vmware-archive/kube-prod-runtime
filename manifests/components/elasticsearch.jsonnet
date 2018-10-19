@@ -15,7 +15,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
 {
   p:: "",
-  replicas:: 3,
   min_master_nodes:: 2,
 
   labels:: {
@@ -66,7 +65,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     local this = self,
     spec+: {
       podManagementPolicy: "Parallel",
-      replicas: $.replicas,
+      replicas: 3,
       updateStrategy: { type: "RollingUpdate" },
       template+: {
         metadata+: {
