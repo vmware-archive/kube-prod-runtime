@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuite tests="1" failures="0" time="26.725077979">
+      <testcase name="Ingress basic Ingress LB should have a public IP" classname="foo" time="26.723020306"></testcase>
+  </testsuite>
