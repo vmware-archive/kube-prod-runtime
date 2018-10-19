@@ -124,13 +124,7 @@ Prometheus Kubernetes Service uses the default port:
 
 #### Storage
 
-To assure persistence of the timeseries database, each pod relies on a Kubernetes PersistentVolume named `data-prometheus-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated storage based on the following formula: `1.5 * retention_seconds * samples_per_second * bytes_per_sample / 1000000`, where:
-
-* `retention_seconds` defaults to 183 days (in seconds)
-* `samples_per_second` defaults to `166.66`
-* `bytes_per_sample` defaults to `2`
-
-Or about 8GiB of disk space. These parameter can be tweaked. Please read the Overrides section below.
+To assure persistence of the timeseries database, each pod relies on a Kubernetes PersistentVolume named `data-prometheus-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated a default storage of 6 months or 8GiB. In the Overrides section below there are instructions for reconfiguring this.
 
 ### Overrides
 
