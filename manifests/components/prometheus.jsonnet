@@ -33,6 +33,60 @@ local get_cm_web_hook_url = function(port, path) (
     },
   },
 
+  // https://prometheus.io/docs/prometheus/2.0/storage/#operational-aspects
+  //  On average, Prometheus uses only around 1-2 bytes per sample. Thus, to
+  // plan the capacity of a Prometheus server, you can use the rough formula:
+  //  needed_disk_space = retention_seconds * ingested_samples_per_second * bytes_per_sample
+  local time_series = 10000,
+  local bytes_per_sample = 2,
+  local retention_seconds = self.retention_days * 86400,
+  local ingested_samples_per_second = time_series / $.config.global.scrape_interval_secs,
+  local needed_space = retention_seconds * ingested_samples_per_second * bytes_per_sample,
+
+  retention_days:: 366/2,
+  storage:: 1.5 * needed_space / 1e6,
+
+  # Default monitoring rules
+  basic_rules:: {
+    K8sApiUnavailable: {
+      expr: "max(up{job=\"kubernetes_apiservers\"}) != 1",
+      "for": "10m",
+      annotations: {
+        summary: "Kubernetes API is unavailable",
+        description: "Kubernetes API is not responding",
+      },
+    },
+    CrashLooping: {
+      expr: "sum(rate(kube_pod_container_status_restarts[15m])) BY (namespace, container) * 3600 > 0",
+      "for": "1h",
+      labels: {severity: "notice"},
+      annotations: {
+        summary: "Frequently restarting container",
+        description: "{{$labels.namespace}}/{{$labels.container}} is restarting {{$value}} times per hour",
+      },
+    },
+  },
+  monitoring_rules:: {
+    PrometheusBadConfig: {
+      expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
+      "for": "10m",
+      labels: {severity: "critical"},
+      annotations: {
+        summary: "Prometheus failed to reload config",
+        description: "Config error with prometheus, see container logs",
+      },
+    },
+    AlertmanagerBadConfig: {
+      expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
+      "for": "10m",
+      labels: {severity: "critical"},
+      annotations: {
+        summary: "Alertmanager failed to reload config",
+        description: "Config error with alertmanager, see container logs",
+      },
+    },
+  },
+
   ingress: utils.AuthIngress($.p + "prometheus") + $.metadata {
     local this = self,
     host:: error "host is required",
@@ -71,27 +125,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "basic.rules",
-          rules: [
-            {
-              alert: "K8sApiUnavailable",
-              expr: "max(up{job=\"kubernetes_apiservers\"}) != 1",
-              "for": "10m",
-              annotations: {
-                summary: "Kubernetes API is unavailable",
-                description: "Kubernetes API is not responding",
-              },
-            },
-            {
-              alert: "CrashLooping",
-              expr: "sum(rate(kube_pod_container_status_restarts[15m])) BY (namespace, container) * 3600 > 0",
-              "for": "1h",
-              labels: {severity: "notice"},
-              annotations: {
-                summary: "Frequently restarting container",
-                description: "{{$labels.namespace}}/{{$labels.container}} is restarting {{$value}} times per hour",
-              },
-            },
-          ],
+          rules: [{alert: kv[0]} + kv[1] for kv in kube.objectItems($.basic_rules)],
         },
       ],
     },
@@ -100,28 +134,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "monitoring.rules",
-          rules: [
-            {
-              alert: "PrometheusBadConfig",
-              expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
-              "for": "10m",
-              labels: {severity: "critical"},
-              annotations: {
-                summary: "Prometheus failed to reload config",
-                description: "Config error with prometheus, see container logs",
-              },
-            },
-            {
-              alert: "AlertmanagerBadConfig",
-              expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
-              "for": "10m",
-              labels: {severity: "critical"},
-              annotations: {
-                summary: "Alertmanager failed to reload config",
-                description: "Config error with alertmanager, see container logs",
-              },
-            },
-          ],
+          rules: [{alert: kv[0]} + kv[1], for kv in kube.objectItems($.monitoring_rules)],
         },
       ],
     },
@@ -172,19 +185,7 @@ local get_cm_web_hook_url = function(port, path) (
       spec+: {
         volumeClaimTemplates_: {
           data: {
-            // https://prometheus.io/docs/prometheus/2.0/storage/#operational-aspects
-            //  On average, Prometheus uses only around 1-2 bytes per
-            //  sample. Thus, to plan the capacity of a Prometheus server,
-            //  you can use the rough formula:
-            //  needed_disk_space = retention_time_seconds * ingested_samples_per_second * bytes_per_sample
-            retention_days:: prom.deploy.spec.template.spec.containers_.default.args_.retention_days,
-            retention_secs:: self.retention_days * 86400,
-            time_series:: 10000, // wild guess
-            samples_per_sec:: self.time_series / $.config.global.scrape_interval_secs,
-            bytes_per_sample:: 2,
-            needed_space:: self.retention_secs * self.samples_per_sec * self.bytes_per_sample,
-            overhead_factor:: 1.5,
-            storage: "%dMi" % [self.overhead_factor * self.needed_space / 1e6],
+            storage: "%dMi" % $.storage,
           },
         },
         template+: {
@@ -217,8 +218,7 @@ local get_cm_web_hook_url = function(port, path) (
                   "web.external-url": $.ingress.prom_url,
 
                   "config.file": this.volumeMounts_.config.mountPath + "/prometheus.yml",
-                  retention_days:: 366/2,
-                  "storage.tsdb.retention": "%dd" % self.retention_days,
+                  "storage.tsdb.retention": "%dd" % $.retention_days,
 
                   // These are unmodified upstream console files. May
                   // want to ship in config instead.
