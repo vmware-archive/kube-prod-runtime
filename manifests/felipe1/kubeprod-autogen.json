@@ -1,0 +1,17 @@
+{
+  "dnsZone": "aks.azure.nami.run",
+  "contactEmail": "felipe@bitnami.com",
+  "externalDns": {
+    "tenantId": "9c701005-1e88-41d9-bc41-44f1c95615bd",
+    "subscriptionId": "ba31ac71-49e0-4d66-9c96-99e6298a9b69",
+    "aadClientId": "0a4ab085-f081-4e0c-8cd7-dc0b28261042",
+    "aadClientSecret": "fX11m7n0Gg+hkUnK",
+    "resourceGroup": "felipe1"
+  },
+  "oauthProxy": {
+    "client_id": "e3ca476e-60e7-4d27-8a69-9a6deb752f57",
+    "client_secret": "8eeQuHwLDXSlBe5pxahIL3X+",
+    "cookie_secret": "1/kebTdfau8OxlGnLR6hHJCp9IGhUUd7",
+    "azure_tenant": "9c701005-1e88-41d9-bc41-44f1c95615bd"
+  }
+}

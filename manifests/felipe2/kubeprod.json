@@ -1,0 +1,17 @@
+{
+  "dnsZone": "felipe.fuloi.org",
+  "contactEmail": "felipe@bitnami.com",
+  "externalDns": {
+    "tenantId": "9c701005-1e88-41d9-bc41-44f1c95615bd",
+    "subscriptionId": "ba31ac71-49e0-4d66-9c96-99e6298a9b69",
+    "aadClientId": "a6139c2c-9267-4910-a715-30b76995f1a5",
+    "aadClientSecret": "g0vHBzmyLS2NKDHL",
+    "resourceGroup": "felipe2"
+  },
+  "oauthProxy": {
+    "client_id": "ec8efa62-a53f-421b-83d5-1d2473f5c436",
+    "client_secret": "/hI6ZNtrhNBDXQBTr3+SYvEe",
+    "cookie_secret": "YhjOXWuFbdfwaWDTmJ2kW8El4oJ1+Up+",
+    "azure_tenant": "9c701005-1e88-41d9-bc41-44f1c95615bd"
+  }
+}
