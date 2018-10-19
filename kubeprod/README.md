@@ -1,15 +1,5 @@
 # Installer for Production Runtime
 
-Usage:
-
-```sh
-# Find supported platform
-kubeprod list-platforms
-
-# Install to cluster given by current kubectl context
-kubeprod install --platform=$platform
-```
-
 ## Development
 
 Requires a typical golang development environment.  To build:
@@ -33,10 +23,9 @@ az aks get-credentials --resource-group "${AZURE_RESOURCE_GROUP_NAME}" --name "$
 # Run "kubeprod" to populate the AKS cluster
 cd ${GOPATH:-$HOME/go}/src/github.com/bitnami/kube-prod-runtime/kubeprod
 make
-./bin/kubeprod install \
+./bin/kubeprod install aks \
     --email "<your e-mail address>" \
     --manifests ../manifests \
-    --platform aks+k8s-1.9 \
     --dns-zone "${AZURE_DNS_ZONE}" \
     --dns-resource-group "${AZURE_RESOURCE_GROUP_NAME}"
 ```

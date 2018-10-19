@@ -41,20 +41,8 @@ var gkeCmd = &cobra.Command{
 	Short: "Install Bitnami Production Runtime for GKE",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := kubeprodcmd.NewInstallSubcommand(cmd)
+		c, err := kubeprodcmd.NewInstallSubcommand(cmd, "gke", &GKEConfig{flags: cmd.Flags()})
 		if err != nil {
-			return err
-		}
-
-		conf := GKEConfig{}
-		c.PlatformConfig = &conf
-		if err := c.ReadPlatformConfig(&conf); err != nil {
-			return err
-		}
-		if err := config(cmd, &conf); err != nil {
-			return err
-		}
-		if err := c.WritePlatformConfig(&conf); err != nil {
 			return err
 		}
 

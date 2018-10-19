@@ -31,8 +31,6 @@ import (
 )
 
 const (
-	FlagPlatform = "platform"
-
 	FlagManifests       = "manifests"
 	DefaultManifestBase = "https://github.com/bitnami/kube-prod-runtime/manifests/"
 
@@ -48,18 +46,19 @@ var InstallCmd = &cobra.Command{
 func init() {
 	RootCmd.AddCommand(InstallCmd)
 
-	InstallCmd.PersistentFlags().String(FlagPlatform, "", "Target platform name.  See list-platforms for possible values")
-	InstallCmd.MarkPersistentFlagRequired(FlagPlatform)
 	InstallCmd.PersistentFlags().String(FlagManifests, DefaultManifestBase, "Base URL below which to find platform manifests")
 	InstallCmd.PersistentFlags().String(FlagPlatformConfig, prodruntime.DefaultPlatformConfig, "Path for generated platform config file")
 }
 
 // Common initialisation for platform install subcommands
-func NewInstallSubcommand(cmd *cobra.Command) (*installer.InstallCmd, error) {
-	flags := cmd.Flags()
+func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.PlatformConfig) (*installer.InstallCmd, error) {
 	var err error
+	flags := cmd.Flags()
 
-	c := installer.InstallCmd{}
+	c := installer.InstallCmd{
+		Platform:       platform,
+		PlatformConfig: config,
+	}
 
 	cwdURL, err := tools.CwdURL()
 	if err != nil {
@@ -89,17 +88,6 @@ func NewInstallSubcommand(cmd *cobra.Command) (*installer.InstallCmd, error) {
 		return nil, fmt.Errorf("platform config path must be a file:// URL")
 	}
 	c.PlatformConfigPath = platformConfigURL.Path
-
-	platform, err := flags.GetString(FlagPlatform)
-	if err != nil {
-		return nil, err
-	}
-	c.Platform = prodruntime.FindPlatform(platform)
-	if c.Platform == nil {
-		// TODO: add some more helpful advice about how to
-		// find valid values, etc
-		return nil, fmt.Errorf("unknown platform %q", platform)
-	}
 
 	c.Config, err = clientConfig.ClientConfig()
 	if err != nil {

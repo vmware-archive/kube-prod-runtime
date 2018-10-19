@@ -19,6 +19,10 @@
 
 package gke
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 // Structure of `azure.json` required by external-dns
 type ExternalDnsConfig struct {
 	// contents of GOOGLE_APPLICATION_CREDENTIALS file
@@ -39,6 +43,8 @@ type OauthProxyConfig struct {
 
 // Local config required for GKE platforms
 type GKEConfig struct {
+	flags *flag.FlagSet
+
 	// TODO: Promote this to a proper (versioned) k8s Object
 	DnsZone      string            `json:"dnsZone"`
 	ContactEmail string            `json:"contactEmail"`

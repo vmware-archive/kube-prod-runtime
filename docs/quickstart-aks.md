@@ -128,7 +128,6 @@ Follow the steps below:
   kubeprod install aks \
     --email <email-address> \
     --manifests <path-to-jsonnet-manifests>/manifests \
-    --platform aks+k8s-${AZURE_AKS_K8S_VERSION%.*} \
     --dns-zone "${AZURE_DNS_ZONE}" \
     --dns-resource-group "${AZURE_RESOURCE_GROUP}"
   ```

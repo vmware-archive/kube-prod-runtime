@@ -17,6 +17,8 @@
  * limitations under the License.
  */
 
+// Top-level file for Google GKE
+
 local kube = import "../lib/kube.libsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
