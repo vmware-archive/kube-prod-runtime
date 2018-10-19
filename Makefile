@@ -6,12 +6,17 @@ GITHUB_TOKEN ?=
 
 GO = go
 
+HAS_JQ := $(shell command -v jq;)
+
 Release_Notes.md:
 ifndef GITHUB_TOKEN
 	$(error You must specify the GITHUB_TOKEN)
 endif
-
-	@PREV_VERSION=$$(git -c 'versionsort.suffix=-' tag --list  --sort=-v:refname | grep -m2 "^v[0-9]*\.[0-9]*\.[0-9]*$" | tail -n1) ; \
+ifndef HAS_JQ
+	$(error You must install jq)
+endif
+	@set -e ; \
+	PREV_VERSION=$$(git -c 'versionsort.suffix=-' tag --list  --sort=-v:refname | grep -m2 "^v[0-9]*\.[0-9]*\.[0-9]*$$" | tail -n1) ; \
 	echo -n > jenkins/Changes.lst ; \
 	for pr in $$(git log $${PREV_VERSION}..$(VERSION) --pretty=format:"%s" | grep "Merge pull request" | cut -d"#" -f2 | cut -d' ' -f1); do \
 		wget -q --header "Authorization: token $${GITHUB_TOKEN}" "https://api.github.com/repos/$(GITHUB_USER)/$(GITHUB_REPO)/pulls/$${pr}" -O - | \
@@ -37,7 +42,8 @@ ifndef GITHUB_TOKEN
 endif
 	github-release delete --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' || :
 	cat Release_Notes.md | github-release release --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' -n 'BKPR $(VERSION)' -d -
-	for f in $$(ls kubeprod/_dist/*.gz kubeprod/_dist/*.zip) ; do github-release upload --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' --name "$$(basename $${f})" --file "$${f}" ; done ; \
+	@set -e ; \
+	for f in $$(ls kubeprod/_dist/*.gz kubeprod/_dist/*.zip) ; do github-release upload --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' --name "$$(basename $${f})" --file "$${f}" ; done
 
 clean:
 	rm -f Release_Notes.md

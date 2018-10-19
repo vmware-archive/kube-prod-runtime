@@ -22,7 +22,8 @@ $(BINDIR)/$(PACKAGE): $(shell tools/godeps.sh .)
 	$(GO) build -o $@ $(GOFLAGS) $(GOBUILDFLAGS) .
 
 release: clean
-	@for platform in $(TARGETS); do \
+	@set -e ; \
+	for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
 		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
@@ -33,7 +34,8 @@ release: clean
 	done
 
 manifests: release
-	@for platform in $(TARGETS); do \
+	@set -e ; \
+	for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
 		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
@@ -45,7 +47,8 @@ manifests: release
 	done
 
 dist: archiver release manifests
-	@for platform in $(TARGETS); do \
+	@set -e ; \
+	for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
 		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
