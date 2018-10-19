@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuite tests="1" failures="1" time="900.673297669">
+      <testcase name="Logging basic should capture container logs" classname="foo" time="900.670917936">
+          <failure type="Failure">/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/tests/logging_test.go:76&#xA;Timed out after 900.002s.&#xA;Error: Unexpected non-nil/non-zero extra argument at index 1:&#xA;&#x9;&lt;*errors.StatusError&gt;: &amp;errors.StatusError{ErrStatus:v1.Status{TypeMeta:v1.TypeMeta{Kind:&#34;&#34;, APIVersion:&#34;&#34;}, ListMeta:v1.ListMeta{SelfLink:&#34;&#34;, ResourceVersion:&#34;&#34;, Continue:&#34;&#34;}, Status:&#34;Failure&#34;, Message:&#34;the server could not find the requested resource (get services http:elasticsearch-logging:9200)&#34;, Reason:&#34;NotFound&#34;, Details:(*v1.StatusDetails)(0xc0001cc660), Code:404}}&#xA;/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/tests/logging_test.go:90</failure>
+          <system-out>[BeforeEach] Logging&#xA;  /Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/tests/logging_test.go:50&#xA;Created namespace test-logging-pxgx4&#xA;[JustBeforeEach] Logging&#xA;  /Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/tests/logging_test.go:66&#xA;[It] should capture container logs&#xA;  /Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/tests/logging_test.go:76&#xA;[AfterEach] Logging&#xA;  /Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/tests/logging_test.go:61&#xA;</system-out>
+      </testcase>
+  </testsuite>

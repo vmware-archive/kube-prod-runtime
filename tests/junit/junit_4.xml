@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="UTF-8"?>
+  <testsuite tests="1" failures="0" time="27.095054978">
+      <testcase name="Ingress basic should be reachable via http URL" classname="foo" time="27.092385996"></testcase>
+  </testsuite>
