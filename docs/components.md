@@ -35,7 +35,7 @@ The following deployment parameters are supported, tested, and will be honoured 
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     elasticsearch+: {
@@ -137,7 +137,7 @@ The following example shows how to override the retention days and storage volum
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     prometheus+: {
@@ -154,7 +154,7 @@ The following example shows how to add additional monitoring rules. The default 
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "/Users/falfaro/go/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     prometheus+: {
