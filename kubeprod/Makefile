@@ -25,36 +25,39 @@ release: clean
 	@for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
-		output=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE) ; \
-		if [ $${GOOS} = "windows" ]; then output=$${output}.exe ; fi ; \
-		echo CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
-		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${output} $(GORELEASEFLAGS) . ; \
+		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
+		outfile=$(PACKAGE) ; \
+		if [ $${GOOS} = "windows" ]; then outfile=$${outfile}.exe ; fi ; \
+		echo "CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${ARTIFACTS_DIR}/$${outfile} $(GORELEASEFLAGS) ." ; \
+		CGO_ENABLED=0 GOOS=$${GOOS} GOARCH=$${GOARCH} go build -o $${ARTIFACTS_DIR}/$${outfile} $(GORELEASEFLAGS) . ; \
 	done
 
 manifests: release
-	@mkdir -p _dist/manifests
-	@for d in $(MANIFEST_DIST_DIRS); do \
-		echo "cp -a ../manifests/$${d} _dist/manifests/" ; \
-		cp -a ../manifests/$${d} _dist/manifests/ ; \
+	@for platform in $(TARGETS); do \
+		GOOS=$${platform%/*} ; \
+		GOARCH=$${platform#*/} ; \
+		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
+		for d in $(MANIFEST_DIST_DIRS); do \
+			mkdir -p $${ARTIFACTS_DIR}/manifests/ ; \
+			echo "cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/" ; \
+			cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/ ; \
+		done ; \
 	done
 
 dist: archiver release manifests
 	@for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
+		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
 		case $${GOOS} in \
-			windows) \
-				output_format=zip ; \
-				kubeprod_binary=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE).exe ; \
-				;; \
-			*) \
-				output_format=tar.gz ; \
-				kubeprod_binary=_dist/$${GOOS}-$${GOARCH}/$(PACKAGE); \
-				;; \
+			windows) OUTPUT_FORMAT=zip ;; \
+			      *) OUTPUT_FORMAT=tar.gz ;; \
 		esac ; \
-		output=_dist/$(PACKAGE)-$(VERSION)-$${GOOS}-$${GOARCH}.$${output_format} ; \
-		echo "archiver make $${output} ../LICENSE ../README.md $${kubeprod_binary} _dist/manifests" ; \
-		archiver make $${output} ../LICENSE ../README.md $${kubeprod_binary} _dist/manifests ; \
+		RELEASE_TARBALL=_dist/bkpr-$(VERSION)-$${GOOS}-$${GOARCH}.$${OUTPUT_FORMAT} ; \
+		echo "cp -a ../LICENSE ../README.md $${ARTIFACTS_DIR}/" ; \
+		cp -a ../LICENSE ../README.md $${ARTIFACTS_DIR}/ ; \
+		echo "archiver make $${RELEASE_TARBALL} $${ARTIFACTS_DIR}" ; \
+		archiver make $${RELEASE_TARBALL} $${ARTIFACTS_DIR} ; \
 	done
 
 checksum:
