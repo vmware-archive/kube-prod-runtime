@@ -90,7 +90,7 @@ Among the elements scraped by our default Prometheus configuration:
 
 The following Kubernetes annotations on pods allow a fine control of the scraping process:
 
-* `prometheus.io/scrape`: whether to include the pod or not in the scraping process
+* `prometheus.io/scrape`: `true` to include the pod in the scraping process
 * `prometheus.io/path`: required if the metrics path is not `/metrics`
 * `prometheus.io/port`: required if the pod must be scraped on the indicated port instead of the pod’s declared ports
 
