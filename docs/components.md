@@ -210,6 +210,7 @@ The following deployment parameters are supported, tested, and will be honoured 
 To override pod memory or CPU:
 
 ```
+$ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
@@ -312,5 +313,101 @@ $ cat kubeprod-manifest.jsonnet
             },
         },
     },
+}
+```
+
+## cert-manager
+
+[cert-manager](https://cert-manager.readthedocs.io/en/latest/) is a Kubernetes add-on to automate the management and issuance of TLS certificates. It will ensure certificates are valid and up to date periodically, and attempt to renew certificates at an appropriate time before expiry.
+
+### Implementation
+
+`cert-manager` in BKPR is configured to use [Let's Encrypt](https://letsencrypt.org/) as the Certificate Authority for TLS certificates. It has the concept of Certificates that define a desired X.509 certificate. A `Certificate` is a namespaced Kubernetes resource that references an `Issuer` or `ClusterIssuer` for information on how to obtain the certificate:
+
+```
+$ kubectl --namespace=kubeprod get certificates
+NAME                 AGE
+kibana-logging-tls   20d
+prometheus-tls       20d
+```
+
+and
+
+```
+$ kubectl --namespace=kubeprod describe certificates kibana-logging-tls
+Name:         kibana-logging-tls
+Namespace:    kubeprod
+Labels:       <none>
+Annotations:  <none>
+API Version:  certmanager.k8s.io/v1alpha1
+Kind:         Certificate
+Metadata:
+  Cluster Name:
+  Creation Timestamp:  2018-10-01T10:47:44Z
+  Generation:          0
+  Owner References:
+    API Version:           extensions/v1beta1
+    Block Owner Deletion:  true
+    Controller:            true
+    Kind:                  Ingress
+    Name:                  kibana-logging
+    UID:                   5f439d5a-c567-11e8-b84a-0a58ac1f25fb
+  Resource Version:        3557
+  Self Link:               /apis/certmanager.k8s.io/v1alpha1/namespaces/kubeprod/certificates/kibana-logging-tls
+  UID:                     6d529a2f-c567-11e8-b84a-0a58ac1f25fb
+Spec:
+  Acme:
+    Config:
+      Domains:
+        kibana.${dns-zone}
+      Http 01:
+        Ingress:
+        Ingress Class:  nginx
+  Common Name:
+  Dns Names:
+    kibana.${dns-zone}
+  Issuer Ref:
+    Kind:       ClusterIssuer
+    Name:       letsencrypt-prod
+  Secret Name:  kibana-logging-tls
+...
+```
+
+#### Let's Encrypt Environments
+
+Let's Encrypt suppports two environments:
+
+* **Production**: meant for production deployments, enforces [rate-limits](https://letsencrypt.org/docs/rate-limits/) to prevent abuse so it is not suitable for testing or requesting multiple certificates for the same domain in a short period of time.
+* **Staging**: for testing before using the production environment, has a [lower rate-limits](https://letsencrypt.org/docs/staging-environment/) than the production environment.
+
+#### Networking
+
+`cert-manager` exposes a Prometheus `/metrics` endpoint over port `9042/tcp`. `cert-manager` also requires Internet connectivity in order to communicate with Let's Encrypt servers.
+
+#### Monitoring
+
+`cert-manager` supports Prometheus by exporting a Prometheus `/metrics` endpoint over port `9402/tcp`. Please read the Prometheus section on Scraping and Kubernetes Annotations.
+
+#### Storage
+
+Certificates managed by `cert-manager` are stored as namespaced Kubernetes `Certificates` resources.
+
+### Overrides
+
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+
+#### Override Let's Encrypt Environment
+
+The following example shows how to request the use of Let's Encrypt staging environment:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    cert_manager+: {
+        letsencrypt_environment:: "staging",
+    }
 }
 ```
