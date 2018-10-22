@@ -36,30 +36,13 @@ import (
 	"github.com/golang/glog"
 	"github.com/satori/go.uuid"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 
-	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
 const (
 	userAgent = "Bitnami/kubeprod" // TODO: version
 )
-
-func init() {
-	var platforms = []prodruntime.Platform{
-		{
-			Name:        "aks+k8s-1.9",
-			Description: "Azure Container Service (AKS) with Kubernetes 1.9",
-		},
-		{
-			Name:        "aks+k8s-1.8",
-			Description: "Azure Container Service (AKS) with Kubernetes 1.8",
-		},
-	}
-
-	prodruntime.Platforms = append(prodruntime.Platforms, platforms...)
-}
 
 func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssignmentsClient, scope string, params authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
 	uid, err := uuid.NewV4()
@@ -90,9 +73,8 @@ func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssi
 	}
 }
 
-func config(cmd *cobra.Command, conf *AKSConfig) error {
-	ctx := context.TODO()
-	flags := cmd.Flags()
+func (conf *AKSConfig) Generate(ctx context.Context) error {
+	flags := conf.flags
 
 	// Leaks secrets to log!
 	//log.Debugf("Input config: %#v", conf)

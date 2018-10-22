@@ -31,7 +31,6 @@ import (
 
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	log "github.com/sirupsen/logrus"
-	"github.com/spf13/cobra"
 	"golang.org/x/oauth2/google"
 	crm "google.golang.org/api/cloudresourcemanager/v1"
 	dns "google.golang.org/api/dns/v1"
@@ -39,25 +38,11 @@ import (
 	"google.golang.org/api/googleapi"
 	adminpb "google.golang.org/genproto/googleapis/iam/admin/v1"
 
-	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
 func init() {
 	gensupport.RegisterHook(debugHook)
-
-	var platforms = []prodruntime.Platform{
-		{
-			Name:        "gke+k8s-1.9",
-			Description: "Google Kubernetes Engine (GKE) with Kubernetes 1.9",
-		},
-		{
-			Name:        "gke+k8s-1.8",
-			Description: "Google Kubernetes Engine (GKE) with Kubernetes 1.8",
-		},
-	}
-
-	prodruntime.Platforms = append(prodruntime.Platforms, platforms...)
 }
 
 func debugHook(ctx context.Context, req *http.Request) func(resp *http.Response) {
@@ -144,9 +129,8 @@ func addIamBinding(policy *crm.Policy, role, member string) {
 	}
 }
 
-func config(cmd *cobra.Command, conf *GKEConfig) error {
-	ctx := context.TODO()
-	flags := cmd.Flags()
+func (conf *GKEConfig) Generate(ctx context.Context) error {
+	flags := conf.flags
 
 	// Leaks secrets to log!
 	//log.Debugf("Input config: %#v", conf)

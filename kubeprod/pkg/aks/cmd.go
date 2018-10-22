@@ -62,20 +62,8 @@ var aksCmd = &cobra.Command{
 	Short: "Install Bitnami Production Runtime for AKS",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
-		c, err := kubeprodcmd.NewInstallSubcommand(cmd)
+		c, err := kubeprodcmd.NewInstallSubcommand(cmd, "aks", &AKSConfig{flags: cmd.Flags()})
 		if err != nil {
-			return err
-		}
-
-		conf := AKSConfig{}
-		c.PlatformConfig = &conf
-		if err := c.ReadPlatformConfig(&conf); err != nil {
-			return err
-		}
-		if err := config(cmd, &conf); err != nil {
-			return err
-		}
-		if err := c.WritePlatformConfig(&conf); err != nil {
 			return err
 		}
 

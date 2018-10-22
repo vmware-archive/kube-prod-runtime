@@ -19,6 +19,10 @@
 
 package aks
 
+import (
+	flag "github.com/spf13/pflag"
+)
+
 // Structure of `azure.json` required by external-dns
 type ExternalDnsAzureConfig struct {
 	TenantID        string `json:"tenantId"`
@@ -38,6 +42,8 @@ type OauthProxyConfig struct {
 
 // Local config required for AKS platforms
 type AKSConfig struct {
+	flags *flag.FlagSet
+
 	// TODO: Promote this to a proper (versioned) k8s Object
 	DnsZone      string                 `json:"dnsZone"`
 	ContactEmail string                 `json:"contactEmail"`

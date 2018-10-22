@@ -26,7 +26,7 @@ def withGo(Closure body) {
     }
 }
 
-def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, Closure setup) {
+def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure setup) {
     timeout(120) {
         // Regex of tests that are temporarily skipped.  Empty-string
         // to run everything.  Include pointers to tracking issues.
@@ -51,7 +51,7 @@ def runIntegrationTest(String platform, String kubeprodArgs, String ginkgoArgs, 
                 // to do that via some sort of custom jsonnet overlay,
                 // since power users will want similar flexibility.
 
-                sh "./bin/kubeprod -v=1 install aks --platform=${platform} --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install aks --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
 
                 // Wait for deployments to rollout before we start the integration tests
                 try {
@@ -77,7 +77,7 @@ done
                 dir('tests') {
                     try {
                         ansiColor('xterm') {
-                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${platform}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
+                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
                         }
                     } catch (error) {
                         sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
@@ -214,7 +214,7 @@ spec:
     def aksKversions = ["1.8.14", "1.9.10"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
-        def platform = "aks+k8s-" + kversion[0..2]
+        def platform = "aks+k8s-" + kversion
         platforms[platform] = {
             stage(platform) {
                 node(label) {
@@ -308,7 +308,7 @@ az aks create                      \
                                             ])
 
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-(import "manifests/platforms/${platform}.jsonnet") {
+(import "manifests/platforms/aks.jsonnet") {
   config:: import "kubeprod-autogen.json",
   letsencrypt_environment: "staging",
   prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",

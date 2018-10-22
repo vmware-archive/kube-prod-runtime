@@ -20,6 +20,7 @@
 package installer
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -78,21 +79,36 @@ func marshalFile(path string, obj interface{}) error {
 	return f.Close()
 }
 
+type PlatformConfig interface {
+	Generate(context.Context) error
+}
+
 // InstallCmd represents the install subcommand
 type InstallCmd struct {
 	Config     *restclient.Config
 	ClientPool dynamic.ClientPool
 	Discovery  discovery.DiscoveryInterface
 
-	PlatformConfig     interface{}
-	Platform           *prodruntime.Platform
+	PlatformConfig     PlatformConfig
+	Platform           string
 	PlatformConfigPath string
 	ManifestBase       *url.URL
 }
 
 func (c InstallCmd) Run(out io.Writer) error {
 	var err error
-	log.Info("Installing platform ", c.Platform.Name)
+	log.Info("Installing platform ", c.Platform)
+	ctx := context.TODO()
+
+	if err := c.ReadPlatformConfig(c.PlatformConfig); err != nil {
+		return err
+	}
+	if err := c.PlatformConfig.Generate(ctx); err != nil {
+		return err
+	}
+	if err := c.WritePlatformConfig(c.PlatformConfig); err != nil {
+		return err
+	}
 
 	searchPaths := []string{
 		"internal:///",
@@ -105,15 +121,15 @@ func (c InstallCmd) Run(out io.Writer) error {
 		}
 	}
 
-	log.Info("Generating root manifest for platform ", c.Platform.Name)
-	if err := prodruntime.WriteRootManifest(c.ManifestBase.Path, c.Platform.Name); err != nil {
+	log.Info("Generating root manifest for platform ", c.Platform)
+	if err := prodruntime.WriteRootManifest(c.ManifestBase.Path, c.Platform); err != nil {
 		return err
 	}
 
 	// TODO(felipe): Conditionalize this with a command-line flag so this
 	// step is optional
 	if true {
-		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform.Name)
+		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform)
 		if err := c.Update(out); err != nil {
 			return err
 		}
@@ -147,7 +163,7 @@ func (c InstallCmd) WritePlatformConfig(conf interface{}) error {
 }
 
 func (c InstallCmd) Update(out io.Writer) error {
-	log.Info("Updating platform ", c.Platform.Name)
+	log.Info("Updating platform ", c.Platform)
 	searchUrls := []*url.URL{
 		{Scheme: "internal", Path: "/"},
 	}

@@ -17,7 +17,24 @@
  * limitations under the License.
  */
 
-// Platform: Kubernetes 1.8.x on Azure AKS
-//
+// Test AKS
 
-import "aks-common.libsonnet"
+(import "../platforms/aks.jsonnet") {
+  "letsencrypt_contact_email": "noone@nowhere.com",
+  config: {
+    dnsZone: "test.example.com",
+    externalDns: {
+      tenantId: "mytenant",
+      subscriptionId: "mysubscription",
+      aadClientId: "myclientid",
+      aadClientSecret: "mysecret",
+      resourceGroup: "test-resource-group",
+    },
+    oauthProxy: {
+      client_id: "myclientid",
+      client_secret: "mysecret",
+      cookie_secret: "cookiesecret",
+      azure_tenant: "mytenant",
+    },
+  },
+}

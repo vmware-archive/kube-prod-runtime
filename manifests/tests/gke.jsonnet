@@ -17,9 +17,9 @@
  * limitations under the License.
  */
 
-# Test GKE 1.9
+// Test GKE
 
-(import "../platforms/gke+k8s-1.9.jsonnet") {
+(import "../platforms/gke.jsonnet") {
   "letsencrypt_contact_email": "noone@nowhere.com",
   config: {
     dnsZone: "test.example.com",
