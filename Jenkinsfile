@@ -231,7 +231,6 @@ spec:
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
 
-                                def aks
                                 try {
                                     runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
                                         container('az') {
@@ -247,7 +246,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                             // "outer" principal (above) the power to create
                                             // new service principals.
                                             withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
-                                                def output = sh(returnStdout: true, script: """
+                                                sh """
 az aks create                      \
  --verbose                         \
  --resource-group ${resourceGroup} \
@@ -260,11 +259,10 @@ az aks create                      \
  --service-principal \$AZURE_CLIENT_ID \
  --client-secret \$AZURE_CLIENT_SECRET \
  --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
-""")
-                                                aks = readJSON(text: output)
+"""
                                             }
 
-                                            sh "az aks get-credentials --name ${aks.name} --resource-group ${aks.resourceGroup} --admin --file \$KUBECONFIG"
+                                            sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
 
                                             // create dns zone
                                             sh "az network dns zone create --name ${dnsZone} --resource-group ${resourceGroup} --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
@@ -319,16 +317,14 @@ az aks create                      \
                                     }
                                 }
                                 finally {
-                                    if (aks) {
-                                        container('az') {
-                                            sh '''
+                                    container('az') {
+                                        sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
 az account set -s $AZURE_SUBSCRIPTION_ID
 '''
-                                            sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} || :"
-                                            sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
-                                            sh "az aks delete --yes --name ${aks.name} --resource-group ${aks.resourceGroup} --no-wait"
-                                        }
+                                        sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} || :"
+                                        sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
+                                        sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
                                     }
                                 }
                             }
