@@ -20,6 +20,7 @@
 // Top-level file for Google GKE
 
 local kube = import "../lib/kube.libsonnet";
+local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
 local nginx_ingress = import "../components/nginx-ingress.jsonnet";
@@ -38,6 +39,8 @@ local kibana = import "../components/kibana.jsonnet";
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
+
+  version: version,
 
   edns: edns {
     gcreds: kube.Secret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {

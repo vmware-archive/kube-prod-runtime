@@ -22,13 +22,39 @@ package cmd
 import (
 	"fmt"
 
+	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
 var Version = "(dev build)"
 
+const (
+	ReleaseNamespace = "kubeprod"
+	ReleaseName      = "release"
+)
+
 func init() {
 	RootCmd.AddCommand(versionCmd)
+}
+
+type Release struct {
+	Release string `json:"release"`
+}
+
+func getRelease(c corev1.ConfigMapsGetter) string {
+	configmap, err := c.ConfigMaps(ReleaseNamespace).Get(ReleaseName, metav1.GetOptions{})
+	switch {
+	case errors.IsNotFound(err):
+		return "not installed"
+	case err != nil:
+		log.Debugf("error fetching release configmap: %v", err)
+		return "unknown"
+	default:
+		return configmap.Data["release"]
+	}
 }
 
 var versionCmd = &cobra.Command{
@@ -38,7 +64,23 @@ var versionCmd = &cobra.Command{
 	RunE: func(cmd *cobra.Command, args []string) error {
 		out := cmd.OutOrStdout()
 
-		fmt.Fprintf(out, "Installer Version: %s\n", Version)
+		config, err := clientConfig.ClientConfig()
+		if err != nil {
+			return err
+		}
+
+		clientv1, err := corev1.NewForConfig(config)
+		if err != nil {
+			return err
+		}
+
+		release := getRelease(clientv1)
+		if err != nil {
+			return err
+		}
+
+		fmt.Fprintf(out, "Installer version: %s\n", Version)
+		fmt.Fprintf(out, "Server manifests version: %s\n", release)
 
 		return nil
 	},
