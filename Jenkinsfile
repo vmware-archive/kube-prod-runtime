@@ -211,7 +211,7 @@ spec:
     // See:
     //  az aks get-versions -l centralus
     //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-    def aksKversions = ["1.8.14", "1.9.10"]
+    def aksKversions = ["1.9.11", "1.10.8"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
         def platform = "aks+k8s-" + kversion
