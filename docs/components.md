@@ -215,15 +215,27 @@ To override pod memory or CPU:
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     fluentd_es+: {
-        resources:: {
-            limits: {
-                memory: "600Mi",
-            },
-            requests: {
-                cpu: "200m",
-                memory: "300Mi",
+        daemonset+: {
+            spec+: {
+                template+: {
+                    spec+: {
+                        containers_+: {
+                            fluentd_es+: {
+                                resources: {
+                                    limits: {
+                                        memory: "600Mi"
+                                    },
+                                    requests: {
+                                        cpu: "200m",
+                                        memory: "300Mi",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
             },
         },
-    }
+    },
 }
 ```

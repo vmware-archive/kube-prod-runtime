@@ -34,17 +34,6 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     },
   },
 
-  // Resource requirements for Fluentd pod
-  resources:: {
-    limits: {
-      memory: "500Mi",
-    },
-    requests: {
-      cpu: "100m",
-      memory: "200Mi",
-    },
-  },
-
   criticalPod:: { metadata+: { annotations+: { "scheduler.alpha.kubernetes.io/critical-pod": "" } } },
 
   es: error "elasticsearch is required",
@@ -94,7 +83,10 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 FLUENTD_OPT: "-q",
                 ES_HOST: $.es.svc.host,
               },
-              resources: $.resources,
+              resources: {
+                requests: { cpu: "100m", memory: "200Mi" },
+                limits: { memory: "500Mi" },
+              },
               volumeMounts_+: {
                 varlog: {
                   mountPath: "/var/log",
