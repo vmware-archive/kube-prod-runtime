@@ -1,4 +1,4 @@
-# Bitnami Production Runtime for Kubernetes
+# Bitnami Kubernetes Production Runtime
 
 ## Description
 
@@ -75,4 +75,4 @@ The following matrix shows which versions of each component are used and support
 
 ## Contribute Code
 
-If you would like to become an active contributor to this project please follow the instructions provided in [Contributing guidelines](CONTRIBUTING.md).
+If you would like to become an active contributor to this project please follow the instructions provided in [contribution guidelines](CONTRIBUTING.md).

@@ -2,7 +2,7 @@
 
 ## How to become a contributor and submit your own code
 
-## Finding Things That Need Help
+## Finding things that need help
 
 If you're new to the project and want to help, but don't know where to start, we have a list of open issues. [Have a look and see if anything sounds interesting](https://github.com/bitnami/kube-prod-runtime/issues?utf8=%E2%9C%93&q=is%3Aopen+is%3Aissue).
 
@@ -15,6 +15,4 @@ If you're new to the project and want to help, but don't know where to start, we
 
 ## Support Channels
 
-Whether you are a user or contributor, official support channels include:
-
-- GitHub issues: https://github.com/bitnami/kube-prod-runtime/issues/new
+Whether you are a user or contributor, the official support channel is GitHub issues: https://github.com/bitnami/kube-prod-runtime/issues/new.
