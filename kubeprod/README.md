@@ -16,7 +16,7 @@ AZURE_RESOURCE_GROUP_NAME="<your resource group name>"  # e.g. $USER
 AZURE_DNS_ZONE="<your delegated DNS zone>"              # e.g. "my.example.com"
 
 # First, create the AKS cluster (only if it does not exist yet) ...
-az aks create --resource-group "${AZURE_RESOURCE_GROUP_NAME}" --name "${AKS_CLUSTER_NAME}" --node-count 3 --node-vm-size Standard_DS2_v2 --ssh-key-value ~/.ssh/id_rsa.pub --kubernetes-version 1.9.6
+az aks create --resource-group "${AZURE_RESOURCE_GROUP_NAME}" --name "${AKS_CLUSTER_NAME}" --node-count 3 --node-vm-size Standard_DS2_v2 --ssh-key-value ~/.ssh/id_rsa.pub --kubernetes-version 1.9.11
 # ...and populate ~/.kube/config (required to use the Kubernetes API)
 az aks get-credentials --resource-group "${AZURE_RESOURCE_GROUP_NAME}" --name "${AKS_CLUSTER_NAME}"
 

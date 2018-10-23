@@ -22,7 +22,7 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   export AZURE_RESOURCE_GROUP=my-kubeprod-group
   export AZURE_DNS_ZONE=example.com
   export AZURE_AKS_CLUSTER=my-aks-cluster
-  export AZURE_AKS_K8S_VERSION=1.9.10
+  export AZURE_AKS_K8S_VERSION=1.9.11
   ```
 
   - `AZURE_SUBSCRIPTION_ID` specifies the Azure subscription id. `az account list -o table` lists your Microsoft Azure subscriptions.
@@ -30,7 +30,7 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   - `AZURE_RESOURCE_GROUP` specifies the name of the Azure resource group in which resources should be created.
   - `AZURE_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `AZURE_AKS_CLUSTER` specifies the name of the AKS cluster.
-  - `AZURE_AKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `az aks get-versions --location ${AZURE_REGION}` lists the versions available in your region.
+  - `AZURE_AKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `az aks get-versions --location ${AZURE_REGION} -o table` lists the versions available in your region.
 
 * Set the default subscription account:
 

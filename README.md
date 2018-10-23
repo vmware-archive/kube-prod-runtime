@@ -43,9 +43,8 @@ The following matrix shows which Kubernetes versions are supported in AKS and GK
 
 | Kubernetes version |  AKS  |  GKE  |
 |:------------------:|:-----:|:-----:|
-|        `1.8`       |  Yes  |  No   |
 |        `1.9`       |  Yes  |  Yes  |
-|        `1.10`      |  No   |  No   |
+|        `1.10`      |  Yes  |  Yes  |
 
 ### Components Version Support
 
