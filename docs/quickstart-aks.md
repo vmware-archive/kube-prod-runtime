@@ -115,7 +115,7 @@ Note: The Jsonnet manifests from the release are used in the next step.
 
 ### Step 3: Deploy BKPR
 
-To bootstrap your Kubernets cluster with BKPR:
+To bootstrap your Kubernetes cluster with BKPR:
 
   ```bash
   kubeprod install aks \
