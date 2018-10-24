@@ -244,15 +244,15 @@ To override pod memory or CPU:
 
 [nginx-ingress](https://github.com/kubernetes/ingress-nginx) is an open source Kubernetes Ingress controller based on [NGINX](https://www.nginx.com).
 
-An Ingress is a Kubernetes resource that lets you configure an HTTP load balancer for your Kubernetes services. Such a load balancer usually exposes your services to clients outside of your Kubernetes cluster. An Ingress resource supports exposing services and Configuring TLS termination for each exposed host name.
+An Ingress is a Kubernetes resource that lets you configure an HTTP load balancer for your Kubernetes services. Such a load balancer usually exposes your services to clients outside of your Kubernetes cluster. An Ingress resource supports exposing services and configuring TLS termination for each exposed host name.
 
 ### Implementation
 
-It runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `nginx-ingress-controller` inside the `kubeprod` namespace. An [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) resource is associated with this Deployment in order to auto-scale the number of `nginx-ingress-controller` pod replicas based on the incoming load.
+It runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `nginx-ingress-controller` inside the `kubeprod` namespace. A [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) resource is associated with this Deployment in order to auto-scale the number of `nginx-ingress-controller` pod replicas based on the incoming load.
 
 It also relies on `ExternalDNS` to handle registration of Kubernetes Ingress resources in the DNS zone specified when BKPR was installed and `cert-manager` to request X.509 certificates for Kubernetes Ingress resources in order to provide transparent TLS termination.
 
-The `manifests/components/nginx-ingress.jsonnet` manifest defines two Kubernetes Services:
+The [`manifests/components/nginx-ingress.jsonnet`](../manifests/components/nginx-ingress.jsonnet)  manifest defines two Kubernetes Services:
 
 * `nginx-ingress-controller`, which wraps the NGINX server running as a reverse proxy and the logic to derive its configuration and routing rules from Kubernetes Ingress and Service resources.
 * `default-http-backend`, which is configured to respond to `/healthz` requests (liveness/readiness probes) and to return `404 Not Found` for any URL that does not match any of the known routing rules.
@@ -268,9 +268,9 @@ No explicit configuration is required by the NGINX Ingress Controller.
 The following ports are exposed:
 
 * The `nginx-ingress-controller` Service exposes ports:
-  * `80/tcp` and `443/tcp` to servce HTTP and HTTP/S requests
+  * `80/tcp` and `443/tcp` to service HTTP and HTTP/S requests
   * `10254/tcp` for `/healthz` (liveness/readiness probes) and `/metrics` (Prometheus) endpoints.
-* The `default-http-backend` Service exposes port `80/tcp` to render a `404 Not Found` error page for URLs that do not nmatch any routing rule.
+* The `default-http-backend` Service exposes port `80/tcp` to render a `404 Not Found` error page for URLs that do not match any routing rule.
 
 #### Monitoring
 
@@ -293,7 +293,7 @@ NGINX Ingress Controller is a stateless component and therefore does not have an
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override maximum number of replicas
 
