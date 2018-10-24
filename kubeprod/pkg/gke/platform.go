@@ -355,17 +355,19 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 
 			fmt.Println("Google does not provide an API to automatically configure OAuth sign-in, so this part is manual.")
 			fmt.Println("Go to this URL and complete the following steps:")
-			fmt.Printf("  https://console.developers.google.com/apis/credentials?project=%s\n", url.QueryEscape(project))
-			fmt.Println("1. Choose \"Credentials\" on the left pane.")
-			fmt.Println("2. Choose \"OAuth consent screen\" tab in center pane.  Fill in \"Product name shown to users\", and save.")
-			fmt.Println("3. Choose \"Credentials\" tab in center pane.")
-			fmt.Println("4. Click \"Create credentials\" button and choose \"OAuth client ID\".")
-			fmt.Println("5. Choose \"Web application\", and fill in a name.")
-			fmt.Println("6. Fill in the \"Authorised redirect URIs\" with:")
+			fmt.Printf("  https://console.cloud.google.com/apis/credentials?project=%s\n", url.QueryEscape(project))
+			fmt.Println("1. Choose \"OAuth consent screen\" tab in center pane.")
+			fmt.Println("2. Fill in \"Application name\".")
+			fmt.Printf("3. Make sure %q is listed under the \"Authorized domains\" section\n", conf.DnsZone)
+			fmt.Println("4. Save your changes.")
+			fmt.Println("5. Choose \"Credentials\" tab in center pane.")
+			fmt.Println("6. Click \"Create credentials\" button and choose \"OAuth client ID\".")
+			fmt.Println("7. Choose \"Web application\", and fill in a name.")
+			fmt.Println("8. Fill in the \"Authorised redirect URIs\" with:")
 			for _, u := range replyUrls {
 				fmt.Printf("     %s\n", u)
 			}
-			fmt.Println("7. Click \"Create\"")
+			fmt.Println("9. Click \"Create\"")
 
 			clientID, err = prompt("Client ID", clientID)
 			if err != nil {
