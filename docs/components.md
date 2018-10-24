@@ -322,7 +322,7 @@ $ cat kubeprod-manifest.jsonnet
 
 ### Implementation
 
- The [`ingress-shim`](https://github.com/jetstack/cert-manager/blob/master/docs/reference/ingress-shim.rst) component of `cert-manager` watches for Kubernetes Ingress resources across the cluster. If it observes an Ingress resource annotated with `kubernetes.io/tls-acme: true`, it will ensure a Certificate resource with the same name as the Ingress, and configured as described on the Ingress resource, exists. A Certificate is a namespaced Kubernetes resource that references an Issuer or ClusterIssuer for information on how to obtain the certificate and current `spec` (`commonName`, `dnsNames`, etc.) and status (like last renewal time). `cert-manager` in BKPR is configured to use [Let's Encrypt](https://letsencrypt.org/) as the Certificate Authority for TLS certificates.
+The [`ingress-shim`](https://github.com/jetstack/cert-manager/blob/master/docs/reference/ingress-shim.rst) component of `cert-manager` watches for Kubernetes Ingress resources across the cluster. If it observes an Ingress resource annotated with `kubernetes.io/tls-acme: true`, it will ensure a Certificate resource exists with the same name as the Ingress. A Certificate is a namespaced Kubernetes resource that references an Issuer or ClusterIssuer for information on how to obtain the certificate and current `spec` (`commonName`, `dnsNames`, etc.) and status (like last renewal time). `cert-manager` in BKPR is configured to use [Let's Encrypt](https://letsencrypt.org/) as the Certificate Authority for TLS certificates.
 
  Example:
 
@@ -375,7 +375,8 @@ Spec:
 ...
 ```
 
-Reader shall take into account that `kibana.${dns-zone}` will get replaced by actual DNS domain specified in the `--dns-zone` command-line argument to `kubeprod`.
+(`kibana.${dns-zone}` will use the actual DNS domain specified in the `--dns-zone` command-line argument to `kubeprod`).
+
 
 #### Let's Encrypt Environments
 
@@ -407,7 +408,7 @@ The following example shows how to request the use of Let's Encrypt staging envi
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     cert_manager+: {
