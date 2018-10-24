@@ -10,6 +10,7 @@ This document walks you through setting up an Azure Kubernetes Service (AKS) clu
 * [Microsoft Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
+* [jq](https://stedolan.github.io/jq/)
 
 ## Installation and setup
 
@@ -169,7 +170,18 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
   Additionally you should remove the NS entries configured at the domain registrar.
 
-### Step 3: Delete the AKS cluster
+### Step 3: Delete Azure app registrations
+
+  ```bash
+  az ad app delete \
+    --subscription ${AZURE_SUBSCRIPTION_ID} \
+    --id $(jq -r .externalDns.aadClientId kubeprod-autogen.json)
+  az ad app delete \
+    --subscription ${AZURE_SUBSCRIPTION_ID} \
+    --id $(jq -r .oauthProxy.client_id kubeprod-autogen.json)
+  ```
+
+### Step 4: Delete the AKS cluster
 
   ```bash
   az aks delete \
@@ -177,7 +189,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
     --resource-group ${AZURE_RESOURCE_GROUP}
   ```
 
-### Step 4: Delete the Azure resource group
+### Step 5: Delete the Azure resource group
 
   ```bash
   az group delete --name ${AZURE_RESOURCE_GROUP}
