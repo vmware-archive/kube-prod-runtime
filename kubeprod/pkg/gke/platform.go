@@ -361,7 +361,7 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 			fmt.Printf("3. Make sure %q is listed under the \"Authorized domains\" section\n", conf.DnsZone)
 			fmt.Println("4. Save your changes.")
 			fmt.Println("5. Choose \"Credentials\" tab in center pane.")
-			fmt.Println("6. Click \"Create credentials v\" button and choose \"OAuth client ID\".")
+			fmt.Println("6. Click \"Create credentials\" button and choose \"OAuth client ID\".")
 			fmt.Println("7. Choose \"Web application\", and fill in a name.")
 			fmt.Println("8. Fill in the \"Authorised redirect URIs\" with:")
 			for _, u := range replyUrls {
