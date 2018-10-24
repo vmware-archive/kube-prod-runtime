@@ -9,7 +9,7 @@ At the time of writing, BKPR supports [Azure Kubernetes Service (AKS)](https://a
 #### Q: What is the difference between BKPR and `kubeprod`?
 A: BKPR consists of a collection of Kubernetes manifests written in *jsonnet* plus the accompanying `kubeprod` binary which deals with all the platform-specific details, evaluates the *jsonnet* manifests, and applies them to the existing Kubernetes cluster.
 
-#### Q: Does BKPR support support Helm?
+#### Q: Does BKPR support Helm?
 A: Yes. BKPR only adds functionality to an existing Kubernetes cluster while keeping compatibility with other frameworks like Helm.
 
 #### Q: How does BKPR differ from me deploying the needed components via e.g. Helm, where I can choose which components and configurations to use?
