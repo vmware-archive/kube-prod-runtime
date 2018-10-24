@@ -49,12 +49,12 @@ BKPR leverages the following components to achieve its mission. For more im-dept
 
 ### Kubernetes version support matrix
 
-The following matrix shows which Kubernetes versions are supported in BKPR:
+The following matrix shows which Kubernetes versions and platforms are supported:
 
-| Kubernetes version |  AKS  |  GKE  |
-|:------------------:|:-----:|:-----:|
-|        `1.9`       |  Yes  |  Yes  |
-|        `1.10`      |  Yes  |  Yes  |
+| BKPR release | Kubernetes versions | AKS | GKE |
+|:------------:|:-------------------:|:---:|:---:|
+|     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
+|     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
 
 ### Components version support
 
