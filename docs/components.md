@@ -389,10 +389,6 @@ Let's Encrypt suppports two environments:
 
 `cert-manager` exposes a Prometheus `/metrics` endpoint over port `9042/tcp`. `cert-manager` also requires Internet connectivity in order to communicate with Let's Encrypt servers.
 
-#### Monitoring
-
-`cert-manager` supports Prometheus by exporting a Prometheus `/metrics` endpoint over port `9402/tcp`. Please read the Prometheus section on Scraping and Kubernetes Annotations.
-
 #### Storage
 
 Certificates managed by `cert-manager` are stored as namespaced Kubernetes `Certificates` resources.
