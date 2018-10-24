@@ -43,7 +43,7 @@ BKPR leverages the following components to achieve its mission. For more im-dept
 * [cert-manager](docs/components.md#user-content-cert-manager): A Kubernetes add-on to automate the management and issuance of TLS certificates from various sources
 ### Others
 * [OAuth2 Proxy](docs/components.md#user-content-oauth2-proxy): A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group
-* [nginx-ingress](docs/components.md#user-content-nginx-ingress): A Controller to satisfy requests for Ingress objects
+* [nginx-ingress](docs/components.md#user-content-nginx-ingress-controller): A Controller to satisfy requests for Ingress objects
 
 ## Release compatibility
 
