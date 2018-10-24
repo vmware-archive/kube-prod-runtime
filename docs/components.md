@@ -35,7 +35,7 @@ The following deployment parameters are supported, tested, and will be honoured 
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     elasticsearch+: {
@@ -137,7 +137,7 @@ The following example shows how to override the retention days and storage volum
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     prometheus+: {
@@ -154,7 +154,7 @@ The following example shows how to add additional monitoring rules. The default 
 ```
 $ cat kubeprod-manifest.jsonnet
 # Cluster-specific configuration
-(import "../../manifests/platforms/aks+k8s-1.9.jsonnet") {
+(import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     prometheus+: {
@@ -170,5 +170,72 @@ $ cat kubeprod-manifest.jsonnet
             },
         },
     }
+}
+```
+
+## Fluentd
+
+[Fluentd](https://www.fluentd.org/) is an open source data collector for unified logging layer. Fluentd allows you to unify data collection and consumption for a better use and understanding of data.
+
+### Implementation
+
+BKPR uses Fluentd as [packaged by Bitnami](https://hub.docker.com/r/bitnami/fluentd/). It is implemented as a [Kubernetes DaemonSet](https://kubernetes.io/docs/concepts/workloads/controllers/daemonset/) named `fluentd-es` under the `kubeprod` namespace. This maps to one Fluentd pod per Kubelet.
+
+### Usage
+
+To have your logs collected by Fluentd and injected into Elasticsearch automatically, just must have the processes running inside the containers write to standard output and standard error streams in one of the log formats recognized by [Fluentd built-in parsers](https://docs.fluentd.org/v1.0/articles/parser-plugin-overview). Fluentd allows for [writing custom parsers](https://docs.fluentd.org/v1.0/articles/api-plugin-parser) when the built-in ones are not sufficient.
+
+### Configuration
+
+Fluentd configuration is split across several configuration files which have been downloaded from [upstream](https://raw.githubusercontent.com/kubernetes/kubernetes/master/cluster/addons/fluentd-elasticsearch/fluentd-es-configmap.yaml) by the `manifests/fluentd-es-config/import-from-upstream.py` tool. These configuration files are assembled into a Kubernetes ConfigMap and injected into the Fluentd container.
+
+#### Configuration reloading
+
+Fluentd supports reloading configuration file by gracefully restarting the worker process when it receives the SIGHUP signal. However, BKPR does not currently implement a mechanism to deliver a SIGHUP signal to Fluentd when any of the configuration files (assembled into a Kubernetes ConfigMap) are changed.
+
+#### Networking
+
+Fluentd sends its log stream to the Elasticsearch cluster over TCP. Elasticsearch networking requirements are described in the corresponding Elasticsearch section.
+
+#### Storage
+
+Fluentd uses the [Elasticsearch Output Plugin](https://docs.fluentd.org/v1.0/articles/out_elasticsearch/) to process system and Docker daemon logs and streams them into Elasticsearch. System logs are collected from the Kubelet's `/var/log` directory (via HostPath). Docker daemon logs are not collected from the Docker deamons but from the Kubelet's `/var/lib/docker/containers` (via HostPath). Fluentd requires a small amount of local storage on the host machine under `/var/log/fluentd-pos/` in the form of *pos* files to record the position it last read into each log file.
+
+### Overrides
+
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+
+#### Resource requirements
+
+To override pod memory or CPU:
+
+```
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    fluentd_es+: {
+        daemonset+: {
+            spec+: {
+                template+: {
+                    spec+: {
+                        containers_+: {
+                            fluentd_es+: {
+                                resources: {
+                                    limits: {
+                                        memory: "600Mi"
+                                    },
+                                    requests: {
+                                        cpu: "200m",
+                                        memory: "300Mi",
+                                    },
+                                },
+                            },
+                        },
+                    },
+                },
+            },
+        },
+    },
 }
 ```
