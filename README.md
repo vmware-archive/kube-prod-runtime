@@ -45,9 +45,9 @@ BKPR leverages the following components to achieve its mission. For more im-dept
 * [OAuth2 Proxy](docs/components.md#user-content-oauth2-proxy): A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group
 * [nginx-ingress](docs/components.md#user-content-nginx-ingress): A Controller to satisfy requests for Ingress objects
 
-## Release Compatibility
+## Release compatibility
 
-### Kubernetes Version Support matrix for BKPR 1.0
+### Kubernetes version support matrix for BKPR 1.0
 
 The following matrix shows which Kubernetes versions are supported in AKS and GKE in BKPR 1.0:
 
@@ -56,7 +56,7 @@ The following matrix shows which Kubernetes versions are supported in AKS and GK
 |        `1.9`       |  Yes  |  Yes  |
 |        `1.10`      |  Yes  |  Yes  |
 
-### Components Version Support
+### Components version support
 
 The following matrix shows which versions of each component are used and supported in the most recent releases of BKPR:
 
@@ -73,6 +73,6 @@ The following matrix shows which versions of each component are used and support
 |    Heapster   |            `1.5.2` |
 |    Fluentd    |            `1.2.2` |
 
-## Contribute Code
+## Contribute code
 
 If you would like to become an active contributor to this project please follow the instructions provided in [contribution guidelines](CONTRIBUTING.md).
