@@ -47,9 +47,9 @@ BKPR leverages the following components to achieve its mission. For more im-dept
 
 ## Release compatibility
 
-### Kubernetes version support matrix for BKPR 1.0
+### Kubernetes version support matrix
 
-The following matrix shows which Kubernetes versions are supported in AKS and GKE in BKPR 1.0:
+The following matrix shows which Kubernetes versions are supported in BKPR:
 
 | Kubernetes version |  AKS  |  GKE  |
 |:------------------:|:-----:|:-----:|
