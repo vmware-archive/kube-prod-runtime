@@ -412,3 +412,49 @@ $ cat kubeprod-manifest.jsonnet
     }
 }
 ```
+
+## OAuth2 Proxy
+
+[OAuth2 Proxy](https://hub.docker.com/r/bitnami/oauth2-proxy/) is an open source reverse proxy and static file server that uses the underlying platform OAuth2 support to provide authentication for Kubernetes Ingress resources.
+
+### Implementation
+
+It runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `oauth2-proxy` inside the `kubeprod` namespace. A [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) resource is associated with this Deployment in order to auto-scale the number of `oauth2-proxy` pod replicas based on the incoming load.
+
+The [`manifests/components/oauth2-proxy.jsonnet`](../manifests/components/oauth2-proxy.jsonnet) manifest defines a [Secret](https://kubernetes.io/docs/concepts/configuration/secret/) resource that protects the client ID, client secret and client cookie required by the underlying platform implementation of the OAuth2 protocol. These are populated for you at the root manifest `kubeprod-manifest.jsonnet` by reading the corresponding entries from the `kubeprod-autogen.json` file.
+
+### Configuration
+
+No explicit configuration is required by OAuth2 Proxy.
+
+#### Networking
+
+OAuth2 Proxy relies on a Kubernetes Service resource to expose port `4180/tcp`, where OAuth2 callbacks are processed.
+
+#### Storage
+
+OAuth2 Proxy is a stateless component and therefore does not have any persistent storage requirements.
+
+### Overrides
+
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
+
+#### Override maximum number of replicas
+
+The following example shows how to override the maximum number of replicas for OAuth2 Proxy:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    oauth2_proxy+: {
+        hpa+: {
+            spec+: {
+                maxReplicas: 10
+            },
+        },
+    },
+}
+```
