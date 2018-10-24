@@ -239,3 +239,78 @@ To override pod memory or CPU:
     },
 }
 ```
+
+## NGINX Ingress Controller
+
+[nginx-ingress](https://github.com/kubernetes/ingress-nginx) is an open source Kubernetes Ingress controller based on [NGINX](https://www.nginx.com).
+
+An Ingress is a Kubernetes resource that lets you configure an HTTP load balancer for your Kubernetes services. Such a load balancer usually exposes your services to clients outside of your Kubernetes cluster. An Ingress resource supports exposing services and Configuring TLS termination for each exposed host name.
+
+### Implementation
+
+It runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `nginx-ingress-controller` inside the `kubeprod` namespace. An [HorizontalPodAutoscaler](https://kubernetes.io/docs/tasks/run-application/horizontal-pod-autoscale/) resource is associated with this Deployment in order to auto-scale the number of `nginx-ingress-controller` pod replicas based on the incoming load.
+
+It also relies on `ExternalDNS` to handle registration of Kubernetes Ingress resources in the DNS zone specified when BKPR was installed and `cert-manager` to request X.509 certificates for Kubernetes Ingress resources in order to provide transparent TLS termination.
+
+The `manifests/components/nginx-ingress.jsonnet` manifest defines two Kubernetes Services:
+
+* `nginx-ingress-controller`, which wraps the NGINX server running as a reverse proxy and the logic to derive its configuration and routing rules from Kubernetes Ingress and Service resources.
+* `default-http-backend`, which is configured to respond to `/healthz` requests (liveness/readiness probes) and to return `404 Not Found` for any URL that does not match any of the known routing rules.
+
+`nginx-ingress-controller` is configured to forward any URL that does not match any of the known routing rules to the `default-http-backend` Service.
+
+### Configuration
+
+No explicit configuration is required by the NGINX Ingress Controller.
+
+#### Networking
+
+The following ports are exposed:
+
+* The `nginx-ingress-controller` Service exposes ports:
+  * `80/tcp` and `443/tcp` to servce HTTP and HTTP/S requests
+  * `10254/tcp` for `/healthz` (liveness/readiness probes) and `/metrics` (Prometheus) endpoints.
+* The `default-http-backend` Service exposes port `80/tcp` to render a `404 Not Found` error page for URLs that do not nmatch any routing rule.
+
+#### Monitoring
+
+NGINX Ingress Controller currently exposes a `/metrics` endpoint for exposing metrics to Prometheus. Some of the metrics exported are:
+
+* `connections_total`
+* `requests_total`
+* `read_bytes_total`
+* `write_bytes_total`
+* `request_duration_seconds` (histogram)
+* `response_duration_seconds` (histogram)
+* `request_size` (histogram)
+* `response_size` (histogram)
+
+For additional information, read the [source code](https://github.com/kubernetes/ingress-nginx/search?q=prometheus.Collector&unscoped_q=prometheus.Collector).
+
+#### Storage
+
+NGINX Ingress Controller is a stateless component and therefore does not have any persistent storage requirements.
+
+### Overrides
+
+The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+
+#### Override maximum number of replicas
+
+The following example shows how to override the maximum number of replicas for NGINX Ingress Controller:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    nginx_ingress+: {
+        hpa+: {
+            spec+: {
+                maxReplicas: 10
+            },
+        },
+    },
+}
+```
