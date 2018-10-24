@@ -28,7 +28,7 @@ To assure durability of the underlying Elasticsearch storage, each pod relies on
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override pod replicas
 
@@ -128,7 +128,7 @@ To assure persistence of the timeseries database, each pod relies on a Kubernete
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override storage parameters
 
@@ -203,7 +203,7 @@ Fluentd uses the [Elasticsearch Output Plugin](https://docs.fluentd.org/v1.0/art
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Resource requirements
 
@@ -294,7 +294,7 @@ NGINX Ingress Controller is a stateless component and therefore does not have an
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override maximum number of replicas
 
@@ -395,7 +395,7 @@ Certificates managed by `cert-manager` are stored as namespaced Kubernetes `Cert
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other detail of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override Let's Encrypt Environment
 
@@ -437,7 +437,7 @@ OAuth2 Proxy is a stateless component and therefore does not have any persistent
 
 ### Overrides
 
-The following deployment parameters are supported, tested, and will be honoured across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
 
 #### Override maximum number of replicas
 
