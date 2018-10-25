@@ -30,11 +30,12 @@ import (
 )
 
 const (
-	flagEmail     = "email"
-	flagDNSSuffix = "dns-zone"
-	flagSubID     = "subscription-id"
-	flagTenantID  = "tenant-id"
-	flagDNSResgrp = "dns-resource-group"
+	flagEmail       = "email"
+	flagDNSSuffix   = "dns-zone"
+	flagAuthzDomain = "authz-domain"
+	flagSubID       = "subscription-id"
+	flagTenantID    = "tenant-id"
+	flagDNSResgrp   = "dns-resource-group"
 )
 
 func defaultSubscription() *azcli.Subscription {
@@ -81,7 +82,7 @@ func init() {
 	}
 
 	aksCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
-
+	aksCmd.PersistentFlags().String(flagAuthzDomain, "*", "Restrict authorized users to this email domain.  Default '*' allows all users in Azure tenant.")
 	aksCmd.PersistentFlags().String(flagSubID, defSubID, "Azure subscription ID")
 	aksCmd.PersistentFlags().String(flagTenantID, defTenantID, "Azure tenant ID")
 	aksCmd.PersistentFlags().String(flagDNSSuffix, "", "External DNS zone for public endpoints")

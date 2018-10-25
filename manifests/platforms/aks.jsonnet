@@ -96,6 +96,7 @@ local kibana = import "../components/kibana.jsonnet";
             containers_+: {
               proxy+: {
                 args_+: {
+                  "email-domain": $.config.oauthProxy.authz_domain,
                   provider: "azure",
                 },
                 env_+: {
