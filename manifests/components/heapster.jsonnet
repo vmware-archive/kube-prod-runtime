@@ -18,9 +18,9 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 local arch = "amd64";
-local version = "v1.5.2";
 
 {
   metadata:: {
@@ -84,7 +84,7 @@ local version = "v1.5.2";
           nodeSelector+: {"beta.kubernetes.io/arch": arch},
           containers_+: {
             default: kube.Container("heapster") {
-              image: "gcr.io/google_containers/heapster-%s:%s" % [arch, version],
+              image: bkpr_rel.heapster__arch.image % {arch: arch},
               command: ["/heapster"],
               args_+: {
                 source: "kubernetes.summary_api:''",
@@ -99,7 +99,7 @@ local version = "v1.5.2";
               },
             },
             nanny: kube.Container("heapster-nanny") {
-              image: "gcr.io/google_containers/addon-resizer-%s:2.1" % arch,
+              image: bkpr_rel.addon_resizer__arch.image % {arch: arch},
               command: ["/pod_nanny"],
               args_+: {
                 cpu: "80m",

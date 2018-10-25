@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 {
   p:: "",
@@ -45,7 +46,7 @@ local kube = import "../lib/kube.libsonnet";
           terminationGracePeriodSeconds: 30,
           containers_+: {
             etcd: kube.Container("etcd") {
-              image: "quay.io/coreos/etcd:v3.3.1",
+              image: bkpr_rel.etcd.image,
               resources+: {
                 requests: {cpu: "100m", memory: "20Mi"},
                 limits: {cpu: "100m", memory: "30Mi"},

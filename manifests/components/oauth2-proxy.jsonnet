@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 {
   p:: "",
@@ -51,7 +52,7 @@ local kube = import "../lib/kube.libsonnet";
         spec+: {
           containers_+: {
             proxy: kube.Container("oauth2-proxy") {
-              image: "bitnami/oauth2-proxy:0.20180625.74543-debian-9-r6",
+              image: bkpr_rel.oauth2_proxy.image,
               args_+: {
                 "email-domain": "*",
                 "http-address": "0.0.0.0:4180",

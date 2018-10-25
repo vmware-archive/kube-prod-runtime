@@ -19,6 +19,7 @@
 
 local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 // TODO: move into kube.libsonnet
 local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService", "") {
@@ -129,7 +130,7 @@ local APIService() = kube._Object("apiregistration.k8s.io/v1beta1", "APIService"
             },
             containers_+: {
               apiserver: kube.Container("apiserver") {
-                image: kubecfg.resolveImage("quay.io/kubernetes-service-catalog/service-catalog:v0.1.9"),
+                image: kubecfg.resolveImage(bkpr_rel.kubernetes_svc_cat.image),
                 resources: {
                   requests: {cpu: "100m", memory: "20Mi"},
                   limits: {cpu: "100m", memory: "30Mi"},

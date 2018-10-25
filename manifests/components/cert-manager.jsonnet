@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local brpr_rel = import "bkpr-release.jsonnet";
 
 {
   p:: "",
@@ -105,7 +106,7 @@ local kube = import "../lib/kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             default: kube.Container("cert-manager") {
-              image: "bitnami/cert-manager:0.5.0-r36",
+              image: brpr_rel.cert_manager.image,
               args_+: {
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
                 "leader-election-namespace": "$(POD_NAMESPACE)",

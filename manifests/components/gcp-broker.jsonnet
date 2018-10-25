@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 // See https://github.com/GoogleCloudPlatform/k8s-service-catalog
 
@@ -64,7 +65,7 @@ local kube = import "../lib/kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             oauth: kube.Container("catalog-oauth") {
-              image: "gcr.io/gcp-services/catalog-oauth:latest",  // FIXME: release?
+              image: bkpr_rel.gcp_broker.image,
               args_+: {
                 n: "$(POD_NAMESPACE)",
                 v: 6,

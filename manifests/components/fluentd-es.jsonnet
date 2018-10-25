@@ -20,8 +20,8 @@
 local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
-local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
 local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
@@ -75,7 +75,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
         spec+: {
           containers_+: {
             fluentd_es: kube.Container("fluentd-es") {
-              image: FLUENTD_ES_IMAGE,
+              image: bkpr_rel.fluentd_es.image,
               securityContext: {
                 runAsUser: 0,  // required to be able to read system-wide logs.
               },
