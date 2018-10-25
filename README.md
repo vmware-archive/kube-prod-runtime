@@ -14,6 +14,10 @@ BKPR is available for [Google Kubernetes Engine (GKE)](https://cloud.google.com/
 
 BKPR is licensed under the [Apache License Version 2.0](LICENSE).
 
+## Requirements
+
+BKPR has been tested to work on a bare-minimum Kubernetes cluster with three kubelet nodes with 2 CPUs and 8GiB of RAM each.
+
 ## Quickstart
 
 * [AKS Quickstart](docs/quickstart-aks.md)
