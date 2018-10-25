@@ -20,8 +20,6 @@
 local kube = import "../lib/kube.libsonnet";
 local bkpr_rel = import "bkpr-release.jsonnet";
 
-local arch = "amd64";
-
 {
   metadata:: {
     metadata+: {
@@ -81,10 +79,10 @@ local arch = "amd64";
         spec+: {
           local this_containers = self.containers_,
           serviceAccountName: $.serviceAccount.metadata.name,
-          nodeSelector+: {"beta.kubernetes.io/arch": arch},
+          nodeSelector+: {"beta.kubernetes.io/arch": "amd64"},
           containers_+: {
             default: kube.Container("heapster") {
-              image: bkpr_rel.heapster__arch.image % {arch: arch},
+              image: bkpr_rel.heapster.image,
               command: ["/heapster"],
               args_+: {
                 source: "kubernetes.summary_api:''",
@@ -99,7 +97,7 @@ local arch = "amd64";
               },
             },
             nanny: kube.Container("heapster-nanny") {
-              image: bkpr_rel.addon_resizer__arch.image % {arch: arch},
+              image: bkpr_rel.addon_resizer.image,
               command: ["/pod_nanny"],
               args_+: {
                 cpu: "80m",

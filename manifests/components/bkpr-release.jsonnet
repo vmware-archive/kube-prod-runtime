@@ -1,10 +1,6 @@
 {
-  // TODO(release): addon_resizer to use a single image
   addon_resizer:: {
-    image:: "gcr.io/google_containers/addon-resizer:1.0",
-  },
-  addon_resizer__arch:: {
-    image:: "gcr.io/google_containers/addon-resizer-%(arch)s:2.1",
+    image:: "gcr.io/google_containers/addon-resizer-amd64:2.1",
   },
   alpine:: {
     image:: "alpine:3.6",
@@ -37,7 +33,7 @@
     image:: "gcr.io/gcp-services/catalog-oauth:latest",  // FIXME: release?
   },
   heapster__arch:: {
-    image:: "gcr.io/google_containers/heapster-%(arch)s:v1.5.2",
+    image:: "gcr.io/google_containers/heapster-amd64:v1.5.2",
   },
   kibana:: {
     image:: "bitnami/kibana:5.6.12-r15",
