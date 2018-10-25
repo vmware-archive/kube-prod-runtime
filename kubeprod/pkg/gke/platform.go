@@ -22,15 +22,18 @@ package gke
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"regexp"
 	"strings"
 
 	admin "cloud.google.com/go/iam/admin/apiv1"
 	log "github.com/sirupsen/logrus"
+	flag "github.com/spf13/pflag"
 	"golang.org/x/oauth2/google"
 	crm "google.golang.org/api/cloudresourcemanager/v1"
 	dns "google.golang.org/api/dns/v1"
@@ -46,10 +49,52 @@ func init() {
 }
 
 func debugHook(ctx context.Context, req *http.Request) func(resp *http.Response) {
+	// Note to debuggers: Re-running with GODEBUG=http2debug=2 env var set may also be useful.
 	log.Debugf("-> %#v", req)
 	return func(resp *http.Response) {
 		log.Debugf("<- %#v", resp)
 	}
+}
+
+func defaultProject() string {
+	// No "nice" golang API for this: https://github.com/golang/oauth2/issues/241
+
+	type Output struct {
+		Core struct {
+			Project string `json:"project"`
+		} `json:"core"`
+	}
+
+	out, err := exec.Command("gcloud", "-q", "config", "list", "core/project", "--format=json").Output()
+	if err != nil {
+		log.Debugf("failed to get default gcloud project: 'gcloud config list core/project' failed with %v", err)
+		return ""
+	}
+
+	var output Output
+	if err := json.Unmarshal(out, &output); err != nil {
+		log.Debugf("unable to decode 'gcloud config list' output: %v", err)
+		return ""
+	}
+
+	return output.Core.Project
+}
+
+func getProject(flags *flag.FlagSet) (string, error) {
+	project, err := flags.GetString(flagProject)
+	if err != nil {
+		return "", err
+	}
+
+	if project == "" {
+		project = defaultProject()
+	}
+
+	if project == "" {
+		return "", fmt.Errorf("no gcloud default found, explicit --project flag is required")
+	}
+
+	return project, nil
 }
 
 func prompt(question, def string) (string, error) {
@@ -157,7 +202,7 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 		//
 
 		if conf.ExternalDNS.Project == "" {
-			project, err := flags.GetString(flagProject)
+			project, err := getProject(flags)
 			if err != nil {
 				return err
 			}
@@ -289,7 +334,7 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 		}
 		defer client.Close()
 
-		project, err := flags.GetString(flagProject)
+		project, err := getProject(flags)
 		if err != nil {
 			return err
 		}
@@ -348,7 +393,7 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 		}
 
 		if clientID == "" || clientSecret == "" {
-			project, err := flags.GetString(flagProject)
+			project, err := getProject(flags)
 			if err != nil {
 				return err
 			}
