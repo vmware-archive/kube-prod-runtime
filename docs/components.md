@@ -473,7 +473,7 @@ Alertmanager is accessible from within the cluster via a Kubernetes Service name
 
 The Alertmanager manifest reads its configuration from `manifests/components/alertmanager-config.jsonnet`. Its contents are exposed in the Alertmanager container as a read-only YAML configuration file named `/config/config.yml`.
 
-The following sections document a very small subset of Alertmanager configuration. Please read [Alertmanager's configuration](https://prometheus.io/docs/alerting/configuration/) for a detailed description of all Alertmanager configuration options.
+The following sections document a very small subset of Alertmanager configuration. Please read [Alertmanager's documentation](https://prometheus.io/docs/alerting/configuration/) for a detailed description of all Alertmanager configuration options.
 
 #### Receivers
 
