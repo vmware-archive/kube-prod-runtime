@@ -18,8 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-
-local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 {
   p:: "",
@@ -64,7 +63,7 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
             terminationGracePeriodSeconds: 30,
             containers_+: {
               default: kube.Container("default-http-backend") {
-                image: "gcr.io/google_containers/defaultbackend:1.4",
+                image: bkpr_rel.default_backend.image,
                 readinessProbe: {
                   httpGet: {path: "/healthz", port: 8080, scheme: "HTTP"},
                   timeoutSeconds: 5,
@@ -196,7 +195,7 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
           terminationGracePeriodSeconds: 60,
           containers_+: {
             default: kube.Container("nginx") {
-              image: NGNIX_INGRESS_IMAGE,
+              image: bkpr_rel.nginx_ingress_controller.image,
               securityContext: {
                 runAsUser: 1001,
                 capabilities: {

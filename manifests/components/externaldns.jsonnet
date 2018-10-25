@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 {
   p:: "",
@@ -69,7 +70,7 @@ local kube = import "../lib/kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             edns: kube.Container("external-dns") {
-              image: "bitnami/external-dns:0.5.4-r8",
+              image: bkpr_rel.edns.image,
               args_+: {
                 sources_:: ["service", "ingress"],
                 "txt-owner-id": this.ownerId,

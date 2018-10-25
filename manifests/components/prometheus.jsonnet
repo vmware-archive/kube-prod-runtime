@@ -20,20 +20,17 @@
 local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 local path_join(prefix, suffix) = (
   if std.endsWith(prefix, "/") then prefix + suffix
   else prefix + "/" + suffix
 );
 
-local PROMETHEUS_IMAGE = "bitnami/prometheus:2.3.2-r41";
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
-local ALERTMANAGER_IMAGE = "bitnami/alertmanager:0.15.2-r36";
 local ALERTMANAGER_PORT = 9093;
-
-local CONFIGMAP_RELOADER_IMAGE = "jimmidyson/configmap-reload:v0.2.2";
 
 // Builds the `webhook-url` used by a container to trigger a reload
 // after a ConfigMap change
@@ -227,7 +224,7 @@ local get_cm_web_hook_url = function(port, path) (
             containers_+: {
               default: kube.Container("prometheus") {
                 local this = self,
-                image: PROMETHEUS_IMAGE,
+                image: bkpr_rel.prometheus.image,
                 securityContext+: {
                   runAsUser: 1001,
                 },
@@ -274,7 +271,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               config_reload: kube.Container("configmap-reload") {
-                image: CONFIGMAP_RELOADER_IMAGE,
+                image: bkpr_rel.configmap_reloader.image,
                 args_+: {
                   "volume-dir": "/config",
                   "webhook-url": get_cm_web_hook_url(PROMETHEUS_PORT, $.ingress.prom_path),
@@ -330,7 +327,7 @@ local get_cm_web_hook_url = function(port, path) (
             containers_+: {
               default: kube.Container("alertmanager") {
                 local this = self,
-                image: ALERTMANAGER_IMAGE,
+                image: bkpr_rel.prometheus_alertmanager.image,
                 args_+: {
                   "config.file": this.volumeMounts_.config.mountPath + "/config.yml",
                   "storage.path": this.volumeMounts_.storage.mountPath,
@@ -355,7 +352,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               config_reload: kube.Container("configmap-reload") {
-                image: CONFIGMAP_RELOADER_IMAGE,
+                image: bkpr_rel.configmap_reloader.image,
                 args_+: {
                   "volume-dir": "/config",
                   "webhook-url": get_cm_web_hook_url(ALERTMANAGER_PORT, $.ingress.am_path),
@@ -391,7 +388,7 @@ local get_cm_web_hook_url = function(port, path) (
             }],
             containers_+: {
               default: kube.Container("node-exporter") {
-                image: "prom/node-exporter:v0.15.2",
+                image: bkpr_rel.prometheus_node_exporter.image,
                 local v = self.volumeMounts_,
                 args_+: {
                   "path.procfs": v.procfs.mountPath,
@@ -490,7 +487,7 @@ local get_cm_web_hook_url = function(port, path) (
             serviceAccountName: $.ksm.serviceAccount.metadata.name,
             containers_+: {
               default+: kube.Container("ksm") {
-                image: "quay.io/coreos/kube-state-metrics:v1.1.0",
+                image: bkpr_rel.kube_state_metrics.image,
                 ports_: {
                   metrics: {containerPort: 8080},
                 },
@@ -510,7 +507,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               resizer: kube.Container("addon-resizer") {
-                image: "gcr.io/google_containers/addon-resizer:1.0",
+                image: bkpr_rel.addon_resizer.image,
                 command: ["/pod_nanny"],
                 args_+: {
                   container: spec.containers[0].name,

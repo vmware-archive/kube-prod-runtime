@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local KIBANA_IMAGE = "bitnami/kibana:5.6.12-r15";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 local strip_trailing_slash(s) = (
   if std.endsWith(s, "/") then
@@ -49,7 +49,7 @@ local strip_trailing_slash(s) = (
         spec+: {
           containers_+: {
             kibana: kube.Container("kibana") {
-              image: KIBANA_IMAGE,
+              image: bkpr_rel.kibana.image,
               resources: {
                 requests: {
                   cpu: "10m",

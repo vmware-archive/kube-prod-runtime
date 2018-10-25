@@ -19,8 +19,7 @@
 
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
-
-local ELASTICSEARCH_IMAGE = "bitnami/elasticsearch:5.6.12-r2";
+local bkpr_rel = import "bkpr-release.jsonnet";
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
@@ -106,7 +105,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
           containers_+: {
             elasticsearch_logging: kube.Container("elasticsearch-logging") {
               local container = self,
-              image: ELASTICSEARCH_IMAGE,
+              image: bkpr_rel.elasticsearch.image,
               // This can massively vary depending on the logging volume
               securityContext: {
                 runAsUser: 1001,
@@ -164,7 +163,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               },
             },
             prom_exporter: kube.Container("prom-exporter") {
-              image: "justwatch/elasticsearch_exporter:1.0.1",
+              image: bkpr_rel.elasticsearch_exporter.image,
               command: ["elasticsearch_exporter"],
               args_+: {
                 "es.uri": "http://localhost:%s/" % ELASTICSEARCH_HTTP_PORT,
@@ -183,7 +182,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
           },
           initContainers_+: {
             elasticsearch_logging_init: kube.Container("elasticsearch-logging-init") {
-              image: "alpine:3.6",
+              image: bkpr_rel.alpine.image,
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
               // NOTE: copied verbatim from https://www.elastic.co/guide/en/elasticsearch/reference/5.6/vm-max-map-count.html
               command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"],
