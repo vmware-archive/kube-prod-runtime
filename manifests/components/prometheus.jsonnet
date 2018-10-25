@@ -296,7 +296,8 @@ local get_cm_web_hook_url = function(port, path) (
   alertmanager: {
     local am = self,
 
-    storage: "5Gi",
+    // Amount of persistent storage required by Alertmanager
+    storage:: "5Gi",
 
     svc: kube.Service($.p + "alertmanager") + $.metadata {
       target_pod: am.deploy.spec.template,
