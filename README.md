@@ -33,7 +33,7 @@ BKPR leverages the following components to achieve its mission. For more im-dept
 
 ### Monitoring
 * [Prometheus](docs/components.md#user-content-prometheus): A monitoring system and time series database
-* [Alertmanager](docs/components.md#user-content-alertmanager): An alert manager and router
+* [Alertmanager](docs/components.md#alertmanager): An alert manager and router
 ### Logging
 * [Elasticsearch](docs/components.md#user-content-elasticsearch): A distributed, RESTful search and analytics engine
 * [Kibana](docs/components.md#user-content-kibana): A visualization tool for Elasticsearch data
