@@ -39,7 +39,7 @@ BKPR leverages the following components to achieve its mission. For more im-dept
 * [Kibana](docs/components.md#user-content-kibana): A visualization tool for Elasticsearch data
 * [Fluentd](docs/components.md#user-content-fluentd): A data collector for unified logging layer
 ### DNS and TLS certificates
-* [ExternalDNS](docs/components.md#user-content-externaldns): A component to synchronize exposed Kubernetes Services and Ingresses with DNS providers
+* [ExternalDNS](docs/components.md#externaldns): A component to synchronize exposed Kubernetes Services and Ingresses with DNS providers
 * [cert-manager](docs/components.md#user-content-cert-manager): A Kubernetes add-on to automate the management and issuance of TLS certificates from various sources
 ### Others
 * [OAuth2 Proxy](docs/components.md#user-content-oauth2-proxy): A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group

@@ -377,7 +377,6 @@ Spec:
 
 (`kibana.${dns-zone}` will use the actual DNS domain specified in the `--dns-zone` command-line argument to `kubeprod`).
 
-
 #### Let's Encrypt Environments
 
 Let's Encrypt suppports two environments:
@@ -535,3 +534,40 @@ $ cat kubeprod-manifest.jsonnet
     },
 }
 ```
+
+## ExternalDNS
+
+[ExternalDNS](https://github.com/kubernetes-incubator/external-dns) makes Kubernetes resources discoverable via public DNS servers by controlling DNS records dynamically via Kubernetes resources in a DNS provider-agnostic way.
+
+### Implementation
+
+ExternalDNS runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `external-dns` inside the `kubeprod` namespace. Underneath, it retrieves a list of Kubernetes Service and Ingress resources from the Kubernetes API to determine a desired list of DNS records. Then assures that the DNS zone configured when BKPR was installed is updated with this information by using the underlying platform DNS implementation (e.g. Azure DNS, Google CloudDNS, etc.).
+
+Example:
+
+```
+$ kubectl --namespace=kubeprod get ingress
+NAME             HOSTS                                               ADDRESS   PORTS     AGE
+kibana-logging   kibana.my-domain.com,kibana.my-domain.com           1.2.3.4   80, 443   1d
+prometheus       prometheus.my-domain.com,prometheus.my-domain.com   1.2.3.4   80, 443   1d
+```
+
+ExternalDNS will ensure that `kibana.my-domain.com` will resolve to `1.2.3.4` and that `prometheus.my-domain.com` will resolve to `1.2.3.4`:
+
+```
+$ nslookup kibana.my-domain.com
+Server:		8.8.8.8
+Address:	8.8.8.8#53
+
+Non-authoritative answer:
+Name:	kibana.my-domain.com
+Address: 1.2.3.4
+```
+
+#### Networking
+
+ExternalDNS requires access to the Kubernetes API and the a subset of the underlying platform's API in order to configure DNS.
+
+#### Storage
+
+ExternalDNS is a stateless component and therefore does not have any persistent storage requirements.
