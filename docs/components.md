@@ -461,29 +461,27 @@ $ cat kubeprod-manifest.jsonnet
 
 ## Alertmanager
 
-[Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) is an open source component that handles alerts sent by Prometheus server. It performs deduplication, grouping and delivery to the correct receiver and also takes care of silencing and inhibition of alerts.
+[Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) is an open source component that handles alerts sent by the Prometheus server. It performs deduplication, grouping and delivery to the correct receiver and also takes care of silencing and inhibition of alerts.
 
 ### Implementation
 
-It runs on top of Kubernetes as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `alertmanager-0` under the `kubeprod` namespace. It is is implemented inside the [Prometheus](../manifests/components/prometheus.jsonnet) manifest.
+It runs on top of Kubernetes as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `alertmanager-0` under the `kubeprod` namespace. It is implemented inside the [Prometheus](../manifests/components/prometheus.jsonnet) manifest.
 
 Alertmanager is accessible from within the cluster via a Kubernetes Service named `alertmanager` inside the `kubeprod` namespace.
 
 ### Configuration
 
-The Alertmanager manifest reads its a configuration from `manifests/components/alertmanager-config.jsonnet`. Its contents are exposed into the Alertmanager container as a read-only YAML configuration file named `/config/config.yml`.
+The Alertmanager manifest reads its configuration from `manifests/components/alertmanager-config.jsonnet`. Its contents are exposed in the Alertmanager container as a read-only YAML configuration file named `/config/config.yml`.
 
 The following sections document a very small subset of Alertmanager configuration. Please read [Alertmanager's configuration](https://prometheus.io/docs/alerting/configuration/) for a detailed description of all Alertmanager configuration options.
 
 #### Receivers
 
-A receiver defines the mechanism or protocol used to deliver alerts to a set of recipients. For example, to:
+A receiver defines the mechanism or protocol used to deliver alerts to a set of recipients. For example:
 
 * A receiver named `email` to deliver alerts over e-mail to the primary and secondary on-call e-mail aliases
 * A receiver named `pager` to deliver alerts to a SkyTel pager
 * A receiver named `sms` to deliver alerts over SMS to a pre-configured phone number
-
-##### Single `email` receiver
 
 BKPR configures Alertmanager with a receiver named `email` in order to deliver alerts over e-mail. However, BKPR's default configuration requires you to specify the list of intended e-mail recipients. Use the following override construct to specify one or multiple e-mail addresses for delivering alerts over e-mail:
 
@@ -532,7 +530,7 @@ $ cat kubeprod-manifest.jsonnet
     // Place your overrides here
     prometheus+: {
         alertmanager+: {
-            storage: "9Gi",
+            storage:: "9Gi",
         },
     },
 }
