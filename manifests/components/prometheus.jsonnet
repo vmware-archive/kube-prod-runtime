@@ -296,6 +296,9 @@ local get_cm_web_hook_url = function(port, path) (
   alertmanager: {
     local am = self,
 
+    // Amount of persistent storage required by Alertmanager
+    storage:: "5Gi",
+
     svc: kube.Service($.p + "alertmanager") + $.metadata {
       target_pod: am.deploy.spec.template,
     },
@@ -309,7 +312,7 @@ local get_cm_web_hook_url = function(port, path) (
     deploy: kube.StatefulSet($.p + "alertmanager") + $.metadata {
       spec+: {
         volumeClaimTemplates_+: {
-          storage: {storage: "5Gi"},
+          storage: {storage: am.storage},
         },
         template+: {
           metadata+: {

@@ -458,3 +458,80 @@ $ cat kubeprod-manifest.jsonnet
     },
 }
 ```
+
+## Alertmanager
+
+[Alertmanager](https://prometheus.io/docs/alerting/alertmanager/) is an open source component that handles alerts sent by the Prometheus server. It performs deduplication, grouping and delivery to the correct receiver and also takes care of silencing and inhibition of alerts.
+
+### Implementation
+
+It runs on top of Kubernetes as a [Kubernetes StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 pod named `alertmanager-0` under the `kubeprod` namespace. It is implemented inside the [Prometheus](../manifests/components/prometheus.jsonnet) manifest.
+
+Alertmanager is accessible from within the cluster via a Kubernetes Service named `alertmanager` inside the `kubeprod` namespace.
+
+### Configuration
+
+The Alertmanager manifest reads its configuration from `manifests/components/alertmanager-config.jsonnet`. Its contents are exposed in the Alertmanager container as a read-only YAML configuration file named `/config/config.yml`.
+
+The following sections document a very small subset of Alertmanager configuration. Please read [Alertmanager's documentation](https://prometheus.io/docs/alerting/configuration/) for a detailed description of all Alertmanager configuration options.
+
+#### Receivers
+
+A receiver defines the mechanism or protocol used to deliver alerts to a set of recipients. For example:
+
+* A receiver named `email` to deliver alerts over e-mail to the primary and secondary on-call e-mail aliases
+* A receiver named `pager` to deliver alerts to a SkyTel pager
+* A receiver named `sms` to deliver alerts over SMS to a pre-configured phone number
+
+BKPR configures Alertmanager with a receiver named `email` in order to deliver alerts over e-mail. However, BKPR's default configuration requires you to specify the list of intended e-mail recipients. Use the following override construct to specify one or multiple e-mail addresses for delivering alerts over e-mail:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    prometheus+: {
+        am_config+:: {
+            receivers_+:: {
+                email: {
+                    email_configs: [
+                        { to: "my_email@my-domain.com" },
+                        { to: "your_email@my-domain.com },
+                    ],
+                },
+            },
+        },
+    },
+}
+```
+
+#### Networking
+
+Alertmanager listens on port `9093/tcp` for client requests. Prometheus is the main client, but nothing prevents you from talking to Alertmanager via its exposed Kubernetes Service.
+
+#### Storage
+
+To assure the resilience of Alertmanager, each pod relies on a Kubernetes PersistentVolume named `data-alertmanager-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated a default storage of 5GiB. In the Overrides section below there are instructions for reconfiguring this.
+
+### Overrides
+
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
+
+#### Override storage parameters
+
+The following example shows how to override the amount of persistent storage required by Alertmanager:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    prometheus+: {
+        alertmanager+: {
+            storage:: "9Gi",
+        },
+    },
+}
+```
