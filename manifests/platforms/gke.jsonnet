@@ -104,6 +104,7 @@ local kibana = import "../components/kibana.jsonnet";
             containers_+: {
               proxy+: {
                 args_+: {
+                  "email-domain": $.config.oauthProxy.authz_domain,
                   provider: "google",
                   "google-service-account-json": if $.config.oauthProxy.google_service_account_json != "" then "/google/credentials.json" else "",
                   "google-admin-email": $.config.oauthProxy.google_admin_email,

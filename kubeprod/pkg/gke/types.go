@@ -36,6 +36,7 @@ type OauthProxyConfig struct {
 	ClientID                 string   `json:"client_id"`
 	ClientSecret             string   `json:"client_secret"`
 	CookieSecret             string   `json:"cookie_secret"`
+	AuthzDomain              string   `json:"authz_domain"`
 	GoogleGroups             []string `json:"google_groups"`
 	GoogleAdminEmail         string   `json:"google_admin_email"`
 	GoogleServiceAccountJson string   `json:"google_service_account_json"`
