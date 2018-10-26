@@ -43,6 +43,7 @@ manifests: release
 			mkdir -p $${ARTIFACTS_DIR}/manifests/ ; \
 			echo "cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/" ; \
 			cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/ ; \
+			echo $(VERSION) > $${ARTIFACTS_DIR}/manifests/VERSION ; \
 		done ; \
 	done
 

@@ -31,6 +31,7 @@
       client_id: "myclientid",
       client_secret: "mysecret",
       cookie_secret: "cookiesecret",
+      authz_domain: "test.invalid",
       google_groups: [],
       google_admin_email: "admin@example.com",
       google_service_account_json: "<fake google credentials json contents>",

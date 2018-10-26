@@ -34,6 +34,7 @@
       client_id: "myclientid",
       client_secret: "mysecret",
       cookie_secret: "cookiesecret",
+      authz_domain: "test.invalid",
       azure_tenant: "mytenant",
     },
   },

@@ -37,6 +37,7 @@ type OauthProxyConfig struct {
 	ClientID     string `json:"client_id"`
 	ClientSecret string `json:"client_secret"`
 	CookieSecret string `json:"cookie_secret"`
+	AuthzDomain  string `json:"authz_domain"`
 	AzureTenant  string `json:"azure_tenant"`
 }
 

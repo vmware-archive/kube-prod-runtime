@@ -297,6 +297,14 @@ func (conf *AKSConfig) Generate(ctx context.Context) error {
 		conf.OauthProxy.ClientSecret = secret
 	}
 
+	if conf.OauthProxy.AuthzDomain == "" {
+		domain, err := flags.GetString(flagAuthzDomain)
+		if err != nil {
+			return err
+		}
+		conf.OauthProxy.AuthzDomain = domain
+	}
+
 	if conf.OauthProxy.AzureTenant == "" {
 		tenantID, err := flags.GetString(flagTenantID)
 		if err != nil {

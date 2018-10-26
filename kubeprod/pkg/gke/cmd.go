@@ -31,6 +31,7 @@ const (
 	flagEmail             = "email"
 	flagDNSSuffix         = "dns-zone"
 	flagProject           = "project"
+	flagAuthzDomain       = "authz-domain"
 	flagOauthClientId     = "oauth-client-id"
 	flagOauthClientSecret = "oauth-client-secret"
 	flagOauthGoogleGroups = "oauth-google-groups"
@@ -55,6 +56,8 @@ func init() {
 
 	gkeCmd.PersistentFlags().String(flagEmail, os.Getenv("EMAIL"), "Contact email for cluster admin")
 	gkeCmd.PersistentFlags().String(flagDNSSuffix, "", "External DNS zone for public endpoints")
+	gkeCmd.PersistentFlags().String(flagAuthzDomain, "", "Restrict authorized users to this Google email domain")
+	gkeCmd.MarkPersistentFlagRequired(flagAuthzDomain)
 	gkeCmd.PersistentFlags().String(flagProject, "", "GCP project to use for managed resources")
 	gkeCmd.PersistentFlags().String(flagOauthClientId, "", "Client ID to use for OAuth")
 	gkeCmd.PersistentFlags().String(flagOauthClientSecret, "", "Client secret to use for OAuth")
