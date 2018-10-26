@@ -18,6 +18,15 @@ BKPR is licensed under the [Apache License Version 2.0](LICENSE).
 
 BKPR has been tested to work on a bare-minimum Kubernetes cluster with three kubelet nodes with 2 CPUs and 8GiB of RAM each.
 
+## Kubernetes version support matrix
+
+The following matrix shows which Kubernetes versions and platforms are supported:
+
+| BKPR release | Kubernetes versions | AKS | GKE |
+|:------------:|:-------------------:|:---:|:---:|
+|     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
+|     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
+
 ## Quickstart
 
 * [AKS Quickstart](docs/quickstart-aks.md)
@@ -35,30 +44,25 @@ The versioning used in BKPR is described [here](docs/versioning.md).
 
 BKPR leverages the following components to achieve its mission. For more im-depth documentation about them please read the [components](docs/components.md) documentation.
 
-### Monitoring
-* [Prometheus](docs/components.md#user-content-prometheus): A monitoring system and time series database
+### Logging stack
+
+* [Elasticsearch](docs/components.md#elasticsearch): A distributed, RESTful search and analytics engine
+* [Fluentd](docs/components.mdfluentd): A data collector for unified logging layer
+* [Kibana](docs/components.md#kibana): A visualization tool for Elasticsearch data
+
+### Monitoring stack
+
+* [Prometheus](docs/components.md#prometheus): A monitoring system and time series database
 * [Alertmanager](docs/components.md#alertmanager): An alert manager and router
-### Logging
-* [Elasticsearch](docs/components.md#user-content-elasticsearch): A distributed, RESTful search and analytics engine
-* [Kibana](docs/components.md#user-content-kibana): A visualization tool for Elasticsearch data
-* [Fluentd](docs/components.md#user-content-fluentd): A data collector for unified logging layer
-### DNS and TLS certificates
+
+### Ingress stack
+
+* [NGINX Ingress Controller](docs/components.md#nginx-ingress-controller): A Controller to satisfy requests for Ingress objects
+* [cert-manager](docs/components.md#cert-manager): A Kubernetes add-on to automate the management and issuance of TLS certificates from various sources
+* [OAuth2 Proxy](docs/components.md#oauth2-proxy): A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group
 * [ExternalDNS](docs/components.md#externaldns): A component to synchronize exposed Kubernetes Services and Ingresses with DNS providers
-* [cert-manager](docs/components.md#user-content-cert-manager): A Kubernetes add-on to automate the management and issuance of TLS certificates from various sources
-### Others
-* [OAuth2 Proxy](docs/components.md#user-content-oauth2-proxy): A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group
-* [nginx-ingress](docs/components.md#nginx-ingress-controller): A Controller to satisfy requests for Ingress objects
 
 ## Release compatibility
-
-### Kubernetes version support matrix
-
-The following matrix shows which Kubernetes versions and platforms are supported:
-
-| BKPR release | Kubernetes versions | AKS | GKE |
-|:------------:|:-------------------:|:---:|:---:|
-|     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
-|     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
 
 ### Components version support
 
