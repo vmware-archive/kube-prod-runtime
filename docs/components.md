@@ -1,5 +1,18 @@
 # BKPR components
 
+- [Logging stack](#logging-stack)
+    - [Elasticsearch](#elasticsearch)
+    - [Fluentd](#fluentd)
+    - [Kibana](#kibana)
+- [Monitoring stack](#monitoring-stack)
+    - [Prometheus](#prometheus)
+    - [Alertmanager](#alertmanager)
+- [Ingress stack](#ingress-stack)
+    - [NGINX Ingress Controller](#nginx-ingress-controller)
+    - [cert-manager](#cert-manager)
+    - [OAuth2 Proxy](#oauth2-proxy)
+    - [ExternalDNS](#externaldns)
+
 ## Logging stack
 ### Elasticsearch
 
