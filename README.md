@@ -30,7 +30,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 ## Quickstart
 
 * [AKS Quickstart](docs/quickstart-aks.md)
-* GKE Quickstart
+* [GKE Quickstart](docs/quickstart-gke.md)
 
 ## Frequently Asked Questions (FAQ)
 
