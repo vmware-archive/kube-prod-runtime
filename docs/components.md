@@ -541,7 +541,7 @@ $ cat kubeprod-manifest.jsonnet
 
 ### Implementation
 
-ExternalDNS runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `external-dns` inside the `kubeprod` namespace. Underneath, it retrieves a list of Kubernetes Service and Ingress resources from the Kubernetes API to determine a desired list of DNS records. Then assures that the DNS zone configured when BKPR was installed is updated with this information by using the underlying platform DNS implementation (e.g. Azure DNS, Google CloudDNS, etc.).
+ExternalDNS runs on top of Kubernetes and is implemented as a Kubernetes Deployment resource named `external-dns` inside the `kubeprod` namespace. It retrieves a list of Kubernetes Service and Ingress resources from the Kubernetes API to determine a desired list of DNS records, then ensures that the DNS zone configured when BKPR was installed is updated with this information. It uses the underlying platform's DNS implementation (e.g. [Azure DNS](https://docs.microsoft.com/en-us/azure/dns/), [Google CloudDNS](https://cloud.google.com/dns/docs/), etc.) for its operations.
 
 Example:
 
