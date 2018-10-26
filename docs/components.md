@@ -566,7 +566,7 @@ Address: 1.2.3.4
 
 #### Networking
 
-ExternalDNS requires access to the Kubernetes API and the a subset of the underlying platform's API in order to configure DNS.
+ExternalDNS requires access to the Kubernetes API and a subset of the underlying platform's API in order to configure DNS.
 
 #### Storage
 
