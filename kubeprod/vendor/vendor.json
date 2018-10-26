@@ -2097,6 +2097,14 @@
 			"versionExact": "kubernetes-1.10.7"
 		},
 		{
+			"checksumSHA1": "xJ9brnfJUJ09IDuRotLN57/wbd0=",
+			"path": "k8s.io/client-go/kubernetes/typed/core/v1",
+			"revision": "745ca830039794f7b927b8a2c2a58dcc1e8a0a72",
+			"revisionTime": "2018-08-17T11:46:23Z",
+			"version": "kubernetes-1.10",
+			"versionExact": "kubernetes-1.10.7"
+		},
+		{
 			"checksumSHA1": "YzoL19W/Q0lh3qmIUYHYOHUBPZg=",
 			"path": "k8s.io/client-go/pkg/apis/clientauthentication",
 			"revision": "745ca830039794f7b927b8a2c2a58dcc1e8a0a72",
@@ -2235,6 +2243,14 @@
 		{
 			"checksumSHA1": "rRC9GCWXfyIXKHBCeKpw7exVybE=",
 			"path": "k8s.io/client-go/tools/metrics",
+			"revision": "745ca830039794f7b927b8a2c2a58dcc1e8a0a72",
+			"revisionTime": "2018-08-17T11:46:23Z",
+			"version": "kubernetes-1.10",
+			"versionExact": "kubernetes-1.10.7"
+		},
+		{
+			"checksumSHA1": "3jRI+y0VTCD9IVl1X8ZQCcSo40g=",
+			"path": "k8s.io/client-go/tools/reference",
 			"revision": "745ca830039794f7b927b8a2c2a58dcc1e8a0a72",
 			"revisionTime": "2018-08-17T11:46:23Z",
 			"version": "kubernetes-1.10",
