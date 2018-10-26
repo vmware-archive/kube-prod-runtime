@@ -316,6 +316,14 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 		conf.OauthProxy.CookieSecret = secret
 	}
 
+	if conf.OauthProxy.AuthzDomain == "" {
+		domain, err := flags.GetString(flagAuthzDomain)
+		if err != nil {
+			return err
+		}
+		conf.OauthProxy.AuthzDomain = domain
+	}
+
 	if conf.OauthProxy.GoogleGroups == nil {
 		// Avoid json `null`
 		groups, err := flags.GetStringSlice(flagOauthGoogleGroups)
