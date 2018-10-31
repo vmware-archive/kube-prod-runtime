@@ -97,7 +97,7 @@ The next several days should be invested in testing and stabilizing the release 
 During this phase, the `$RELEASE_BRANCH_NAME` branch will keep evolving as you will produce new release candidates. Each time you want to produce a new release candidate, you will start by adding commits to the branch by cherry-picking from `master`:
 
 ```bash
-git cherry-pick -x <commit_id>
+git cherry-pick --gpg-sign -x <commit_id>
 ```
 
 After that, tag and push the new release candidate:
