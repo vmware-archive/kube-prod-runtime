@@ -42,7 +42,7 @@ The versioning used in BKPR is described [here](docs/versioning.md).
 
 ## Components
 
-BKPR leverages the following components to achieve its mission. For more im-depth documentation about them please read the [components](docs/components.md) documentation.
+BKPR leverages the following components to achieve its mission. For more in-depth documentation about them please read the [components](docs/components.md) documentation.
 
 ### Logging stack
 
