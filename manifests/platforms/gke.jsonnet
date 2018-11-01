@@ -107,7 +107,7 @@ local kibana = import "../components/kibana.jsonnet";
             containers_+: {
               proxy+: {
                 args_+: {
-                  "email-domain": $.config.oauthProxy.authz_domain,
+                  "email-domain": if std.objectHas($.config.oauthProxy, 'authz_domain') then $.config.oauthProxy.authz_domain else '*',
                   provider: "google",
                   "google-service-account-json": if $.config.oauthProxy.google_service_account_json != "" then "/google/credentials.json" else "",
                   "google-admin-email": $.config.oauthProxy.google_admin_email,

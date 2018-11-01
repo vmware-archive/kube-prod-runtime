@@ -99,7 +99,7 @@ local kibana = import "../components/kibana.jsonnet";
             containers_+: {
               proxy+: {
                 args_+: {
-                  "email-domain": $.config.oauthProxy.authz_domain,
+                  "email-domain": if std.objectHas($.config.oauthProxy, 'authz_domain') then $.config.oauthProxy.authz_domain else '*',
                   provider: "azure",
                 },
                 env_+: {
