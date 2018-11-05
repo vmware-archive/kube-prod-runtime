@@ -85,7 +85,7 @@ BKPR releases are available for 64-bit versions of Linux, macOS and Windows plat
 For convenience lets define a environment variable with the BKPR version:
 
 ```bash
-export BKPR_VERSION=$(curl --silent "https://api.github.com/repos/bitnami/kube-prod-runtime/releases/latest" | sed -n 's/.*"tag_name": *"\([^"]*\)".*/\1/p')
+export BKPR_VERSION=$(curl --silent "https://api.github.com/repos/bitnami/kube-prod-runtime/releases/latest" | jq -r '.tag_name')
 ```
 
 On Linux:
