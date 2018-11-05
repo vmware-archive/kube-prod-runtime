@@ -52,7 +52,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 unstash 'manifests'
                 unstash 'tests'
 
-                sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
+                sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
                 // install
                 // FIXME: we should have a better "test mode", that uses
@@ -69,9 +69,10 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 set +x
 for deploy in $(kubectl --namespace kubeprod get deploy --output name)
 do
-  echo "Waiting for rollout of ${deploy}..."
+  echo -n "\nWaiting for rollout of ${deploy}"
   while ! $(kubectl --namespace kubeprod rollout status ${deploy} --watch=false | grep -q "successfully rolled out")
   do
+    echo -n "."
     sleep 3
   done
 done
@@ -379,7 +380,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                     def dnsZone = "${dnsPrefix}.${parentZone}"
 
                                     try {
-                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "") { // --dns-suffix ${dnsZone}
                                             container('gcloud') {
                                                 sh """
 gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}
@@ -410,7 +411,7 @@ kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-ad
 {
   "dnsZone": "${dnsZone}",
   "externalDns": {
-    "credentials": "${saCreds}"
+    "credentials": ${saCreds}
   },
   "oauthProxy": {
     "client_id": "${OAUTH_CLIENT_ID}",
@@ -420,10 +421,12 @@ kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-ad
 """
                                             ])
 
+
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-(import "manifests/platforms/${platform}.jsonnet") {
+(import "manifests/platforms/gke.jsonnet") {
   config:: import "kubeprod-autogen.json",
-  letsencrypt_environment: "staging"
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
 }
 """
                                             ])
