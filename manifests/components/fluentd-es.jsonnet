@@ -41,7 +41,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
   fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
     data+: {
       // Verbatim from upstream:
-      "fluentd.input.conf": (importstr "fluentd-es-config/fluentd.input.conf"),
+      "avoid_fluentd.input.conf": (importstr "fluentd-es-config/avoid_fluentd.input.conf"),
       "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
       "forward.input.conf": (importstr "fluentd-es-config/forward.input.conf"),
       "monitoring.conf": (importstr "fluentd-es-config/monitoring.conf"),
