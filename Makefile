@@ -10,7 +10,7 @@ HAS_JQ := $(shell command -v jq;)
 
 Release_Notes.md:
 ifndef GITHUB_TOKEN
-	$(error You must specify the GITHUB_TOKEN)
+	$(warning GITHUB_TOKEN not specified, you may exceed the GitHub API rate limit. Authenticated requests get a higher rate limit.)
 endif
 ifndef HAS_JQ
 	$(error You must install jq)
@@ -26,7 +26,7 @@ endif
 		git log $${PREV_VERSION}..$(VERSION) --pretty=format:"- %s" >> jenkins/Changes.lst ; \
 		echo >> jenkins/Changes.lst ; \
 	fi ; \
-	git cat-file -p $(VERSION) | tail -n +6 > Release_Notes.md ; \
+	git cat-file -p $(VERSION) | sed '/-----BEGIN PGP SIGNATURE-----/,/-----END PGP SIGNATURE-----/d' | tail -n +6 > Release_Notes.md ; \
 	cat jenkins/Release_Notes.md.tmpl >> Release_Notes.md ; \
 	cat jenkins/Changes.lst >> Release_Notes.md ; \
 	rm -f jenkins/Changes.lst
