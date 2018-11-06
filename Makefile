@@ -10,7 +10,7 @@ HAS_JQ := $(shell command -v jq;)
 
 Release_Notes.md:
 ifndef GITHUB_TOKEN
-	$(error You must specify the GITHUB_TOKEN)
+	$(warning GITHUB_TOKEN not specified, you may exceed the GitHub API rate limit. Authenticated requests get a higher rate limit.)
 endif
 ifndef HAS_JQ
 	$(error You must install jq)
