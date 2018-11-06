@@ -18,7 +18,7 @@ endif
 	@set -e ; \
 	PREV_VERSION=$$(git -c 'versionsort.suffix=-' tag --list  --sort=-v:refname | grep -m2 "^v[0-9]*\.[0-9]*\.[0-9]*$$" | tail -n1) ; \
 	echo -n > jenkins/Changes.lst ; \
-	for pr in $$(git log $${PREV_VERSION}..$(VERSION) --pretty=format:"%s" | grep "Merge pull request" | cut -d"#" -f2 | cut -d' ' -f1); do \
+	for pr in $$(git log $${PREV_VERSION}..$(VERSION) --pretty=format:"%s" | grep '(#[0-9]*)$$' | cut -d"#" -f2 | cut -d' ' -f1); do \
 		wget -q --header "Authorization: token $${GITHUB_TOKEN}" "https://api.github.com/repos/$(GITHUB_USER)/$(GITHUB_REPO)/pulls/$${pr}" -O - | \
 			jq -r '[.number,.title,.user.login] | "- \(.[1]) (#\(.[0])) - @\(.[2])"' >> jenkins/Changes.lst ; \
 	done ; \
