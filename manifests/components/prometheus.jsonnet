@@ -26,7 +26,7 @@ local path_join(prefix, suffix) = (
   else prefix + "/" + suffix
 );
 
-local PROMETHEUS_IMAGE = "bitnami/prometheus:2.3.2-r41";
+local PROMETHEUS_IMAGE = "bitnami/prometheus:2.4.3-r31";
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
