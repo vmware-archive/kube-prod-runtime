@@ -39,7 +39,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
   es: error "elasticsearch is required",
 
-  fluentd_es: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
+  fluentd_es_conf: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
     data+: {
       "fluentd.conf": (importstr "fluentd-es-config/fluentd.conf"),
     },
@@ -124,7 +124,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
             varlogpos: kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH, "DirectoryOrCreate"),
             varlogbuffers: kube.HostPathVolume(FLUENTD_ES_LOG_BUFFERS_PATH, "DirectoryOrCreate"),
             varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers", "Directory"),
-            config: kube.ConfigMapVolume($.fluentd_es),
+            config: kube.ConfigMapVolume($.fluentd_es_conf),
             configd: kube.ConfigMapVolume($.fluentd_es_configd),
           },
         },
