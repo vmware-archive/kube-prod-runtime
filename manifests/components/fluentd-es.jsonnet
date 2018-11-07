@@ -22,6 +22,7 @@ local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
+local FLUENTD_ES_CONF_PATH = "/opt/bitnami/fluentd/conf";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
 local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
@@ -38,11 +39,16 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
   es: error "elasticsearch is required",
 
-  fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
+  fluentd_es: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
+    data+: {
+      "fluentd.conf": (importstr "fluentd-es-config/fluentd.conf"),
+    },
+  },
+
+  fluentd_es_configd: kube.ConfigMap($.p + "fluentd-es-configd") + $.metadata {
     data+: {
       // Verbatim from upstream:
       "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
-      "forward.input.conf": (importstr "fluentd-es-config/forward.input.conf"),
       "monitoring.conf": (importstr "fluentd-es-config/monitoring.conf"),
       "system.conf": (importstr "fluentd-es-config/system.conf"),
       "system.input.conf": (importstr "fluentd-es-config/system.input.conf"),
@@ -80,7 +86,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 runAsUser: 0,  // required to be able to read system-wide logs.
               },
               env_+: {
-                FLUENTD_OPT: "-qq -o /tmp/fluentd.log --log-rotate-age 5 --log-rotate-size 104857600",
+                FLUENTD_OPT: "-o /tmp/fluentd.log --log-rotate-age 5 --log-rotate-size 104857600 --no-supervisor",
                 ES_HOST: $.es.svc.host,
               },
               resources: {
@@ -98,7 +104,11 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                   mountPath: "/var/lib/docker/containers",
                   readOnly: true,
                 },
-                configvolume: {
+                config: {
+                  mountPath: FLUENTD_ES_CONF_PATH,
+                  readOnly: true,
+                },
+                configd: {
                   mountPath: FLUENTD_ES_CONFIGD_PATH,
                   readOnly: true,
                 },
@@ -114,7 +124,8 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
             varlogpos: kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH, "DirectoryOrCreate"),
             varlogbuffers: kube.HostPathVolume(FLUENTD_ES_LOG_BUFFERS_PATH, "DirectoryOrCreate"),
             varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers", "Directory"),
-            configvolume: kube.ConfigMapVolume($.fluentd_es_config),
+            config: kube.ConfigMapVolume($.fluentd_es),
+            configd: kube.ConfigMapVolume($.fluentd_es_configd),
           },
         },
       },
