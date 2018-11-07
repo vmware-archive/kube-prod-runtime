@@ -357,7 +357,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
 
     // See:
     //  gcloud container get-server-config
-    def gkeKversions = ["1.9.7-gke.6", "1.10.7-gke.6"]
+    def gkeKversions = ["1.9", "1.10"]
     for (x in gkeKversions) {
         def kversion = x  // local bind required because closures
         def platform = "gke+k8s-" + kversion
