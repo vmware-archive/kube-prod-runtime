@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.6-r16";
+local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
 local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
@@ -41,7 +41,6 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
   fluentd_es_config: kube.ConfigMap($.p + "fluentd-es") + $.metadata {
     data+: {
       // Verbatim from upstream:
-      "avoid_fluentd.input.conf": (importstr "fluentd-es-config/avoid_fluentd.input.conf"),
       "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
       "forward.input.conf": (importstr "fluentd-es-config/forward.input.conf"),
       "monitoring.conf": (importstr "fluentd-es-config/monitoring.conf"),
@@ -81,7 +80,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 runAsUser: 0,  // required to be able to read system-wide logs.
               },
               env_+: {
-                FLUENTD_OPT: "-q",
+                FLUENTD_OPT: "-qq -o /tmp/fluentd.log --log-rotate-age 5 --log-rotate-size 104857600",
                 ES_HOST: $.es.svc.host,
               },
               resources: {
