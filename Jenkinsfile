@@ -282,6 +282,7 @@ az aks create                      \
 
                                             sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
 
+
                                             // create dns zone
                                             sh "az network dns zone create --name ${dnsZone} --resource-group ${resourceGroup} --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
 
@@ -296,6 +297,8 @@ az aks create                      \
 
                                             // update TTL for NS record to 60 seconds
                                             sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} --set ttl=60"
+
+                                            waitForRollout("kube-system", 30)
                                         }
 
                                         // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
@@ -398,6 +401,8 @@ gcloud container clusters get-credentials ${clusterName} --zone ${zone} --projec
 user=\$(gcloud info --format='value(config.account)')
 kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$user
 """
+
+                                                waitForRollout("kube-system", 30)
                                             }
 
                                             // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
