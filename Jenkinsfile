@@ -438,9 +438,8 @@ kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-ad
                                     finally {
                                         container('gcloud') {
                                             sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
-
-                                            sh "gcloud dns managed-zones delete ${dnsZone} --project ${project} || :"
                                             sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --async || :"
+                                            sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
                                         }
                                     }
                                 }
