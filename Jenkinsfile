@@ -26,6 +26,30 @@ def withGo(Closure body) {
     }
 }
 
+def waitForRollout(String namespace, int minutes) {
+    withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
+        try {
+            timeout(time: minutes, unit: 'MINUTES') {
+                sh """
+set +x
+for deploy in \$(kubectl --namespace ${namespace} get deploy --output name)
+do
+  echo -n "\nWaiting for rollout of \${deploy} in ${namespace} namespace"
+  while ! \$(kubectl --namespace ${namespace} rollout status \${deploy} --watch=false | grep -q "successfully rolled out")
+  do
+    echo -n "."
+    sleep 3
+  done
+done
+"""
+            }
+        } catch (error) {
+            sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
+            throw error
+        }
+    }
+}
+
 // Clean a string, suitable for use in a GCP "label".
 // "It must only contain lowercase letters ([a-z]), numeric characters ([0-9]), underscores (_) and dashes (-). International characters are allowed."
 // .. and "must be less than 63 bytes"
@@ -33,7 +57,6 @@ def withGo(Closure body) {
 String gcpLabel(String s) {
     s.replaceAll(/[^a-zA-Z0-9_-]+/, '-').toLowerCase().take(62)
 }
-
 
 def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure setup) {
     timeout(120) {
@@ -54,34 +77,9 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 
                 sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
-                // install
-                // FIXME: we should have a better "test mode", that uses
-                // letsencrypt-staging, fewer replicas, etc.  My plan is
-                // to do that via some sort of custom jsonnet overlay,
-                // since power users will want similar flexibility.
-
                 sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
 
-                // Wait for deployments to rollout before we start the integration tests
-                try {
-                    timeout(time: 30, unit: 'MINUTES') {
-                        sh '''
-set +x
-for deploy in $(kubectl --namespace kubeprod get deploy --output name)
-do
-  echo -n "\nWaiting for rollout of ${deploy}"
-  while ! $(kubectl --namespace kubeprod rollout status ${deploy} --watch=false | grep -q "successfully rolled out")
-  do
-    echo -n "."
-    sleep 3
-  done
-done
-'''
-                    }
-                } catch (error) {
-                    sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
-                    throw error
-                }
+                waitForRollout("kubeprod", 30)
 
                 sh 'go get github.com/onsi/ginkgo/ginkgo'
                 dir('tests') {
