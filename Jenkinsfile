@@ -383,9 +383,8 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                     try {
                                         runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "") { // --dns-suffix ${dnsZone}
                                             container('gcloud') {
+                                                sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
                                                 sh """
-gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}
-
 gcloud container clusters create ${clusterName} \
  --cluster-version ${kversion} \
  --project ${project} \
@@ -395,12 +394,9 @@ gcloud container clusters create ${clusterName} \
  --zone ${zone} \
  --enable-autorepair \
  --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
-
-gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}
-
-user=\$(gcloud info --format='value(config.account)')
-kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$user
 """
+                                                sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
+                                                sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
 
                                                 waitForRollout("kube-system", 30)
                                             }
