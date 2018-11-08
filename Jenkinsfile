@@ -232,7 +232,7 @@ spec:
     def aksKversions = ["1.9.11", "1.10.8"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
-        def platform = "aks+k8s-" + kversion
+        def platform = "aks-" + kversion
         platforms[platform] = {
             stage(platform) {
                 node(label) {
@@ -358,7 +358,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
     def gkeKversions = ["1.9", "1.10"]
     for (x in gkeKversions) {
         def kversion = x  // local bind required because closures
-        def platform = "gke+k8s-" + kversion
+        def platform = "gke-" + kversion
         platforms[platform] = {
             stage(platform) {
                 node(label) {
