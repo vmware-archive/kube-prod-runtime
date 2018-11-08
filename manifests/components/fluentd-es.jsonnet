@@ -24,6 +24,7 @@ local utils = import "../lib/utils.libsonnet";
 local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
 local FLUENTD_ES_CONF_PATH = "/opt/bitnami/fluentd/conf";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
+local FLUENTD_ES_LOG_FILE = "/opt/bitnami/fluentd/logs/fluentd.log";
 local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
 local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
@@ -86,7 +87,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 runAsUser: 0,  // required to be able to read system-wide logs.
               },
               env_+: {
-                FLUENTD_OPT: "-o /tmp/fluentd.log --log-rotate-age 5 --log-rotate-size 104857600 --no-supervisor",
+                FLUENTD_OPT: "-o %s --log-rotate-age 5 --log-rotate-size 104857600 --no-supervisor" % FLUENTD_ES_LOG_FILE,
                 ES_HOST: $.es.svc.host,
               },
               resources: {
