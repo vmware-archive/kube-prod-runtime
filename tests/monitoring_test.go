@@ -87,11 +87,6 @@ var _ = Describe("Monitoring", func() {
 	var ns string
 
 	BeforeEach(func() {
-		if *dnsSuffix == "" {
-			// This test requires a real DNS suffix, because letsencrypt
-			Skip("--dns-suffix was not provided")
-		}
-
 		c = kubernetes.NewForConfigOrDie(clusterConfigOrDie())
 		ns = createNsOrDie(c.CoreV1(), "test-monitoring-")
 		decoder := scheme.Codecs.UniversalDeserializer()
