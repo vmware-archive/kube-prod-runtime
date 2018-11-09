@@ -242,7 +242,7 @@ spec:
                             // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
                             withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
                                 def resourceGroup = 'jenkins-bkpr-rg'
-                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def dnsPrefix = "${clusterName}"
                                 def parentZone = 'tests.bkpr.run'
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
@@ -374,7 +374,7 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                 dir('src/github.com/bitnami/kube-prod-runtime') {
                                     def project = 'bkprtesting'
                                     def zone = 'us-east1-d'
-                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                     def dnsPrefix = "${clusterName}"
                                     def parentZone = 'tests.bkpr.run'
                                     def adminEmail = "${clusterName}@${parentZone}"
