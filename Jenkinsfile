@@ -11,6 +11,9 @@
 import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+def parentZone = 'tests.bkpr.run'
+def parentZoneResourceGroup = 'jenkins-bkpr-rg'
+
 // Force using our pod
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
@@ -46,6 +49,29 @@ done
         } catch (error) {
             sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
             throw error
+        }
+    }
+}
+
+def insertGlueRecords(String name, String nameServersJson, String ttl, String zone, String resourceGroup) {
+    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+        container('az') {
+            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
+            for (ns in readJSON(text: nameServersJson)) {
+                sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${zone} --record-set-name ${name} --nsdname ${ns}"
+            }
+            sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} --set ttl=${ttl}"
+        }
+    }
+}
+
+def deleteGlueRecords(String name, String zone, String resourceGroup) {
+    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+        container('az') {
+            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
+            sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} || :"
         }
     }
 }
@@ -244,7 +270,6 @@ spec:
                                 def resourceGroup = 'jenkins-bkpr-rg'
                                 def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def dnsPrefix = "${clusterName}"
-                                def parentZone = 'tests.bkpr.run'
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
@@ -282,7 +307,6 @@ az aks create                      \
 
                                             sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
 
-
                                             // create dns zone
                                             sh "az network dns zone create --name ${dnsZone} --resource-group ${resourceGroup} --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
 
@@ -290,13 +314,8 @@ az aks create                      \
                                             sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${dnsZone} --expire-time 60 --retry-time 60 --refresh-time 60 --minimum-ttl 60"
 
                                             // update glue records in parent zone
-                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
-                                            for (ns in readJSON(text: output)) {
-                                                sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${parentZone} --record-set-name ${dnsPrefix} --nsdname ${ns}"
-                                            }
-
-                                            // update TTL for NS record to 60 seconds
-                                            sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} --set ttl=60"
+                                            def nameServers = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
 
                                             waitForRollout("kube-system", 30)
                                         }
@@ -339,14 +358,12 @@ az aks create                      \
                                 }
                                 finally {
                                     container('az') {
-                                        sh '''
-az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
-az account set -s $AZURE_SUBSCRIPTION_ID
-'''
-                                        sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} || :"
+                                        sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+                                        sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
                                         sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
                                         sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
                                     }
+                                    deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
                                 }
                             }
                         }
@@ -376,7 +393,6 @@ az account set -s $AZURE_SUBSCRIPTION_ID
                                     def zone = 'us-east1-d'
                                     def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                     def dnsPrefix = "${clusterName}"
-                                    def parentZone = 'tests.bkpr.run'
                                     def adminEmail = "${clusterName}@${parentZone}"
                                     def dnsZone = "${dnsPrefix}.${parentZone}"
 
