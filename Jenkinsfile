@@ -395,9 +395,10 @@ az aks create                      \
                                     def dnsPrefix = "${clusterName}"
                                     def adminEmail = "${clusterName}@${parentZone}"
                                     def dnsZone = "${dnsPrefix}.${parentZone}"
+                                    def dnsZoneName = ("bkpr-${dnsZone}").replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase().take(30).replaceAll(/-$/, '')
 
                                     try {
-                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "") { // --dns-suffix ${dnsZone}
+                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
                                             container('gcloud') {
                                                 sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
                                                 sh """
@@ -410,6 +411,15 @@ gcloud container clusters create ${clusterName} \
 """
                                                 sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
                                                 sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
+
+                                                // create dns Zone
+                                                sh "gcloud dns managed-zones create ${dnsZoneName} --dns-name=${dnsZone} --description=\"\" --project ${project}"
+
+                                                // update glue records in parent zone
+                                                withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                                                    def nameServers = sh(returnStdout: true, script: "gcloud dns managed-zones describe ${dnsZoneName} --project ${project} --format=json | jq -r .nameServers")
+                                                    insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                                }
 
                                                 waitForRollout("kube-system", 30)
                                             }
@@ -453,6 +463,7 @@ gcloud container clusters create ${clusterName} \
                                             sh "gcloud dns record-sets import /dev/null --zone=\$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --delete-all-existing"
                                             sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
                                         }
+                                        deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
                                     }
                                 }
                             }
