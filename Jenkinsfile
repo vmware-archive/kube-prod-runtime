@@ -388,11 +388,8 @@ az account set -s $AZURE_SUBSCRIPTION_ID
 gcloud container clusters create ${clusterName} \
  --cluster-version ${kversion} \
  --project ${project} \
- --create-subnetwork '' \
- --enable-ip-alias \
  --num-nodes 3 \
  --zone ${zone} \
- --enable-autorepair \
  --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
 """
                                                 sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
