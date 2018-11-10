@@ -173,8 +173,7 @@ BKPR creates and manages a Cloud DNS zone which is used to map external access t
 Query the name servers of the zone with the following command and configure the records with your domain registrar.
 
   ```bash
-  export GCLOUD_DNS_ZONE_NAME=bkpr-${GCLOUD_DNS_ZONE//./-}
-  export GCLOUD_DNS_ZONE_NAME=${GCLOUD_DNS_ZONE_NAME:0:30}
+  GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
   gcloud dns record-sets list \
     --zone ${GCLOUD_DNS_ZONE_NAME} \
     --name ${GCLOUD_DNS_ZONE} --type NS \
@@ -200,6 +199,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 ### Step 2: Delete the Cloud DNS zone
 
   ```bash
+  GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
   gcloud dns managed-zones delete ${GCLOUD_DNS_ZONE_NAME}
   ```
 
