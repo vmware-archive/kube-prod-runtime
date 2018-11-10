@@ -84,7 +84,7 @@ String gcpLabel(String s) {
     s.replaceAll(/[^a-zA-Z0-9_-]+/, '-').toLowerCase().take(62)
 }
 
-def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure setup) {
+def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure clusterSetup, Closure dnsSetup) {
     timeout(120) {
         // Regex of tests that are temporarily skipped.  Empty-string
         // to run everything.  Include pointers to tracking issues.
@@ -92,7 +92,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 
         withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubeconf"]) {
 
-            setup()
+            clusterSetup()
 
             withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
                 sh "kubectl version; kubectl cluster-info"
@@ -104,6 +104,8 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
                 sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+
+                dnsSetup()
 
                 waitForRollout("kubeprod", 30)
 
@@ -307,16 +309,6 @@ az aks create                      \
 
                                             sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
 
-                                            // create dns zone
-                                            sh "az network dns zone create --name ${dnsZone} --resource-group ${resourceGroup} --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
-
-                                            // update SOA record for quicker updates
-                                            sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${dnsZone} --expire-time 60 --retry-time 60 --refresh-time 60 --minimum-ttl 60"
-
-                                            // update glue records in parent zone
-                                            def nameServers = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
-                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
-
                                             waitForRollout("kube-system", 30)
                                         }
 
@@ -324,7 +316,6 @@ az aks create                      \
                                         withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-
                                             writeFile([file: 'kubeprod-autogen.json', text: """
 {
   "dnsZone": "${dnsZone}",
@@ -353,6 +344,12 @@ az aks create                      \
 }
 """
                                             ])
+                                        }
+                                    }{
+                                        // update glue records in parent zone
+                                        container('az') {
+                                            def nameServers = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
                                         }
                                     }
                                 }
@@ -395,7 +392,6 @@ az aks create                      \
                                     def dnsPrefix = "${clusterName}"
                                     def adminEmail = "${clusterName}@${parentZone}"
                                     def dnsZone = "${dnsPrefix}.${parentZone}"
-                                    def dnsZoneName = ("bkpr-${dnsZone}").replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase().take(30).replaceAll(/-$/, '')
 
                                     try {
                                         runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
@@ -410,17 +406,10 @@ gcloud container clusters create ${clusterName} \
  --zone ${zone} \
  --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
 """
+
                                                 sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
+
                                                 sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
-
-                                                // create dns Zone
-                                                sh "gcloud dns managed-zones create ${dnsZoneName} --dns-name=${dnsZone} --description=\"\" --project ${project}"
-
-                                                // update glue records in parent zone
-                                                withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                                                    def nameServers = sh(returnStdout: true, script: "gcloud dns managed-zones describe ${dnsZoneName} --project ${project} --format=json | jq -r .nameServers")
-                                                    insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
-                                                }
 
                                                 waitForRollout("kube-system", 30)
                                             }
@@ -453,6 +442,14 @@ gcloud container clusters create ${clusterName} \
 }
 """
                                             ])
+                                        }{
+                                            // update glue records in parent zone
+                                            container('gcloud') {
+                                                withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                                                    def nameServers = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
+                                                    insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                                }
+                                            }
                                         }
                                     }
                                     finally {
