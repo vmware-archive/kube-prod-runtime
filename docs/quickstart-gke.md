@@ -200,10 +200,9 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
   ```bash
   GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
+  gcloud dns record-sets import /dev/null --zone ${GCLOUD_DNS_ZONE_NAME} --delete-all-existing
   gcloud dns managed-zones delete ${GCLOUD_DNS_ZONE_NAME}
   ```
-
-If the previous command fails because of some records still extant in the `${GCLOUD_DNS_ZONE_NAME}`, remove them manually and try again.
 
 ### Step 3: Delete Service account and IAM profile
 
