@@ -405,6 +405,7 @@ az aks create                      \
 gcloud container clusters create ${clusterName} \
  --cluster-version ${kversion} \
  --project ${project} \
+ --machine-type n1-standard-2 \
  --num-nodes 3 \
  --zone ${zone} \
  --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
