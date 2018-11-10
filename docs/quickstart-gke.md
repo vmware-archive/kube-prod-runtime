@@ -207,9 +207,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 ### Step 3: Delete Service account and IAM profile
 
   ```bash
-  export GCLOUD_SERVICE_ACCOUNT=bkpr-edns-${GCLOUD_DNS_ZONE//./-}
-  export GCLOUD_SERVICE_ACCOUNT="${GCLOUD_SERVICE_ACCOUNT:0:30}"
-  export GCLOUD_SERVICE_ACCOUNT="${GCLOUD_SERVICE_ACCOUNT%-}@${GCLOUD_PROJECT}.iam.gserviceaccount.com"
+  GCLOUD_SERVICE_ACCOUNT=$(gcloud iam service-accounts list --filter "displayName:${GCLOUD_DNS_ZONE} AND email:bkpr-edns" --format='value(email)')
   gcloud projects remove-iam-policy-binding ${GCLOUD_PROJECT} \
     --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} \
     --role=roles/dns.admin
