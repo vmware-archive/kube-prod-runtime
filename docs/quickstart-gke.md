@@ -27,7 +27,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   export GCLOUD_DNS_ZONE="my-domain.com"
   export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
   export GCLOUD_K8S_CLUSTER="my-gke-cluster"
-  export GCLOUD_K8S_VERSION="1.10.7-gke.6"
+  export GCLOUD_K8S_VERSION="1.10"
   ```
 
   - `GCLOUD_USER` specifies the email address used in requests to Let's Encrypt.
