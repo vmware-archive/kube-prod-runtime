@@ -60,8 +60,8 @@ dist: archiver release manifests
 		RELEASE_TARBALL=_dist/bkpr-$(VERSION)-$${GOOS}-$${GOARCH}.$${OUTPUT_FORMAT} ; \
 		echo "cp -a ../LICENSE ../README.md $${ARTIFACTS_DIR}/" ; \
 		cp -a ../LICENSE ../README.md $${ARTIFACTS_DIR}/ ; \
-		echo "archiver make $${RELEASE_TARBALL} $${ARTIFACTS_DIR}" ; \
-		archiver make $${RELEASE_TARBALL} $${ARTIFACTS_DIR} ; \
+		echo "arc archive $${RELEASE_TARBALL} $${ARTIFACTS_DIR}" ; \
+		arc archive $${RELEASE_TARBALL} $${ARTIFACTS_DIR} ; \
 	done
 
 checksum:
@@ -76,11 +76,11 @@ fmt:
 vet:
 	$(GO) vet $(GOPKGS)
 
-HAS_ARCHIVER := $(shell command -v archiver;)
+HAS_ARCHIVER := $(shell command -v arc;)
 
 archiver:
 ifndef HAS_ARCHIVER
-	$(GO) get github.com/mholt/archiver/cmd/archiver
+	$(GO) get github.com/mholt/archiver/cmd/arc
 endif
 
 clean:
