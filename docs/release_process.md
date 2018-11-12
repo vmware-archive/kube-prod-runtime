@@ -23,7 +23,7 @@ For major/minor releases, use the following:
 ```bash
 export RELEASE_NAME=vX.Y.0
 export RELEASE_BRANCH_NAME="release-X.Y"
-export RELEASE_CANDIDATE_NAME="$RELEASE_NAME-rc.1"
+export RELEASE_CANDIDATE_NAME="$RELEASE_NAME-rc1"
 ```
 
 For patch releases:
@@ -32,7 +32,7 @@ For patch releases:
 export PREVIOUS_PATCH_RELEASE=vX.Y.Z
 export RELEASE_NAME=vX.Y.Z+1
 export RELEASE_BRANCH_NAME="release-X.Y"
-export RELEASE_CANDIDATE_NAME="$RELEASE_NAME-rc.1"
+export RELEASE_CANDIDATE_NAME="$RELEASE_NAME-rc1"
 ```
 
 With the environment configuration in place, follow the procedure described in the following sections.
@@ -103,7 +103,7 @@ git cherry-pick -x <commit_id>
 After that, tag and push the new release candidate:
 
 ```bash
-export RELEASE_CANDIDATE_NAME="$RELEASE_NAME-rc.2"
+export RELEASE_CANDIDATE_NAME="$RELEASE_NAME-rc2"
 git tag --sign --annotate ${RELEASE_CANDIDATE_NAME}
 git push origin $RELEASE_CANDIDATE_NAME
 ```
