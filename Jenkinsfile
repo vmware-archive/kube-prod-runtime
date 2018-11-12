@@ -8,10 +8,13 @@
 // - jobcacher
 // - azure-credentials
 
+import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+def parentZone = 'tests.bkpr.run'
+def parentZoneResourceGroup = 'jenkins-bkpr-rg'
+
 // Force using our pod
-//def label = UUID.randomUUID().toString()
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
 def withGo(Closure body) {
@@ -26,15 +29,69 @@ def withGo(Closure body) {
     }
 }
 
-def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure setup) {
+def waitForRollout(String namespace, int minutes) {
+    withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
+        try {
+            timeout(time: minutes, unit: 'MINUTES') {
+                sh """
+set +x
+for deploy in \$(kubectl --namespace ${namespace} get deploy --output name)
+do
+  echo -n "\nWaiting for rollout of \${deploy} in ${namespace} namespace"
+  while ! \$(kubectl --namespace ${namespace} rollout status \${deploy} --watch=false | grep -q "successfully rolled out")
+  do
+    echo -n "."
+    sleep 3
+  done
+done
+"""
+            }
+        } catch (error) {
+            sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
+            throw error
+        }
+    }
+}
+
+def insertGlueRecords(String name, java.util.ArrayList nameServers, String ttl, String zone, String resourceGroup) {
+    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+        container('az') {
+            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
+            for (ns in nameServers) {
+                sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${zone} --record-set-name ${name} --nsdname ${ns}"
+            }
+            sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} --set ttl=${ttl}"
+        }
+    }
+}
+
+def deleteGlueRecords(String name, String zone, String resourceGroup) {
+    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+        container('az') {
+            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
+            sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} || :"
+        }
+    }
+}
+
+// Clean a string, suitable for use in a GCP "label".
+// "It must only contain lowercase letters ([a-z]), numeric characters ([0-9]), underscores (_) and dashes (-). International characters are allowed."
+// .. and "must be less than 63 bytes"
+@NonCPS
+String gcpLabel(String s) {
+    s.replaceAll(/[^a-zA-Z0-9_-]+/, '-').toLowerCase().take(62)
+}
+
+def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure clusterSetup, Closure dnsSetup) {
     timeout(120) {
         // Regex of tests that are temporarily skipped.  Empty-string
         // to run everything.  Include pointers to tracking issues.
         def skip = ''
 
         withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubeconf"]) {
-
-            setup()
+            clusterSetup()
 
             withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
                 sh "kubectl version; kubectl cluster-info"
@@ -43,35 +100,13 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 unstash 'manifests'
                 unstash 'tests'
 
-                sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
+                sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
-                // install
-                // FIXME: we should have a better "test mode", that uses
-                // letsencrypt-staging, fewer replicas, etc.  My plan is
-                // to do that via some sort of custom jsonnet overlay,
-                // since power users will want similar flexibility.
+                sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
 
-                sh "./bin/kubeprod -v=1 install aks --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+                dnsSetup()
 
-                // Wait for deployments to rollout before we start the integration tests
-                try {
-                    timeout(time: 30, unit: 'MINUTES') {
-                        sh '''
-set +x
-for deploy in $(kubectl --namespace kubeprod get deploy --output name)
-do
-  echo "Waiting for rollout of ${deploy}..."
-  while ! $(kubectl --namespace kubeprod rollout status ${deploy} --watch=false | grep -q "successfully rolled out")
-  do
-    sleep 3
-  done
-done
-'''
-                    }
-                } catch (error) {
-                    sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
-                    throw error
-                }
+                waitForRollout("kubeprod", 30)
 
                 sh 'go get github.com/onsi/ginkgo/ginkgo'
                 dir('tests') {
@@ -97,6 +132,41 @@ podTemplate(
     cloud: 'kubernetes-cluster',
     label: label,
     idleMinutes: 1,  // Allow some best-effort reuse between successive stages
+    containers: [
+        containerTemplate(
+            name: 'go',
+            image: 'golang:1.10.1-stretch',
+            ttyEnabled: true,
+            command: 'cat',
+            // Rely on burst CPU, but actually need RAM to avoid OOM killer
+            resourceLmitCpu: '2000m',
+            resourceLimitMemory: '2Gi',
+            resourceRequestCpu: '10m',
+            resourceRequestMemory: '1Gi',
+        ),
+        // Note nested podTemplate doesn't work, so use "fat slaves" for now :(
+        // -> https://issues.jenkins-ci.org/browse/JENKINS-42184
+        containerTemplate(
+            name: 'gcloud',
+            image: 'google/cloud-sdk:218.0.0',
+            ttyEnabled: true,
+            command: 'cat',
+            resourceRequestCpu: '1m',
+            resourceRequestMemory: '100Mi',
+            resourceLimitCpu: '100m',
+            resourceLimitMemory: '500Mi',
+        ),
+        containerTemplate(
+            name: 'az',
+            image: 'microsoft/azure-cli:2.0.45',
+            ttyEnabled: true,
+            command: 'cat',
+            resourceRequestCpu: '1m',
+            resourceRequestMemory: '100Mi',
+            resourceLimitCpu: '100m',
+            resourceLimitMemory: '500Mi',
+        ),
+    ],
     yaml: """
 apiVersion: v1
 kind: Pod
@@ -104,31 +174,6 @@ spec:
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
-  containers:
-  - name: go
-    image: golang:1.10.1-stretch
-    stdin: true
-    command: ['cat']
-    resources:
-      limits:
-        cpu: 2000m
-        memory: 2Gi
-      requests:
-        # rely on burst CPU
-        cpu: 10m
-        # but actually need ram to avoid oom killer
-        memory: 1Gi
-  - name: az
-    image: microsoft/azure-cli:2.0.45
-    stdin: true
-    command: ['cat']
-    resources:
-      limits:
-        cpu: 100m
-        memory: 500Mi
-      requests:
-        cpu: 1m
-        memory: 100Mi
 """
 ) {
 
@@ -214,7 +259,7 @@ spec:
     def aksKversions = ["1.9.11", "1.10.8"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
-        def platform = "aks+k8s-" + kversion
+        def platform = "aks-" + kversion
         platforms[platform] = {
             stage(platform) {
                 node(label) {
@@ -224,15 +269,14 @@ spec:
                             // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
                             withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
                                 def resourceGroup = 'jenkins-bkpr-rg'
-                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-${platform}-" + UUID.randomUUID().toString().take(5)).replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def dnsPrefix = "${clusterName}"
-                                def parentZone = 'tests.bkpr.run'
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
 
                                 try {
-                                    runIntegrationTest(platform, "--dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                    runIntegrationTest(platform, "aks --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
                                         container('az') {
                                             sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
@@ -264,27 +308,13 @@ az aks create                      \
 
                                             sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
 
-                                            // create dns zone
-                                            sh "az network dns zone create --name ${dnsZone} --resource-group ${resourceGroup} --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
-
-                                            // update SOA record for quicker updates
-                                            sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${dnsZone} --expire-time 60 --retry-time 60 --refresh-time 60 --minimum-ttl 60"
-
-                                            // update glue records in parent zone
-                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
-                                            for (ns in readJSON(text: output)) {
-                                                sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${parentZone} --record-set-name ${dnsPrefix} --nsdname ${ns}"
-                                            }
-
-                                            // update TTL for NS record to 60 seconds
-                                            sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} --set ttl=60"
+                                            waitForRollout("kube-system", 30)
                                         }
 
                                         // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
                                         withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-
                                             writeFile([file: 'kubeprod-autogen.json', text: """
 {
   "dnsZone": "${dnsZone}",
@@ -314,17 +344,131 @@ az aks create                      \
 """
                                             ])
                                         }
+                                    }{
+                                        // update glue records in parent zone
+                                        container('az') {
+                                            def nameServers = []
+                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            for (ns in readJSON(text: output)) {
+                                                nameServers << ns
+                                            }
+                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                        }
                                     }
                                 }
                                 finally {
                                     container('az') {
-                                        sh '''
-az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
-az account set -s $AZURE_SUBSCRIPTION_ID
-'''
-                                        sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${parentZone} --name ${dnsPrefix} || :"
+                                        sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+                                        sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
                                         sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
                                         sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
+                                    }
+                                    deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // See:
+    //  gcloud container get-server-config
+    def gkeKversions = ["1.9", "1.10"]
+    for (x in gkeKversions) {
+        def kversion = x  // local bind required because closures
+        def platform = "gke-" + kversion
+        platforms[platform] = {
+            stage(platform) {
+                node(label) {
+                    withCredentials([
+                        file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
+                        usernamePassword(credentialsId: 'gke-oauthproxy-client', usernameVariable: 'OAUTH_CLIENT_ID', passwordVariable: 'OAUTH_CLIENT_SECRET'),
+                    ]) {
+                        withEnv(["CLOUDSDK_CORE_DISABLE_PROMPTS=1"]) {
+                            withGo() {
+                                dir('src/github.com/bitnami/kube-prod-runtime') {
+                                    def project = 'bkprtesting'
+                                    def zone = 'us-east1-d'
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
+                                    def dnsPrefix = "${clusterName}"
+                                    def adminEmail = "${clusterName}@${parentZone}"
+                                    def dnsZone = "${dnsPrefix}.${parentZone}"
+
+                                    try {
+                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
+                                            container('gcloud') {
+                                                sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
+                                                sh """
+gcloud container clusters create ${clusterName} \
+ --cluster-version ${kversion} \
+ --project ${project} \
+ --machine-type n1-standard-2 \
+ --num-nodes 3 \
+ --zone ${zone} \
+ --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
+"""
+
+                                                sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
+
+                                                sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
+
+                                                waitForRollout("kube-system", 30)
+                                            }
+
+                                            // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
+                                            def saCreds = JsonOutput.toJson(readFile(env.GOOGLE_APPLICATION_CREDENTIALS))
+
+                                            // NB: writeJSON doesn't work without approvals(?)
+                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+                                            writeFile([file: 'kubeprod-autogen.json', text: """
+{
+  "dnsZone": "${dnsZone}",
+  "externalDns": {
+    "credentials": ${saCreds}
+  },
+  "oauthProxy": {
+    "client_id": "${OAUTH_CLIENT_ID}",
+    "client_secret": "${OAUTH_CLIENT_SECRET}"
+  }
+}
+"""
+                                            ])
+
+
+                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
+(import "manifests/platforms/gke.jsonnet") {
+  config:: import "kubeprod-autogen.json",
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
+}
+"""
+                                            ])
+                                        }{
+                                            // update glue records in parent zone
+                                            container('gcloud') {
+                                                withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                                                    def nameServers = []
+                                                    def output = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
+                                                    for (ns in readJSON(text: output)) {
+                                                        nameServers << ns
+                                                    }
+                                                    insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    finally {
+                                        container('gcloud') {
+                                            def disksFilter = "${clusterName}".take(18).replaceAll(/-$/, '')
+                                            sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
+                                            sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --quiet || :"
+                                            sh "gcloud compute disks delete \$(gcloud compute disks list --project ${project} --filter name:${disksFilter} --format='value(name)') --project ${project} --zone ${zone} --quiet || :"
+                                            sh "gcloud dns record-sets import /dev/null --zone=\$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --delete-all-existing"
+                                            sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
+                                        }
+                                        deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
                                     }
                                 }
                             }
