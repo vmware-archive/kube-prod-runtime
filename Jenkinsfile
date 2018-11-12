@@ -53,12 +53,12 @@ done
     }
 }
 
-def insertGlueRecords(String name, String nameServersJson, String ttl, String zone, String resourceGroup) {
+def insertGlueRecords(String name, java.util.ArrayList nameServers, String ttl, String zone, String resourceGroup) {
     withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
         container('az') {
             sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
             sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
-            for (ns in readJSON(text: nameServersJson)) {
+            for (ns in nameServers) {
                 sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${zone} --record-set-name ${name} --nsdname ${ns}"
             }
             sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} --set ttl=${ttl}"
@@ -91,7 +91,6 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
         def skip = ''
 
         withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubeconf"]) {
-
             clusterSetup()
 
             withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
@@ -348,7 +347,11 @@ az aks create                      \
                                     }{
                                         // update glue records in parent zone
                                         container('az') {
-                                            def nameServers = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            def nameServers = []
+                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            for (ns in readJSON(text: output)) {
+                                                nameServers << ns
+                                            }
                                             insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
                                         }
                                     }
@@ -446,7 +449,11 @@ gcloud container clusters create ${clusterName} \
                                             // update glue records in parent zone
                                             container('gcloud') {
                                                 withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                                                    def nameServers = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
+                                                    def nameServers = []
+                                                    def output = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
+                                                    for (ns in readJSON(text: output)) {
+                                                        nameServers << ns
+                                                    }
                                                     insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
                                                 }
                                             }
