@@ -110,19 +110,13 @@ func (c InstallCmd) Run(out io.Writer) error {
 		return err
 	}
 
-	searchPaths := []string{
-		"internal:///",
-	}
-	searchUrls := make([]*url.URL, len(searchPaths))
-	for i, p := range searchPaths {
-		searchUrls[i], err = c.ManifestBase.Parse(p)
-		if err != nil {
-			return fmt.Errorf("unable to make URL from %q (relative to %q): %v", p, c.ManifestBase, err)
-		}
+	manifestURL, err := c.ManifestBase.Parse(fmt.Sprintf("platforms/%s.jsonnet", c.Platform))
+	if err != nil {
+		return fmt.Errorf("unable to construct manifest URL: %v", err)
 	}
 
-	log.Info("Generating root manifest for platform ", c.Platform)
-	if err := prodruntime.WriteRootManifest(c.ManifestBase.Path, c.Platform); err != nil {
+	log.Infof("Using manifests from %s", manifestURL)
+	if err := prodruntime.WriteRootManifest(manifestURL); err != nil {
 		return err
 	}
 

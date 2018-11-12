@@ -102,7 +102,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 
                 sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
-                sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install --config=kubeprod-autogen.json ${kubeprodArgs}"
 
                 dnsSetup()
 
@@ -192,7 +192,7 @@ spec:
                 withGo() {
                     withEnv(["PATH+JQ=${tool 'jq'}"]) {
                         withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
-                            sh "make release-notes VERSION=${env.TAG_NAME}"
+                            sh "make release-notes VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
                         }
                         stash includes: 'Release_Notes.md', name: 'release-notes'
                     }
@@ -490,10 +490,10 @@ gcloud container clusters create ${clusterName} \
                             unstash 'src'
                             unstash 'release-notes'
 
-                            sh "make dist VERSION=${env.TAG_NAME}"
+                            sh "make dist VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
 
                             withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
-                                sh "make publish VERSION=${env.TAG_NAME}"
+                                sh "make publish VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
                             }
                         }
                     }

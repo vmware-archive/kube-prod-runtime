@@ -22,6 +22,7 @@ package prodruntime
 import (
 	"bufio"
 	"fmt"
+	"net/url"
 	"os"
 	"text/template"
 
@@ -29,11 +30,12 @@ import (
 )
 
 const (
-	clusterTemplate = `# Cluster-specific configuration
-(import "{{.ManifestsPath}}platforms/{{.Platform}}.jsonnet") {
+	clusterTemplate = `// Cluster-specific configuration
+(import "{{.ManifestsURL}}") {
 	config:: import "{{.ConfigFilePath}}",
 	// Place your overrides here
-}`
+}
+`
 
 	// RootManifest specifies the filename of the root (cluster) manifest
 	RootManifest          = "kubeprod-manifest.jsonnet"
@@ -43,12 +45,11 @@ const (
 // WriteRootManifest executes the template from the `clusterTemplate`
 // variable and writes the result as the root (cluster) manifest in
 // the current directory named after the value of `RootManifest`.
-func WriteRootManifest(manifestsBase string, platform string) error {
+func WriteRootManifest(manifestsURL *url.URL) error {
 	// If the output file already exists do not overwrite it.
 	v := map[string]string{
 		"ConfigFilePath": DefaultPlatformConfig,
-		"ManifestsPath":  manifestsBase,
-		"Platform":       platform,
+		"ManifestsURL":   manifestsURL.String(),
 	}
 	f, err := os.OpenFile(RootManifest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)
 	if err != nil {
