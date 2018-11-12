@@ -27,7 +27,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   export GCLOUD_DNS_ZONE="my-domain.com"
   export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
   export GCLOUD_K8S_CLUSTER="my-gke-cluster"
-  export GCLOUD_K8S_VERSION="1.10.7-gke.6"
+  export GCLOUD_K8S_VERSION="1.10"
   ```
 
   - `GCLOUD_USER` specifies the email address used in requests to Let's Encrypt.
@@ -173,8 +173,7 @@ BKPR creates and manages a Cloud DNS zone which is used to map external access t
 Query the name servers of the zone with the following command and configure the records with your domain registrar.
 
   ```bash
-  export GCLOUD_DNS_ZONE_NAME=bkpr-${GCLOUD_DNS_ZONE//./-}
-  export GCLOUD_DNS_ZONE_NAME=${GCLOUD_DNS_ZONE_NAME:0:30}
+  GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
   gcloud dns record-sets list \
     --zone ${GCLOUD_DNS_ZONE_NAME} \
     --name ${GCLOUD_DNS_ZONE} --type NS \
@@ -200,17 +199,15 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 ### Step 2: Delete the Cloud DNS zone
 
   ```bash
+  GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
+  gcloud dns record-sets import /dev/null --zone ${GCLOUD_DNS_ZONE_NAME} --delete-all-existing
   gcloud dns managed-zones delete ${GCLOUD_DNS_ZONE_NAME}
   ```
-
-If the previous command fails because of some records still extant in the `${GCLOUD_DNS_ZONE_NAME}`, remove them manually and try again.
 
 ### Step 3: Delete Service account and IAM profile
 
   ```bash
-  export GCLOUD_SERVICE_ACCOUNT=bkpr-edns-${GCLOUD_DNS_ZONE//./-}
-  export GCLOUD_SERVICE_ACCOUNT="${GCLOUD_SERVICE_ACCOUNT:0:30}"
-  export GCLOUD_SERVICE_ACCOUNT="${GCLOUD_SERVICE_ACCOUNT%-}@${GCLOUD_PROJECT}.iam.gserviceaccount.com"
+  GCLOUD_SERVICE_ACCOUNT=$(gcloud iam service-accounts list --filter "displayName:${GCLOUD_DNS_ZONE} AND email:bkpr-edns" --format='value(email)')
   gcloud projects remove-iam-policy-binding ${GCLOUD_PROJECT} \
     --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} \
     --role=roles/dns.admin
