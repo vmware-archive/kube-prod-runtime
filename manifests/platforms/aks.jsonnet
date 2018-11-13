@@ -25,7 +25,6 @@ local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
 local nginx_ingress = import "../components/nginx-ingress.jsonnet";
 local prometheus = import "../components/prometheus.jsonnet";
-local heapster = import "../components/heapster.jsonnet";
 local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
 local fluentd_es = import "../components/fluentd-es.jsonnet";
 local elasticsearch = import "../components/elasticsearch.jsonnet";
@@ -108,19 +107,6 @@ local kibana = import "../components/kibana.jsonnet";
               },
             },
           },
-        },
-      },
-    },
-  },
-
-  heapster: heapster {
-    deployment+: {
-      metadata+: {
-        labels+: {
-          // The heapster pod was constantly being relaunched delaying the rollout on AKS
-          // adding the // addon-manager label "EnsureExists" works around this issue
-          // monitor https://github.com/Azure/ACS/issues/49 for issue resolution in AKS
-          "addonmanager.kubernetes.io/mode": "EnsureExists",
         },
       },
     },
