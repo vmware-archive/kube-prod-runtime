@@ -29,7 +29,9 @@ import (
 	corev1 "k8s.io/client-go/kubernetes/typed/core/v1"
 )
 
+// NB: These are overridden by main()
 var Version = "(dev build)"
+var GitTag = "master"
 
 const (
 	ReleaseNamespace = "kubeprod"

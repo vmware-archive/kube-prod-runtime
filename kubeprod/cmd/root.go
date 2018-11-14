@@ -60,6 +60,18 @@ func init() {
 	RootCmd.PersistentFlags().AddGoFlagSet(goflag.CommandLine)
 }
 
+// Called at top of main() to re-set any flags that may have changed
+// default value.  Hack to force this to occur after init().
+func UpdateFlagDefaults() {
+	set := func(cmd *cobra.Command, flag, value string) {
+		f := cmd.Flag(flag)
+		f.DefValue = value
+		f.Value.Set(value)
+	}
+
+	set(InstallCmd, FlagManifests, DefaultManifestBase())
+}
+
 var RootCmd = &cobra.Command{
 	Use:           "kubeprod",
 	Short:         "Install the Bitnami Kubernetes Production Runtime",
