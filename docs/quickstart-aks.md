@@ -8,6 +8,7 @@ This document walks you through setting up an Azure Kubernetes Service (AKS) clu
 
 * [Microsoft Azure account](https://azure.microsoft.com)
 * [Microsoft Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
+* [kubeprod](install.md)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
@@ -78,40 +79,7 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   kubectl get nodes
   ```
 
-### Step 2: Download BKPR
-
-BKPR releases are available for 64-bit versions of Linux, macOS and Windows platforms. Download the latest stable version for your platform of choice from the [releases](https://github.com/bitnami/kube-prod-runtime/releases) page.
-
-For convenience lets define a environment variable with the BKPR version:
-
-```bash
-export BKPR_VERSION=$(curl --silent "https://api.github.com/repos/bitnami/kube-prod-runtime/releases/latest" | jq -r '.tag_name')
-```
-
-On Linux:
-
-  ```bash
-  curl -LO https://github.com/bitnami/kube-prod-runtime/releases/download/${BKPR_VERSION}/bkpr-${BKPR_VERSION}-linux-amd64.tar.gz
-  tar xf bkpr-${BKPR_VERSION}-linux-amd64.tar.gz
-  ```
-
-On macOS:
-
-  ```bash
-  curl -LO https://github.com/bitnami/kube-prod-runtime/releases/download/${BKPR_VERSION}/bkpr-${BKPR_VERSION}-darwin-amd64.tar.gz
-  tar xf bkpr-${BKPR_VERSION}-darwin-amd64.tar.gz
-  ```
-
-To install the `kubeprod` binary:
-
-  ```bash
-  chmod +x bkpr-${BKPR_VERSION}/kubeprod
-  sudo mv bkpr-${BKPR_VERSION}/kubeprod /usr/local/bin/
-  ```
-
-Note: The Jsonnet manifests from the release are used in the next step.
-
-### Step 3: Deploy BKPR
+### Step 2: Deploy BKPR
 
 To bootstrap your Kubernetes cluster with BKPR:
 
@@ -129,7 +97,7 @@ Wait for all the pods in the cluster to enter `Running` state:
   kubectl get pods -n kubeprod
   ```
 
-### Step 4: Registrar setup
+### Step 3: Registrar setup
 
 BKPR creates and manages a DNS zone which is used to map external access to applications and services in the cluster. However to be usable you need to configure the NS records for the zone.
 
@@ -144,7 +112,7 @@ Query the name servers of the zone with the following command and configure the 
 
 Please note, it can take a while for the DNS changes to propogate.
 
-### Step 5: Access logging and monitoring dashboards
+### Step 4: Access logging and monitoring dashboards
 
 After the DNS changes have propagated you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${AZURE_DNS_ZONE}` and `https://kibana.${AZURE_DNS_ZONE}` respectively.
 

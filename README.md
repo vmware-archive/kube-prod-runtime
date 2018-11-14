@@ -27,10 +27,9 @@ The following matrix shows which Kubernetes versions and platforms are supported
 |     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
 |     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
 
-## Quickstart
+## Installation
 
-* [AKS Quickstart](docs/quickstart-aks.md)
-* [GKE Quickstart](docs/quickstart-gke.md)
+Please follow the [installation guide](docs/install.md) to install BKPR to your cluster.
 
 ## Frequently Asked Questions (FAQ)
 

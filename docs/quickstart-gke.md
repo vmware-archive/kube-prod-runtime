@@ -8,6 +8,7 @@ This document walks you through setting up a Google Kubernetes Engine (GKE) clus
 
 * [Google Cloud account](https://cloud.google.com/billing/docs/how-to/manage-billing-account)
 * [Google Cloud SDK](https://cloud.google.com/sdk/)
+* [kubeprod](install.md)
 * [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
@@ -106,40 +107,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
     --user=$(gcloud info --format='value(config.account)')
   ```
 
-### Step 2: Download BKPR
-
-BKPR releases are available for 64-bit versions of Linux, macOS and Windows platforms. Download the latest stable version for your platform of choice from the [releases](https://github.com/bitnami/kube-prod-runtime/releases) page.
-
-For convenience, lets define an environment variable with the BKPR version:
-
-```bash
-export BKPR_VERSION=$(curl --silent "https://api.github.com/repos/bitnami/kube-prod-runtime/releases/latest" | jq -r '.tag_name')
-```
-
-On Linux:
-
-  ```bash
-  curl -LO https://github.com/bitnami/kube-prod-runtime/releases/download/${BKPR_VERSION}/bkpr-${BKPR_VERSION}-linux-amd64.tar.gz
-  tar xf bkpr-${BKPR_VERSION}-linux-amd64.tar.gz
-  ```
-
-On macOS:
-
-  ```bash
-  curl -LO https://github.com/bitnami/kube-prod-runtime/releases/download/${BKPR_VERSION}/bkpr-${BKPR_VERSION}-darwin-amd64.tar.gz
-  tar xf bkpr-${BKPR_VERSION}-darwin-amd64.tar.gz
-  ```
-
-To install the `kubeprod` binary:
-
-  ```bash
-  chmod +x bkpr-${BKPR_VERSION}/kubeprod
-  sudo mv bkpr-${BKPR_VERSION}/kubeprod /usr/local/bin/
-  ```
-
-Note: The Jsonnet manifests from the release are used in the next step.
-
-### Step 3: Deploy BKPR
+### Step 2: Deploy BKPR
 
 To bootstrap your Kubernetes cluster with BKPR:
 
@@ -166,7 +134,7 @@ If you want to bootstrap the cluster from scratch after a failed run, you should
 
 The `kubeprod-autogen.json` file stores sensitive information. Do not commit this file in a GIT repository.
 
-### Step 4: Configure domain registration records
+### Step 3: Configure domain registration records
 
 BKPR creates and manages a Cloud DNS zone which is used to map external access to applications and services in the cluster. However, for it to be usable, you need to configure the NS records for the zone.
 
@@ -182,7 +150,7 @@ Query the name servers of the zone with the following command and configure the 
 
 Please note, it can take a while for the DNS changes to propogate.
 
-### Step 5: Access logging and monitoring dashboards
+### Step 4: Access logging and monitoring dashboards
 
 After the DNS changes have propagated you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${GCLOUD_DNS_ZONE}` and `https://kibana.${GCLOUD_DNS_ZONE}` respectively.
 
@@ -204,7 +172,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
   gcloud dns managed-zones delete ${GCLOUD_DNS_ZONE_NAME}
   ```
 
-### Step 3: Delete Service account and IAM profile
+### Step 3: Delete service account and IAM profile
 
   ```bash
   GCLOUD_SERVICE_ACCOUNT=$(gcloud iam service-accounts list --filter "displayName:${GCLOUD_DNS_ZONE} AND email:bkpr-edns" --format='value(email)')
@@ -218,4 +186,12 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
   ```bash
   gcloud container clusters delete ${GCLOUD_K8S_CLUSTER}
+  ```
+
+### Step 5: Delete any leftover GCE disks
+
+  ```bash
+  GCLOUD_DISKS_FILTER=${GCLOUD_K8S_CLUSTER:0:18}
+  gcloud compute disks delete --zone ${GCLOUD_DNS_ZONE} \
+    $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)') \
   ```
