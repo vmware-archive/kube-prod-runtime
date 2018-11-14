@@ -65,6 +65,13 @@ local kube = import "../lib/kube.libsonnet";
     ownerId:: error "ownerId is required",
     spec+: {
       template+: {
+        metadata+: {
+          annotations+: {
+            "prometheus.io/scrape": "true",
+            "prometheus.io/port": "7979",
+            "prometheus.io/path": "/metrics",
+          },
+        },
         spec+: {
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
@@ -76,6 +83,13 @@ local kube = import "../lib/kube.libsonnet";
                 "domain-filter": this.ownerId,
               },
               args+: ["--source=%s" % s for s in self.args_.sources_],
+              ports_+: {
+                metrics: {containerPort: 7979},
+              },
+              readinessProbe: {
+                httpGet: {path: "/healthz", port: "metrics"},
+              },
+              livenessProbe: self.readinessProbe,
             },
           },
         },
