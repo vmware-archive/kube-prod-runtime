@@ -33,8 +33,9 @@ import (
 const (
 	FlagManifests          = "manifests"
 	defaultManifestBaseFmt = "https://github.com/bitnami/kube-prod-runtime/raw/%s/manifests/"
-
-	FlagPlatformConfig = "config"
+	FlagOnlyGenerate       = "only-generate"
+	FlagOnlyGenerateShort  = "g"
+	FlagPlatformConfig     = "config"
 )
 
 var InstallCmd = &cobra.Command{
@@ -52,6 +53,7 @@ func init() {
 
 	InstallCmd.PersistentFlags().String(FlagManifests, DefaultManifestBase(), "Base URL below which to find platform manifests")
 	InstallCmd.PersistentFlags().String(FlagPlatformConfig, prodruntime.DefaultPlatformConfig, "Path for generated platform config file")
+	InstallCmd.PersistentFlags().BoolP(FlagOnlyGenerate, FlagOnlyGenerateShort, false, "Whether to just generate the root manifest and configuration files")
 }
 
 // Common initialisation for platform install subcommands
@@ -94,6 +96,11 @@ func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.
 	c.PlatformConfigPath = platformConfigURL.Path
 
 	c.Config, err = clientConfig.ClientConfig()
+	if err != nil {
+		return nil, err
+	}
+
+	c.OnlyGenerate, err = flags.GetBool(FlagOnlyGenerate)
 	if err != nil {
 		return nil, err
 	}
