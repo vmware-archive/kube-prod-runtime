@@ -2,14 +2,14 @@
 
 ## Introduction
 
-This document walks you through setting up a Google Kubernetes Engine (GKE) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) on that cluster.
+This document walks you through setting up a Google Kubernetes Engine (GKE) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) on the cluster.
 
 ## Prerequisites
 
 * [Google Cloud account](https://cloud.google.com/billing/docs/how-to/manage-billing-account)
 * [Google Cloud SDK](https://cloud.google.com/sdk/)
-* [kubeprod](install.md)
-* [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+* [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+* [BKPR installer](install.md)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
 

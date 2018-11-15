@@ -29,7 +29,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 
 ## Installation
 
-Please follow the [installation guide](docs/install.md) to install BKPR to your cluster.
+Please follow the [installation guide](docs/install.md) to install BKPR on your cluster.
 
 ## Frequently Asked Questions (FAQ)
 

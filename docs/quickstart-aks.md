@@ -2,14 +2,14 @@
 
 ## Introduction
 
-This document walks you through setting up an Azure Kubernetes Service (AKS) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) to that cluster.
+This document walks you through setting up an Azure Kubernetes Service (AKS) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) on the cluster.
 
 ## Prerequisites
 
 * [Microsoft Azure account](https://azure.microsoft.com)
 * [Microsoft Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
-* [kubeprod](install.md)
-* [kubectl](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+* [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+* [BKPR installer](install.md)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
 
@@ -97,9 +97,9 @@ Wait for all the pods in the cluster to enter `Running` state:
   kubectl get pods -n kubeprod
   ```
 
-### Step 3: Registrar setup
+### Step 3: Configure domain registration records
 
-BKPR creates and manages a DNS zone which is used to map external access to applications and services in the cluster. However to be usable you need to configure the NS records for the zone.
+BKPR creates and manages a DNS zone which is used to map external access to applications and services in the cluster. However, for it to be usable, you need to configure the NS records for the zone.
 
 Query the name servers of the zone with the following command and configure the records with your domain registrar.
 
@@ -110,7 +110,7 @@ Query the name servers of the zone with the following command and configure the 
     --query nameServers -o tsv
   ```
 
-Please note, it can take a while for the DNS changes to propogate.
+Please note, it can take a while for the DNS changes to propagate.
 
 ### Step 4: Access logging and monitoring dashboards
 
