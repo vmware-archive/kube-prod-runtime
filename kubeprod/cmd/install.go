@@ -34,7 +34,6 @@ const (
 	FlagManifests          = "manifests"
 	defaultManifestBaseFmt = "https://github.com/bitnami/kube-prod-runtime/raw/%s/manifests/"
 	FlagOnlyGenerate       = "only-generate"
-	FlagOnlyGenerateShort  = "g"
 	FlagPlatformConfig     = "config"
 )
 
@@ -53,7 +52,7 @@ func init() {
 
 	InstallCmd.PersistentFlags().String(FlagManifests, DefaultManifestBase(), "Base URL below which to find platform manifests")
 	InstallCmd.PersistentFlags().String(FlagPlatformConfig, prodruntime.DefaultPlatformConfig, "Path for generated platform config file")
-	InstallCmd.PersistentFlags().BoolP(FlagOnlyGenerate, FlagOnlyGenerateShort, false, "Whether to just generate the root manifest and configuration files")
+	InstallCmd.PersistentFlags().Bool(FlagOnlyGenerate, false, "Stop before pushing configuration to the cluster")
 }
 
 // Common initialisation for platform install subcommands

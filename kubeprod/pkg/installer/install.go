@@ -120,11 +120,8 @@ func (c InstallCmd) Run(out io.Writer) error {
 		return err
 	}
 
-	// TODO(felipe): Conditionalize this with a command-line flag so this
-	// step is optional
 	if c.OnlyGenerate {
-		fmt.Println("Kubernetes cluster is ready for deployment.")
-		fmt.Println("run: `kubeprod install` without the --only-generate command-line flag.")
+		fmt.Println("Skipping deployment because --only-generate was provided.")
 	} else {
 		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform)
 		if err := c.Update(out); err != nil {
