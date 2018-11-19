@@ -111,12 +111,7 @@ $ kubecfg diff kubeprod-manifest.jsonnet
 ### Deploy changes
 
 ```
-$ kubeprod install gke --dns-zone ${dnsZone} \
-                       --email ${email} \
-                       --authz-domain ${authzDomain} \
-                       --project ${gceProject} \
-                       --oauth-client-id ${oauthClientId} \
-                       --oauth-client-secret ${oauthClientSecret}
+$ kubecfg update kubeprod-manifest.jsonnet
 ```
 
 ### Check-in changes
