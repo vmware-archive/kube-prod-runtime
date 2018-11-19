@@ -85,10 +85,10 @@ type PlatformConfig interface {
 
 // InstallCmd represents the install subcommand
 type InstallCmd struct {
-	Config     *restclient.Config
-	ClientPool dynamic.ClientPool
-	Discovery  discovery.DiscoveryInterface
-
+	Config             *restclient.Config
+	ClientPool         dynamic.ClientPool
+	Discovery          discovery.DiscoveryInterface
+	OnlyGenerate       bool
 	PlatformConfig     PlatformConfig
 	Platform           string
 	PlatformConfigPath string
@@ -120,16 +120,13 @@ func (c InstallCmd) Run(out io.Writer) error {
 		return err
 	}
 
-	// TODO(felipe): Conditionalize this with a command-line flag so this
-	// step is optional
-	if true {
+	if c.OnlyGenerate {
+		fmt.Println("Skipping deployment because --only-generate was provided.")
+	} else {
 		log.Info("Deploying Bitnami Kubernetes Production Runtime for platform ", c.Platform)
 		if err := c.Update(out); err != nil {
 			return err
 		}
-	} else {
-		fmt.Println("Kubernetes cluster is ready for deployment.")
-		fmt.Printf("run: kubecfg update --ignore-unknown %s\n", prodruntime.RootManifest)
 	}
 	return nil
 }
