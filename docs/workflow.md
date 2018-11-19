@@ -6,6 +6,8 @@ This document documents two different yet common workflows in BKPR using `kubepr
 * Basic workflow
 * [Advanced workflow](#advanced-workflow)
 
+These workflows are intended for users of BKPR, most likely developers, DevOps, Kubernetes operators, etc. The basic workflow covers those cases where the person using BKPR owns the Kubernetes cluster and has full privileges on to it. This is usually the case for end-users who want to experiment with BKPR or developers working on a Kubernetes cluster to which they have full administrative privileges. The advanced workflow is intended for operators of production Kubernetes clusters which require greater customisation and tuning that is not supported by the basic workflow.
+
 ## Pre-requisites
 
 * An existing Kubernetes cluster.
@@ -13,6 +15,11 @@ This document documents two different yet common workflows in BKPR using `kubepr
 * 'kubecfg` binary from https://github.com/ksonnet/kubecfg/releases
 
 ## Basic workflow
+
+Use the basic workflow if you are:
+
+* An end-user or developer with full administrative privileges to a Kubernetes cluster
+* An operator for a Kubernetes cluster that does not already have existing DNS and authentication infrastructure already in place
 
 The basic workflow is covered in the quickstart guides:
 
@@ -22,6 +29,11 @@ The basic workflow is covered in the quickstart guides:
 ## Advanced workflow
 
 The advanced workflow allows for greater control and customisation than the basic workflow, but involves several steps to get BKPR deployed to an existing Kubernetes cluster.
+
+Use the advanced workflow if:
+
+* An operator for a Kubernetes cluster that has existing DNS or authentication infrastructure already in place
+* Other cases where the basic workflow is not suitable
 
 We will use `kubeprod` and `kubecfg` to manage the BKPR lifecycle. `kubeprod` is part of BKPR and [`kubecfg`](https://github.com/ksonnet/kubecfg) is a tool for managing Kubernetes resources as code. `kubecfg` uses [jsonnet](https://jsonnet.org) to describe infrastructure based on templates. `kubeprod` is used to deploy BKPR into an existing Kubernetes cluster and `kubecfg` to show the differences between the running (live) configuration and the local configuration (e.g. your Git client).
 
