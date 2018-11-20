@@ -129,6 +129,8 @@ $ kubecfg diff kubeprod-manifest.jsonnet
 $ kubecfg update --ignore-unknown --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
 ```
 
+[//]: # (There is a bug in kubecfg that always requires using --ignore-unknown for now, even if this command-line flag is supposed to default to True)
+
 ### Check-in changes
 
 For example,
