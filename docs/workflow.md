@@ -1,18 +1,18 @@
 
 # Workflows
 
-This document documents two different yet common workflows in BKPR using `kubeprod` and `kubecfg`:
+This document describes two different yet common workflows in BKPR using `kubeprod` and `kubecfg`:
 
-* Basic workflow
+* [Basic workflow](#basic-workflow)
 * [Advanced workflow](#advanced-workflow)
 
 These workflows are intended for users of BKPR, most likely developers, DevOps, Kubernetes operators, etc. The basic workflow covers those cases where the person using BKPR owns the Kubernetes cluster and has full privileges on to it. This is usually the case for end-users who want to experiment with BKPR or developers working on a Kubernetes cluster to which they have full administrative privileges. The advanced workflow is intended for operators of production Kubernetes clusters which require greater customisation and tuning that is not supported by the basic workflow.
 
 ## Pre-requisites
 
-* An existing Kubernetes cluster.
-* `kubeprod` binary from https://github.com/bitnami/kube-prod-runtime/releases
-* 'kubecfg` binary from https://github.com/ksonnet/kubecfg/releases
+* [Kubernetes cluster](../readme.md#kubernetes-version-support-matrix)
+* [`kubeprod`](https://github.com/bitnami/kube-prod-runtime/releases) binary
+* [`kubecfg`](https://github.com/ksonnet/kubecfg/releases) binary
 
 ## Basic workflow
 
@@ -48,7 +48,7 @@ $ kubectl cluster-info
 
 ### Preparation
 
-This step prepares the Kubernetes cluster and the underlying platform for deploying BKPR. This is acomplished by using `kubeprod install <platform>` where `<platform>` is the underlying platform for the Kubernetes cluster (e.g. AKS or GKE).
+This step prepares the Kubernetes cluster and the underlying platform for deploying BKPR. This is accomplished by using `kubeprod install <platform>` where `<platform>` is the underlying platform for the Kubernetes cluster (e.g. AKS or GKE).
 
 For example:
 
