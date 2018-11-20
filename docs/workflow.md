@@ -126,7 +126,7 @@ $ kubecfg diff kubeprod-manifest.jsonnet
 ### Deploy changes
 
 ```
-$ kubecfg update kubeprod-manifest.jsonnet
+$ kubecfg update --ignore-unknown --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
 ```
 
 ### Check-in changes
