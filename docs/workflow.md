@@ -140,4 +140,4 @@ $ git add kubeprod-manifest.jsonnet
 $ git commit -m "Use Let's Encrypt staging environment"
 ```
 
-Note that the **`kubeprod-autogen.json` file contains sensitive information**, like OAuth2 client and cookies secrets, or credentials for accessing the underlying platform's DNS services. If this information is inadvertently exposed, **it could compromise your Kubernetes cluster or any shared infrastructure**. As a best practice, we recommend explicitly ignoring kubeprod-autogen.json file in your source repository. Best practice is to explicitly ignore `kubeprod-autogen.json` file from your source.
+Note that the **`kubeprod-autogen.json` file contains sensitive information**, like OAuth2 client and cookies secrets, or credentials for accessing the underlying platform's DNS services. If this information is inadvertently exposed, **it could compromise your Kubernetes cluster or any shared infrastructure**. As a best practice, we recommend explicitly ignoring kubeprod-autogen.json file in your source repository.
