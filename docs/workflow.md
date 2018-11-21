@@ -21,8 +21,8 @@ These workflows are intended for users of BKPR, most likely developers, DevOps, 
 
 Use the basic workflow if you are:
 
-* An end-user or developer with full administrative privileges to a Kubernetes cluster
-* An operator for a Kubernetes cluster that does not already have existing DNS and authentication infrastructure already in place
+* An end-user or developer with full administrative privileges to a Kubernetes cluster.
+* An operator for a Kubernetes cluster that does not already have existing DNS and authentication infrastructure already in place.
 
 The basic workflow is covered in the quickstart guides:
 
@@ -35,10 +35,10 @@ The advanced workflow allows for greater control and customization than the basi
 
 Use the advanced workflow if you are:
 
-* An operator for a Kubernetes cluster that has existing DNS or authentication infrastructure already in place
-* Concerned with other cases where the basic workflow is not suitable
+* An operator for a Kubernetes cluster that has existing DNS or authentication infrastructure already in place.
+* Concerned with other cases where the basic workflow is not suitable.
 
-We will use `kubeprod` and `kubecfg` to manage the BKPR lifecycle. `kubeprod` is part of BKPR and [`kubecfg`](https://github.com/ksonnet/kubecfg) is a tool for managing Kubernetes resources as code. `kubecfg` uses [jsonnet](https://jsonnet.org) to describe infrastructure based on templates. `kubeprod` is used to deploy BKPR into an existing Kubernetes cluster and `kubecfg` to show the differences between the running (live) configuration and the local configuration (e.g. your Git client).
+We will use `kubeprod` and `kubecfg` to manage the BKPR lifecycle. `kubeprod` is part of BKPR and [`kubecfg`](https://github.com/ksonnet/kubecfg) is a tool for managing Kubernetes resources as code. `kubecfg` uses [jsonnet](https://jsonnet.org) to describe infrastructure based on templates. `kubeprod` is used to deploy BKPR into an existing Kubernetes cluster and `kubecfg` is used to show the differences between the running (live) configuration and the local configuration (e.g. your Git client).
 
 ### Check the default `kubectl` context
 
@@ -106,7 +106,7 @@ The previous block of code does the following:
 1. Imports the manifest at `manifests/platforms/gke.jsonnet` which describes how to deploy BKPR on GKE.
 1. Under the `cert_manager` key (which implements the `cert-manager` component), overrides the `letsencrypt_environment` property to `staging` from its default value of `prod`.
 
-To ensure the override is working as expected let's evaluate the manifest again using `kubecfg` and filter the output searching for the Let's Encrypt environment. This time we will see that `cert-manager` will use the staging environment instead of the production environment:
+To ensure the override is working as expected, let's evaluate the manifest again using `kubecfg` and filter the output searching for the Let's Encrypt environment. This time we will see that `cert-manager` will use the staging environment instead of the production environment:
 
 ```
 $ kubecfg show kubeprod-manifest.jsonnet | grep -- --default-issuer-name
@@ -126,10 +126,10 @@ $ kubecfg diff kubeprod-manifest.jsonnet
 ### Deploy changes
 
 ```
-$ kubecfg update --ignore-unknown --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
+$ kubecfg update --ignore-unknown=true --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
 ```
 
-[//]: # (There is a bug in kubecfg that always requires using --ignore-unknown for now, even if this command-line flag is supposed to default to True)
+NOTE: There is a [bug in kubecfg](https://github.com/ksonnet/kubecfg/issues/211) that always requires using `--ignore-unknown=true`, even if this command-line flag defaults to `true`.
 
 ### Check-in changes
 
@@ -140,4 +140,4 @@ $ git add kubeprod-manifest.jsonnet
 $ git commit -m "Use Let's Encrypt staging environment"
 ```
 
-Note that the `kubeprod-autogen.json` file contains sensitive information, like OAuth2 client and cookies secrets, or credentials for accessing the underlying platform's DNS services. Leaking or exposing this could lead to getting your Kubernetes cluster or any shared infrastructure compromised. Best practice is to explicitly ignore `kubeprod-autogen.json` file from your source 
+Note that the **`kubeprod-autogen.json` file contains sensitive information**, like OAuth2 client and cookies secrets, or credentials for accessing the underlying platform's DNS services. If this information is inadvertently exposed, **it could compromise your Kubernetes cluster or any shared infrastructure**. As a best practice, we recommend explicitly ignoring kubeprod-autogen.json file in your source repository. Best practice is to explicitly ignore `kubeprod-autogen.json` file from your source.
