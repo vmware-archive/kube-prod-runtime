@@ -64,21 +64,22 @@ var versionCmd = &cobra.Command{
 	Short: "Print version information",
 	Args:  cobra.NoArgs,
 	RunE: func(cmd *cobra.Command, args []string) error {
+		release := ""
 		out := cmd.OutOrStdout()
 
 		config, err := clientConfig.ClientConfig()
 		if err != nil {
-			return err
-		}
+			release = "(unable to read kubectl config)"
+		} else {
+			clientv1, err := corev1.NewForConfig(config)
+			if err != nil {
+				return err
+			}
 
-		clientv1, err := corev1.NewForConfig(config)
-		if err != nil {
-			return err
-		}
-
-		release := getRelease(clientv1)
-		if err != nil {
-			return err
+			release = getRelease(clientv1)
+			if err != nil {
+				return err
+			}
 		}
 
 		fmt.Fprintf(out, "Installer version: %s\n", Version)
