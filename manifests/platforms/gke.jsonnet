@@ -29,6 +29,7 @@ local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
 local fluentd_es = import "../components/fluentd-es.jsonnet";
 local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
+local grafana = import "../components/grafana.jsonnet";
 
 {
   config:: error "no kubeprod configuration",
@@ -41,6 +42,19 @@ local kibana = import "../components/kibana.jsonnet";
   letsencrypt_environment:: "prod",
 
   version: version,
+
+  grafana: grafana {
+    email_domain: $.config.oauthProxy.authz_domain,
+    google_oauth_secret+: {
+      data_+: {
+        "google-client-id": $.config.oauthProxy.client_id,
+        "google-client-secret": $.config.oauthProxy.client_secret,
+      },
+    },
+    ingress+: {
+      host: "grafana." + $.external_dns_zone_name,
+    },
+  },
 
   edns: edns {
     gcreds: kube.Secret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
