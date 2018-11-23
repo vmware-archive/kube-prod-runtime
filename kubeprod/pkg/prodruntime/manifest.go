@@ -38,17 +38,16 @@ const (
 `
 
 	// RootManifest specifies the filename of the root (cluster) manifest
-	RootManifest          = "kubeprod-manifest.jsonnet"
-	DefaultPlatformConfig = "kubeprod-autogen.json"
+	RootManifest = "kubeprod-manifest.jsonnet"
 )
 
 // WriteRootManifest executes the template from the `clusterTemplate`
 // variable and writes the result as the root (cluster) manifest in
 // the current directory named after the value of `RootManifest`.
-func WriteRootManifest(manifestsURL *url.URL) error {
+func WriteRootManifest(manifestsURL *url.URL, platformConfigPath string) error {
 	// If the output file already exists do not overwrite it.
 	v := map[string]string{
-		"ConfigFilePath": DefaultPlatformConfig,
+		"ConfigFilePath": platformConfigPath,
 		"ManifestsURL":   manifestsURL.String(),
 	}
 	f, err := os.OpenFile(RootManifest, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0777)

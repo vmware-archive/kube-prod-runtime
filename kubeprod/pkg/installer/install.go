@@ -116,7 +116,7 @@ func (c InstallCmd) Run(out io.Writer) error {
 	}
 
 	log.Infof("Using manifests from %s", manifestURL)
-	if err := prodruntime.WriteRootManifest(manifestURL); err != nil {
+	if err := prodruntime.WriteRootManifest(manifestURL, c.PlatformConfigPath); err != nil {
 		return err
 	}
 

@@ -26,13 +26,13 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/installer"
-	"github.com/bitnami/kube-prod-runtime/kubeprod/pkg/prodruntime"
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
 const (
 	FlagManifests          = "manifests"
 	defaultManifestBaseFmt = "https://github.com/bitnami/kube-prod-runtime/raw/%s/manifests/"
+	defaultPlatformConfig  = "kubeprod-autogen.json"
 	FlagOnlyGenerate       = "only-generate"
 	FlagPlatformConfig     = "config"
 )
@@ -51,7 +51,7 @@ func init() {
 	RootCmd.AddCommand(InstallCmd)
 
 	InstallCmd.PersistentFlags().String(FlagManifests, DefaultManifestBase(), "Base URL below which to find platform manifests")
-	InstallCmd.PersistentFlags().String(FlagPlatformConfig, prodruntime.DefaultPlatformConfig, "Path for generated platform config file")
+	InstallCmd.PersistentFlags().String(FlagPlatformConfig, defaultPlatformConfig, "Path for generated platform config file")
 	InstallCmd.PersistentFlags().Bool(FlagOnlyGenerate, false, "Stop before pushing configuration to the cluster")
 }
 
