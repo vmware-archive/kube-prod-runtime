@@ -96,7 +96,7 @@ func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.
 
 	c.Config, err = clientConfig.ClientConfig()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("unable to read kubectl config: %v", err)
 	}
 
 	c.OnlyGenerate, err = flags.GetBool(FlagOnlyGenerate)
