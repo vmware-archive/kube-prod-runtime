@@ -40,6 +40,11 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
   // Required to restrict login attempts to a particular domain
   email_domain:: error "Missing e-mail domain",
 
+  // OAuth2-related parameters
+  oauth2_scopes:: error "Missing OAuth2 scopes",
+  oauth2_auth_url:: error "Missing OAuth2 authentication URL",
+  oauth2_token_url:: error "Missing OAuth2 token URL",
+
   // Google Bitnami oAuth secrets, sealed secrets under sre-kube-configs
   google_oauth_secret: kube.Secret($.p + "grafana-google-oauth") + $.metadata {
     data_+: {
@@ -104,9 +109,9 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
                 GF_AUTH_GOOGLE_ENABLED: "true",
                 GF_AUTH_GOOGLE_CLIENT_ID: kube.SecretKeyRef($.google_oauth_secret, "google-client-id"),
                 GF_AUTH_GOOGLE_CLIENT_SECRET: kube.SecretKeyRef($.google_oauth_secret, "google-client-secret"),
-                GF_AUTH_GOOGLE_SCOPES: "https://www.googleapis.com/auth/userinfo.profile, https://www.googleapis.com/auth/userinfo.email",
-                GF_AUTH_GOOGLE_AUTH_URL: "https://accounts.google.com/o/oauth2/auth",
-                GF_AUTH_GOOGLE_TOKEN_URL: "https://accounts.google.com/o/oauth2/token",
+                GF_AUTH_GOOGLE_SCOPES: $.oauth2_scopes,
+                GF_AUTH_GOOGLE_AUTH_URL: $.oauth2_auth_url,
+                GF_AUTH_GOOGLE_TOKEN_URL: $.oauth2_token_url,
                 GF_AUTH_GOOGLE_ALLOW_SIGN_UP: "true",
                 GF_AUTH_GOOGLE_ALLOWED_DOMAINS: $.email_domain,
                 GF_USERS_AUTO_ASSIGN_ORG_ROLE: $.auto_role,
