@@ -41,6 +41,12 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   - `AZURE_AKS_CLUSTER` specifies the name of the AKS cluster.
   - `AZURE_AKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `az aks get-versions --location ${AZURE_REGION} -o table` lists the versions available in your region.
 
+* Get a list of your subscriptions:
+
+```bash
+az account list --output table
+```
+
 * Set the default subscription account:
 
   ```bash
@@ -63,6 +69,22 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   ```
 
   Provisioning a AKS cluster can take a long time to complete. Please be patient while the request is being processed.
+
+  NOTE: if the creation of the AKS cluster fails with an error like this:
+
+  ```
+  Operation failed with status: 'Bad Request'. Details: Service principal clientID: <SOME_CLIENT_ID>
+  not found in Active Directory tenant <SOME_TENANT_ID>, Please see https://aka.ms/acs-sp-help for more details.
+  ```
+
+  even when retrying the operation multiple times, try this workaround:
+
+  ```bash
+  rm -fr ~/.azure
+  az login
+  ```
+
+  This will re-create your Azure CLI environment. Then, re-start this procedure from the beginning.
 
 * Configure `kubectl` to use the new cluster:
 
