@@ -41,6 +41,8 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
   email_domain:: error "Missing e-mail domain",
 
   // OAuth2-related parameters
+  oauth2_client_id:: error "Missing OAuth2 client ID",
+  oauth2_client_secret:: error "Missing OAuth2 client secret",
   oauth2_scopes:: error "Missing OAuth2 scopes",
   oauth2_auth_url:: error "Missing OAuth2 authentication URL",
   oauth2_token_url:: error "Missing OAuth2 token URL",
@@ -48,8 +50,8 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
   // Google Bitnami oAuth secrets, sealed secrets under sre-kube-configs
   google_oauth_secret: kube.Secret($.p + "grafana-google-oauth") + $.metadata {
     data_+: {
-      "google-client-id": error "provided externally",
-      "google-client-secret": error "provided externally",
+      "google-client-id": $.oauth2_client_id,
+      "google-client-secret": $.oauth2_client_secret,
     },
   },
 

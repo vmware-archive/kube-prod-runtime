@@ -45,15 +45,11 @@ local grafana = import "../components/grafana.jsonnet";
 
   grafana: grafana {
     email_domain: $.config.oauthProxy.authz_domain,
+    oauth2_client_id: $.config.oauthProxy.client_id,
+    oauth2_client_secret: $.config.oauthProxy.client_secret,
     oauth2_scopes: "",
     oauth2_auth_url: "",
     oauth2_token_url: "",
-    google_oauth_secret+: {
-      data_+: {
-        "google-client-id": $.config.oauthProxy.client_id,
-        "google-client-secret": $.config.oauthProxy.client_secret,
-      },
-    },
     ingress+: {
       host: "grafana." + $.external_dns_zone_name,
     },
