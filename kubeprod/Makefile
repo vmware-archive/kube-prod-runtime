@@ -36,16 +36,16 @@ release: clean
 
 manifests: release
 	@set -e ; \
+	mkdir -p _dist/manifests/ ; \
+	echo $(VERSION) > _dist/manifests/VERSION ; \
+	for d in $(MANIFEST_DIST_DIRS); do \
+		cp -a ../manifests/$${d} _dist/manifests/ ; \
+	done ; \
 	for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
 		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
-		for d in $(MANIFEST_DIST_DIRS); do \
-			mkdir -p $${ARTIFACTS_DIR}/manifests/ ; \
-			echo "cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/" ; \
-			cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/ ; \
-			echo $(VERSION) > $${ARTIFACTS_DIR}/manifests/VERSION ; \
-		done ; \
+		cp -a _dist/manifests $${ARTIFACTS_DIR}/ ; \
 	done
 
 dist: archiver release manifests
