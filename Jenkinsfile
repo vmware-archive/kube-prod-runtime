@@ -492,7 +492,7 @@ gcloud container clusters create ${clusterName} \
 
                             sh "make dist VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
 
-                            withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+                            withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: ''),]) {
                                 sh "make publish VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
                             }
                         }

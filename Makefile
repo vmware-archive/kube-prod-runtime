@@ -4,6 +4,7 @@ export GIT_TAG ?= $(shell git rev-parse HEAD)
 GITHUB_USER ?= bitnami
 GITHUB_REPO ?= kube-prod-runtime
 GITHUB_TOKEN ?=
+export GITHUB_TOKEN
 
 GO = go
 
@@ -37,7 +38,7 @@ release-notes: Release_Notes.md
 dist:
 	$(MAKE) -C kubeprod $@
 
-publish: github-release release-notes
+publish-to-github: github-release release-notes
 ifndef GITHUB_TOKEN
 	$(error You must specify the GITHUB_TOKEN)
 endif
@@ -45,6 +46,8 @@ endif
 	@set -e ; \
 	PRE_RELEASE=$${VERSION##*-rc} ; cat Release_Notes.md | github-release release $${PRE_RELEASE:+--pre-release} --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(GIT_TAG)' -n 'BKPR $(VERSION)' -d -
 	for f in $$(ls kubeprod/_dist/*.gz kubeprod/_dist/*.zip) ; do github-release upload --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(GIT_TAG)' --name "$$(basename $${f})" --file "$${f}" ; done
+
+publish: publish-to-github
 
 clean:
 	rm -f Release_Notes.md
