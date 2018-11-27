@@ -492,7 +492,15 @@ gcloud container clusters create ${clusterName} \
 
                             sh "make dist VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
 
-                            withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: ''),]) {
+                            withCredentials([
+                                usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: ''),
+                                [
+                                $class: 'AmazonWebServicesCredentialsBinding',
+                                credentialsId: 'jenkins-bkpr-releases',
+                                accessKeyVariable: 'AWS_ACCESS_KEY_ID',
+                                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
+                                ]
+                            ]) {
                                 sh "make publish VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
                             }
                         }

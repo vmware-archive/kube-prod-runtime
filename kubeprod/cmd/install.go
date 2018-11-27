@@ -32,7 +32,7 @@ import (
 
 const (
 	FlagManifests          = "manifests"
-	defaultManifestBaseFmt = "https://github.com/bitnami/kube-prod-runtime/raw/%s/manifests/"
+	defaultManifestBaseFmt = "http://jenkins-bkpr-releases.s3-website-us-east-1.amazonaws.com/files/%s/manifests/"
 	FlagOnlyGenerate       = "only-generate"
 	FlagPlatformConfig     = "config"
 )
