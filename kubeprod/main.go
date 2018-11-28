@@ -37,11 +37,9 @@ import (
 
 // Overridden at link time by Makefile.
 var version = "(dev build)"
-var gitTag = "master"
 
 func init() {
 	cmd.Version = version
-	cmd.GitTag = gitTag
 }
 
 func main() {

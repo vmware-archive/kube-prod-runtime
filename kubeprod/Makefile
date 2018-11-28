@@ -1,5 +1,4 @@
 VERSION ?= $(shell git rev-parse --short HEAD)
-GIT_TAG ?= $(shell git rev-parse HEAD)
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
 MANIFEST_DIST_DIRS = lib components platforms
 
@@ -7,7 +6,7 @@ PACKAGE = kubeprod
 
 GO = go
 GOFLAGS =
-GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION) -X main.gitTag=$(GIT_TAG)'
+GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION)'
 GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo -installsuffix netgo
 GOTESTFLAGS = $(GOFLAGS) -race
 GOFMT = gofmt

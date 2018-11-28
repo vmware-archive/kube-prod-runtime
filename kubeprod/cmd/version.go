@@ -31,7 +31,6 @@ import (
 
 // NB: These are overridden by main()
 var Version = "(dev build)"
-var GitTag = "master"
 
 const (
 	ReleaseNamespace = "kubeprod"

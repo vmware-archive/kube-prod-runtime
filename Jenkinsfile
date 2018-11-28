@@ -192,7 +192,7 @@ spec:
                 withGo() {
                     withEnv(["PATH+JQ=${tool 'jq'}"]) {
                         withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
-                            sh "make release-notes VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
+                            sh "make release-notes VERSION=${TAG_NAME}"
                         }
                         stash includes: 'Release_Notes.md', name: 'release-notes'
                     }
@@ -490,7 +490,7 @@ gcloud container clusters create ${clusterName} \
                             unstash 'src'
                             unstash 'release-notes'
 
-                            sh "make dist VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
+                            sh "make dist VERSION=${TAG_NAME}"
 
                             withCredentials([
                                 usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: ''),
@@ -501,7 +501,7 @@ gcloud container clusters create ${clusterName} \
                                 secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
                                 ]
                             ]) {
-                                sh "make publish VERSION=${TAG_NAME} GIT_TAG=${TAG_NAME}"
+                                sh "make publish VERSION=${TAG_NAME}"
                             }
                         }
                     }
