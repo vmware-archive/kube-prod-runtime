@@ -102,7 +102,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 
                 sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
-                sh "./bin/kubeprod -v=1 install --config=kubeprod-autogen.json ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
 
                 dnsSetup()
 

@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -31,10 +32,12 @@ import (
 )
 
 const (
-	FlagManifests          = "manifests"
+	FlagManifests      = "manifests"
+	FlagOnlyGenerate   = "only-generate"
+	FlagPlatformConfig = "config"
+
 	defaultManifestBaseFmt = "http://jenkins-bkpr-releases.s3-website-us-east-1.amazonaws.com/files/%s/manifests/"
-	FlagOnlyGenerate       = "only-generate"
-	FlagPlatformConfig     = "config"
+	releaseSignature       = "^v[0-9]+\\.[0-9]+\\.[0-9]+(-rc[0-9]+)?$"
 )
 
 var InstallCmd = &cobra.Command{
@@ -43,8 +46,17 @@ var InstallCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 }
 
+func IsRelease() bool {
+	match, _ := regexp.MatchString(releaseSignature, Version)
+	return match
+}
+
 func DefaultManifestBase() string {
-	return fmt.Sprintf(defaultManifestBaseFmt, GitTag)
+	manifestBase := ""
+	if IsRelease() {
+		manifestBase = fmt.Sprintf(defaultManifestBaseFmt, Version)
+	}
+	return manifestBase
 }
 
 func init() {
@@ -73,6 +85,7 @@ func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.
 	if err != nil {
 		return nil, err
 	}
+
 	if !strings.HasSuffix(manifestBase, "/") {
 		manifestBase = manifestBase + "/"
 	}

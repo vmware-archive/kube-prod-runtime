@@ -1,4 +1,4 @@
-export VERSION ?= $(shell git describe --tags --dirty)
+VERSION ?= $(shell git rev-parse --short HEAD)
 export GIT_TAG ?= $(shell git rev-parse HEAD)
 
 GITHUB_USER ?= bitnami
