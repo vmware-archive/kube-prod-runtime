@@ -31,13 +31,14 @@ import (
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
+var ReleasesBaseUrl = "https://releases.kubeprod.io"
+
 const (
 	FlagManifests      = "manifests"
 	FlagOnlyGenerate   = "only-generate"
 	FlagPlatformConfig = "config"
 
-	defaultManifestBaseFmt = "http://jenkins-bkpr-releases.s3-website-us-east-1.amazonaws.com/files/%s/manifests/"
-	releaseSignature       = "^v[0-9]+\\.[0-9]+\\.[0-9]+(-rc[0-9]+)?$"
+	releaseSignature = "^v[0-9]+\\.[0-9]+\\.[0-9]+(-rc[0-9]+)?$"
 )
 
 var InstallCmd = &cobra.Command{
@@ -54,7 +55,10 @@ func IsRelease() bool {
 func DefaultManifestBase() string {
 	manifestBase := ""
 	if IsRelease() {
-		manifestBase = fmt.Sprintf(defaultManifestBaseFmt, Version)
+		if !strings.HasSuffix(ReleasesBaseUrl, "/") {
+			ReleasesBaseUrl = ReleasesBaseUrl + "/"
+		}
+		manifestBase = fmt.Sprintf("%sfiles/%s/manifests", ReleasesBaseUrl, Version)
 	}
 	return manifestBase
 }
