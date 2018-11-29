@@ -36,12 +36,16 @@ import (
 )
 
 // Overridden at link time by Makefile.
-var version = "(dev build)"
-var releasesBaseUrl = "https://releases.kubeprod.io"
+var version = ""
+var releasesBaseUrl = ""
 
 func init() {
-	cmd.Version = version
-	cmd.ReleasesBaseUrl = releasesBaseUrl
+	if version != "" {
+		cmd.Version = version
+	}
+	if releasesBaseUrl != "" {
+		cmd.ReleasesBaseUrl = releasesBaseUrl
+	}
 }
 
 func main() {
