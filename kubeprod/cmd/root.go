@@ -68,8 +68,11 @@ func UpdateFlagDefaults() {
 		f.DefValue = value
 		f.Value.Set(value)
 	}
-
 	set(InstallCmd, FlagManifests, DefaultManifestBase())
+
+	if !IsRelease() {
+		InstallCmd.MarkPersistentFlagRequired(FlagManifests)
+	}
 }
 
 var RootCmd = &cobra.Command{

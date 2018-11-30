@@ -36,12 +36,16 @@ import (
 )
 
 // Overridden at link time by Makefile.
-var version = "(dev build)"
-var gitTag = "master"
+var version = ""
+var releasesBaseUrl = ""
 
 func init() {
-	cmd.Version = version
-	cmd.GitTag = gitTag
+	if version != "" {
+		cmd.Version = version
+	}
+	if releasesBaseUrl != "" {
+		cmd.ReleasesBaseUrl = releasesBaseUrl
+	}
 }
 
 func main() {

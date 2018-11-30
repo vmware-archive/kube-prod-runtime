@@ -21,6 +21,7 @@ package cmd
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -30,11 +31,14 @@ import (
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
 
+var ReleasesBaseUrl = "https://releases.kubeprod.io"
+
 const (
-	FlagManifests          = "manifests"
-	defaultManifestBaseFmt = "https://github.com/bitnami/kube-prod-runtime/raw/%s/manifests/"
-	FlagOnlyGenerate       = "only-generate"
-	FlagPlatformConfig     = "config"
+	FlagManifests      = "manifests"
+	FlagOnlyGenerate   = "only-generate"
+	FlagPlatformConfig = "config"
+
+	releaseSignature = "^v[0-9]+\\.[0-9]+\\.[0-9]+(-rc[0-9]+)?$"
 )
 
 var InstallCmd = &cobra.Command{
@@ -43,8 +47,20 @@ var InstallCmd = &cobra.Command{
 	Args:  cobra.NoArgs,
 }
 
+func IsRelease() bool {
+	match, _ := regexp.MatchString(releaseSignature, Version)
+	return match
+}
+
 func DefaultManifestBase() string {
-	return fmt.Sprintf(defaultManifestBaseFmt, GitTag)
+	manifestBase := ""
+	if IsRelease() {
+		if !strings.HasSuffix(ReleasesBaseUrl, "/") {
+			ReleasesBaseUrl = ReleasesBaseUrl + "/"
+		}
+		manifestBase = fmt.Sprintf("%sfiles/%s/manifests", ReleasesBaseUrl, Version)
+	}
+	return manifestBase
 }
 
 func init() {
@@ -73,6 +89,7 @@ func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.
 	if err != nil {
 		return nil, err
 	}
+
 	if !strings.HasSuffix(manifestBase, "/") {
 		manifestBase = manifestBase + "/"
 	}
