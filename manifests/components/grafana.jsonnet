@@ -37,9 +37,6 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
   // datasources nor invite new users
   auto_role:: "Editor",
 
-  // Required to restrict login attempts to a particular domain
-  email_domain:: error "Missing e-mail domain",
-
   // OAuth2-related parameters
   oauth2_client_id:: error "Missing OAuth2 client ID",
   oauth2_client_secret:: error "Missing OAuth2 client secret",
@@ -47,27 +44,22 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
   oauth2_auth_url:: error "Missing OAuth2 authentication URL",
   oauth2_token_url:: error "Missing OAuth2 token URL",
 
-  // Google Bitnami oAuth secrets, sealed secrets under sre-kube-configs
-  google_oauth_secret: kube.Secret($.p + "grafana-google-oauth") + $.metadata {
-    data_+: {
-      "google-client-id": $.oauth2_client_id,
-      "google-client-secret": $.oauth2_client_secret,
-    },
-  },
-
-  grafana_admin_config: kube.Secret($.p + "grafana-admin-config") + $.metadata {
-    data_+: {
-      "grafana-admin-password": "admin",
-    },
-  },
-
   svc: kube.Service($.p + "grafana") + $.metadata {
     target_pod: $.grafana.spec.template,
   },
 
   ingress: utils.AuthIngress($.p + "grafana") + $.metadata {
     local this = self,
-    host:: error "host required",
+    metadata+: {
+      annotations+: {
+      // TODO: add annotations for whitelisting connections from NGINX pods,
+      // or alternatively use a network policy to prevent connextions from
+      // IPv4 addresses other than those from the NGINX ingress controller.
+        "nginx.ingress.kubernetes.io/configuration-snippet": "
+          proxy_set_header X-Email $email;
+          auth_request_set $email $upstream_http_x_auth_request_email;",
+      },
+    },
     spec+: {
       rules+: [
         {
@@ -82,6 +74,19 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
     },
   },
 
+  grafana_admin_config: kube.Secret(self.p + "grafana-admin-config") + $.metadata {
+    data_+: {
+      "grafana-admin-password": "admin",
+    },
+  },
+
+  google_oauth_secret: kube.Secret(self.p + "grafana-google-oauth") + $.metadata {
+    data_+: {
+      "google-client-id": $.oauth2_client_id,
+      "google-client-secret": $.oauth2_client_secret,
+    },
+  },
+
   grafana: kube.StatefulSet($.p + "grafana") + $.metadata {
     spec+: {
       template+: {
@@ -93,42 +98,36 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
                 limits: { cpu: "100m", memory: "100Mi" },
                 requests: self.limits,
               },
-              ports_+: {
-                dashboard: { containerPort: 3000 },
-              },
               env_+: {
-                GF_AUTH_BASIC_ENABLED: "true",
-                GF_AUTH_ANONYMOUS_ENABLED: "true",
-                GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer",
+                GF_AUTH_PROXY_ENABLED: "true",
+                GF_AUTH_PROXY_HEADER_NAME: "X-Email",
+                GF_AUTH_PROXY_HEADER_PROPERTY: "email",
+                GF_AUTH_PROXY_AUTO_SIGN_UP: "true",
+                GF_SERVER_PROTOCOL: "http",
                 GF_SERVER_DOMAIN: $.ingress.host,
                 GF_SERVER_ROOT_URL: "https://" + $.ingress.host,
+                GF_USERS_AUTO_ASSIGN_ORG_ROLE: $.auto_role,
+                GF_USERS_AUTO_ASSIGN_ORG: "true",
+                GF_USERS_ALLOW_SIGN_UP: "false",
+                GF_EXPLORE_ENABLED: "true",
                 GF_LOG_MODE: "console",
                 GF_LOG_LEVEL: "warn",
                 GF_METRICS_ENABLED: "true",
-                GF_SECURITY_ADMIN_USER: "admin",
-                GF_SECURITY_ADMIN_PASSWORD: kube.SecretKeyRef($.grafana_admin_config, "grafana-admin-password"),
-                GF_AUTH_SIGNOUT_MENU: "true",
-                GF_AUTH_GOOGLE_ENABLED: "true",
-                GF_AUTH_GOOGLE_CLIENT_ID: kube.SecretKeyRef($.google_oauth_secret, "google-client-id"),
-                GF_AUTH_GOOGLE_CLIENT_SECRET: kube.SecretKeyRef($.google_oauth_secret, "google-client-secret"),
-                GF_AUTH_GOOGLE_SCOPES: $.oauth2_scopes,
-                GF_AUTH_GOOGLE_AUTH_URL: $.oauth2_auth_url,
-                GF_AUTH_GOOGLE_TOKEN_URL: $.oauth2_token_url,
-                GF_AUTH_GOOGLE_ALLOW_SIGN_UP: "true",
-                GF_AUTH_GOOGLE_ALLOWED_DOMAINS: $.email_domain,
-                GF_USERS_AUTO_ASSIGN_ORG_ROLE: $.auto_role,
-                GF_USERS_AUTO_ASSIGN_ORG: "true",
-                GF_EXPLORE_ENABLED: "true",
+              },
+              ports_+: {
+                dashboard: { containerPort: 3000 },
               },
               volumeMounts_+: {
                 datadir: { mountPath: "/var/lib/grafana" },
               },
-              livenessProbe: {
-                httpGet: { path: "/api/org", port: "dashboard" },
-                timeoutSeconds: 3,
+              livenessProbe: self.readinessProbe {
+                initialDelaySeconds: 60,
+                successThreshold: 1,
               },
-              readinessProbe: self.livenessProbe {
+              readinessProbe: {
+                tcpSocket: { port: "dashboard" },
                 successThreshold: 2,
+                initialDelaySeconds: 30,
               },
             },
           },

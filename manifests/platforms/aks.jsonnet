@@ -38,20 +38,17 @@ local grafana = import "../components/grafana.jsonnet";
   kubeprod: kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
+  grafana_host:: "grafana." + $.external_dns_zone_name,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
 
   version: version,
 
   grafana: grafana {
-    email_domain: $.config.oauthProxy.authz_domain,
-    oauth2_client_id: $.config.oauthProxy.client_id,
-    oauth2_client_secret: $.config.oauthProxy.client_secret,
-    oauth2_scopes: "",
-    oauth2_auth_url: "",
-    oauth2_token_url: "",
+    oauth2_client_id:: $.config.oauthProxy.client_id,
+    oauth2_client_secret:: $.config.oauthProxy.client_secret,
     ingress+: {
-      host: "grafana." + $.external_dns_zone_name,
+      host: $.grafana_host,
     },
   },
 
