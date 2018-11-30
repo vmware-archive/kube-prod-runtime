@@ -1,5 +1,5 @@
-VERSION ?= $(shell git describe --tags --dirty)
-GIT_TAG ?= $(shell git rev-parse HEAD)
+VERSION ?= $(shell git rev-parse --short HEAD)
+RELEASES_BASE_URL ?=
 TARGETS ?= darwin/amd64 linux/amd64 windows/amd64
 MANIFEST_DIST_DIRS = lib components platforms
 
@@ -7,7 +7,7 @@ PACKAGE = kubeprod
 
 GO = go
 GOFLAGS =
-GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION) -X main.gitTag=$(GIT_TAG)'
+GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION) -X main.releasesBaseUrl=$(RELEASES_BASE_URL)'
 GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo -installsuffix netgo
 GOTESTFLAGS = $(GOFLAGS) -race
 GOFMT = gofmt
@@ -36,16 +36,16 @@ release: clean
 
 manifests: release
 	@set -e ; \
+	mkdir -p _dist/manifests/ ; \
+	echo $(VERSION) > _dist/manifests/VERSION ; \
+	for d in $(MANIFEST_DIST_DIRS); do \
+		cp -a ../manifests/$${d} _dist/manifests/ ; \
+	done ; \
 	for platform in $(TARGETS); do \
 		GOOS=$${platform%/*} ; \
 		GOARCH=$${platform#*/} ; \
 		ARTIFACTS_DIR=_dist/$${GOOS}-$${GOARCH}/bkpr-$(VERSION) ; \
-		for d in $(MANIFEST_DIST_DIRS); do \
-			mkdir -p $${ARTIFACTS_DIR}/manifests/ ; \
-			echo "cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/" ; \
-			cp -a ../manifests/$${d} $${ARTIFACTS_DIR}/manifests/ ; \
-			echo $(VERSION) > $${ARTIFACTS_DIR}/manifests/VERSION ; \
-		done ; \
+		cp -a _dist/manifests $${ARTIFACTS_DIR}/ ; \
 	done
 
 dist: archiver release manifests
