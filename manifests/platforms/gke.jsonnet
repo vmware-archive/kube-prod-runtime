@@ -44,8 +44,6 @@ local grafana = import "../components/grafana.jsonnet";
   version: version,
 
   grafana: grafana {
-    oauth2_client_id:: $.config.oauthProxy.client_id,
-    oauth2_client_secret:: $.config.oauthProxy.client_secret,
     ingress+: {
       host: "grafana." + $.external_dns_zone_name,
     },

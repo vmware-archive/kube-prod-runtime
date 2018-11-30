@@ -37,13 +37,6 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
   // datasources nor invite new users
   auto_role:: "Editor",
 
-  // OAuth2-related parameters
-  oauth2_client_id:: error "Missing OAuth2 client ID",
-  oauth2_client_secret:: error "Missing OAuth2 client secret",
-  oauth2_scopes:: error "Missing OAuth2 scopes",
-  oauth2_auth_url:: error "Missing OAuth2 authentication URL",
-  oauth2_token_url:: error "Missing OAuth2 token URL",
-
   svc: kube.Service($.p + "grafana") + $.metadata {
     target_pod: $.grafana.spec.template,
   },
@@ -71,19 +64,6 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
           },
         },
       ],
-    },
-  },
-
-  grafana_admin_config: kube.Secret(self.p + "grafana-admin-config") + $.metadata {
-    data_+: {
-      "grafana-admin-password": "admin",
-    },
-  },
-
-  google_oauth_secret: kube.Secret(self.p + "grafana-google-oauth") + $.metadata {
-    data_+: {
-      "google-client-id": $.oauth2_client_id,
-      "google-client-secret": $.oauth2_client_secret,
     },
   },
 
