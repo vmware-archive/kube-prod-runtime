@@ -102,7 +102,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 
                 sh "kubectl --namespace kube-system get po,deploy,svc,ing"
 
-                sh "./bin/kubeprod -v=1 install --manifests=manifests --config=kubeprod-autogen.json ${kubeprodArgs}"
+                sh "./bin/kubeprod -v=1 install ${kubeprodArgs} --manifests=manifests"
 
                 dnsSetup()
 
@@ -276,7 +276,7 @@ spec:
                                 def location = "eastus"
 
                                 try {
-                                    runIntegrationTest(platform, "aks --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                    runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
                                         container('az') {
                                             sh '''
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
@@ -315,7 +315,7 @@ az aks create                      \
                                         withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-                                            writeFile([file: 'kubeprod-autogen.json', text: """
+                                            writeFile([file: "${clusterName}-autogen.json", text: """
 {
   "dnsZone": "${dnsZone}",
   "contactEmail": "${adminEmail}",
@@ -337,7 +337,7 @@ az aks create                      \
 
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
 (import "manifests/platforms/aks.jsonnet") {
-  config:: import "kubeprod-autogen.json",
+  config:: import "${clusterName}-autogen.json",
   letsencrypt_environment: "staging",
   prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
 }
@@ -397,7 +397,7 @@ az aks create                      \
                                     def dnsZone = "${dnsPrefix}.${parentZone}"
 
                                     try {
-                                        runIntegrationTest(platform, "gke --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
+                                        runIntegrationTest(platform, "gke --config=${clusterName}-autogen.json --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
                                             container('gcloud') {
                                                 sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
                                                 sh """
@@ -422,7 +422,7 @@ gcloud container clusters create ${clusterName} \
 
                                             // NB: writeJSON doesn't work without approvals(?)
                                             // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-                                            writeFile([file: 'kubeprod-autogen.json', text: """
+                                            writeFile([file: "${clusterName}-autogen.json", text: """
 {
   "dnsZone": "${dnsZone}",
   "externalDns": {
@@ -436,10 +436,9 @@ gcloud container clusters create ${clusterName} \
 """
                                             ])
 
-
                                             writeFile([file: 'kubeprod-manifest.jsonnet', text: """
 (import "manifests/platforms/gke.jsonnet") {
-  config:: import "kubeprod-autogen.json",
+  config:: import "${clusterName}-autogen.json",
   letsencrypt_environment: "staging",
   prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
 }
