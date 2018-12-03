@@ -43,8 +43,6 @@ On macOS:
   sudo mv bkpr-${BKPR_VERSION}/kubeprod /usr/local/bin/
   ```
 
-Note: The Jsonnet manifests from the release are used while installing BKPR on the cluster.
-
 ### Build from source (Linux / macOS)
 
 To build the `kubeprod` binary from source you need the [Go](https://golang.org/) compiler. Please follow the [Go install guide](https://golang.org/doc/install) to install the compiler on your machine before proceeding with this section.
