@@ -401,7 +401,7 @@ local get_cm_web_hook_url = function(port, path) (
             }],
             containers_+: {
               default: kube.Container("node-exporter") {
-                image: "prom/node-exporter:v0.15.2",
+                image: "bitnami/node-exporter:0.17.0-r1",
                 local v = self.volumeMounts_,
                 args_+: {
                   "path.procfs": v.procfs.mountPath,
