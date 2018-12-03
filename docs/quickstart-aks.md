@@ -86,7 +86,6 @@ To bootstrap your Kubernetes cluster with BKPR:
   ```bash
   kubeprod install aks \
     --email ${AZURE_USER} \
-    --manifests ./bkpr-${BKPR_VERSION}/manifests \
     --dns-zone "${AZURE_DNS_ZONE}" \
     --dns-resource-group "${AZURE_RESOURCE_GROUP}"
   ```
