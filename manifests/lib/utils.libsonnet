@@ -22,6 +22,11 @@
 local kube = import "kube.libsonnet";
 
 {
+  path_join(prefix, suffix):: (
+    if std.endsWith(prefix, "/") then prefix + suffix
+    else prefix + "/" + suffix
+  ),
+
   trimUrl(str):: (
     if std.endsWith(str, "/") then
       std.substr(str, 1, std.length(str) - 1)

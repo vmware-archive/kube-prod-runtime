@@ -18,9 +18,11 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
+local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
 
 // TODO: add blackbox-exporter
 
@@ -32,10 +34,11 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
     },
   },
 
-  // Default to "Editor".
-  // User can create/modify dashboards & alert rules, but cannot create/edit
-  // datasources nor invite new users
-  auto_role:: "Editor",
+  prometheus:: error "No Prometheus service",
+
+  // Default to "Admin". See http://docs.grafana.org/permissions/overview/ for
+  // additional information.
+  auto_role:: "Admin",
 
   svc: kube.Service($.p + "grafana") + $.metadata {
     target_pod: $.grafana.spec.template,
@@ -57,10 +60,35 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
     },
   },
 
+  // Generates YAML configuration file for under provisioning/datasources
+  datasources: kube.ConfigMap($.p + "grafana-prometheus") + $.metadata {
+    local this = self,
+    datasources:: {
+      // Built-in datasource for BKPR's Prometheus
+      "BKPR Prometheus": {
+        type: "prometheus",
+        access: "server",
+        InsecureSkipVerify: "true",
+        orgId: 1,
+        url: "http://%s:9090/" % $.prometheus.host,
+      },
+    },
+    data+: {
+      _config:: {
+        apiVersion: 1,
+        datasources: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.datasources)],
+      },
+      "bkpr.yml": kubecfg.manifestYaml(self._config),
+    },
+  },
+
   grafana: kube.StatefulSet($.p + "grafana") + $.metadata {
     spec+: {
       template+: {
         spec+: {
+          volumes_+: {
+            datasources: kube.ConfigMapVolume($.datasources),
+          },
           containers_+: {
             grafana: kube.Container("grafana") {
               image: GRAFANA_IMAGE,
@@ -90,6 +118,11 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
               },
               volumeMounts_+: {
                 datadir: { mountPath: "/var/lib/grafana" },
+                datasources: {
+                  mountPath: utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
+                  subPath: "bkpr.yml",
+                  readOnly: true,
+                },
               },
               livenessProbe: self.readinessProbe {
                 initialDelaySeconds: 60,

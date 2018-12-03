@@ -44,6 +44,7 @@ local grafana = import "../components/grafana.jsonnet";
   version: version,
 
   grafana: grafana {
+    prometheus:: $.prometheus.prometheus.svc,
     ingress+: {
       host: "grafana." + $.external_dns_zone_name,
     },
