@@ -43,16 +43,6 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
 
   ingress: utils.AuthIngress($.p + "grafana") + $.metadata {
     local this = self,
-    metadata+: {
-      annotations+: {
-      // TODO: add annotations for whitelisting connections from NGINX pods,
-      // or alternatively use a network policy to prevent connextions from
-      // IPv4 addresses other than those from the NGINX ingress controller.
-        "nginx.ingress.kubernetes.io/configuration-snippet": "
-          proxy_set_header X-Email $email;
-          auth_request_set $email $upstream_http_x_auth_request_email;",
-      },
-    },
     spec+: {
       rules+: [
         {
@@ -80,8 +70,9 @@ local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
               },
               env_+: {
                 GF_AUTH_PROXY_ENABLED: "true",
-                GF_AUTH_PROXY_HEADER_NAME: "X-Email",
-                GF_AUTH_PROXY_HEADER_PROPERTY: "email",
+                GF_AUTH_PROXY_HEADER_NAME: "X-Auth-Request-User",
+                GF_AUTH_PROXY_HEADER_PROPERTY: "username",
+                GF_AUTH_PROXY_HEADERS: "Email:X-Auth-Request-Email",
                 GF_AUTH_PROXY_AUTO_SIGN_UP: "true",
                 GF_SERVER_PROTOCOL: "http",
                 GF_SERVER_DOMAIN: $.ingress.host,
