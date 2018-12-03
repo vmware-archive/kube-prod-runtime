@@ -249,7 +249,7 @@ spec:
                     }
                 }
             }
-        })
+        }, failFast: true)
 
     def platforms = [:]
 
@@ -478,6 +478,7 @@ gcloud container clusters create ${clusterName} \
         }
     }
 
+    platforms.failFast = true
     parallel platforms
 
     stage('Release') {
