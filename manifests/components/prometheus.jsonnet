@@ -380,6 +380,13 @@ local get_cm_web_hook_url = function(port, path) (
       local this = self,
       spec+: {
         template+: {
+          metadata+: {
+            annotations+: {
+              "prometheus.io/scrape": "true",
+              "prometheus.io/port": "9100",
+              "prometheus.io/path": "/metrics",
+            },
+          },
           spec+: {
             hostNetwork: true,
             hostPID: true,
