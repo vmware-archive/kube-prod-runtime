@@ -114,7 +114,6 @@ To bootstrap your Kubernetes cluster with BKPR:
   ```bash
   kubeprod install gke \
     --email "${GCLOUD_USER}" \
-    --manifests "./bkpr-${BKPR_VERSION}/manifests" \
     --dns-zone "${GCLOUD_DNS_ZONE}" \
     --project "${GCLOUD_PROJECT}" \
     --oauth-client-id "${GCLOUD_OAUTH_CLIENT_KEY}" \
