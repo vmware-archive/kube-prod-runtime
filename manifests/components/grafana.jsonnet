@@ -38,6 +38,13 @@ local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datas
 
   // Default to "Admin". See http://docs.grafana.org/permissions/overview/ for
   // additional information.
+  //
+  // This effectively grants "Admin" to all Org user/ users (which are
+  // authenticated by OAuth2 Proxy). An less secure alternative consists of
+  // explicitly setting an Admin user by specifying its user name in the
+  // GF_SECURITY_ADMIN_USER environment variable and its password in the
+  // GF_SECURITY_ADMIN_PASSWORD environment variable, and setting `auto_role`
+  // to "Editor".
   auto_role:: "Admin",
 
   svc: kube.Service($.p + "grafana") + $.metadata {
