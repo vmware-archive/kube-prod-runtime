@@ -38,7 +38,6 @@ local grafana = import "../components/grafana.jsonnet";
   kubeprod: kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
-  grafana_host:: "grafana." + $.external_dns_zone_name,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
 
@@ -47,7 +46,7 @@ local grafana = import "../components/grafana.jsonnet";
   grafana: grafana {
     prometheus:: $.prometheus.prometheus.svc,
     ingress+: {
-      host: $.grafana_host,
+      host: "grafana." + $.external_dns_zone_name,
     },
   },
 
