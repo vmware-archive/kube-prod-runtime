@@ -112,7 +112,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 dir('tests') {
                     try {
                         ansiColor('xterm') {
-                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=4 --skip '${skip}' -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
+                            sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=8 --skip '${skip}' -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
                         }
                     } catch (error) {
                         sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
