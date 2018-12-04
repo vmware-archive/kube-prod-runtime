@@ -60,7 +60,7 @@ local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datas
     },
   },
 
-  // Generates YAML configuration file for under provisioning/datasources
+  // Generates YAML configuration under provisioning/datasources/
   datasources: kube.ConfigMap($.p + "grafana-prometheus") + $.metadata {
     local this = self,
     datasources:: {
