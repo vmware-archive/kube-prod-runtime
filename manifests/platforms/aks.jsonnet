@@ -29,6 +29,7 @@ local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
 local fluentd_es = import "../components/fluentd-es.jsonnet";
 local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
+local grafana = import "../components/grafana.jsonnet";
 
 {
   config:: error "no kubeprod configuration",
@@ -41,6 +42,13 @@ local kibana = import "../components/kibana.jsonnet";
   letsencrypt_environment:: "prod",
 
   version: version,
+
+  grafana: grafana {
+    prometheus:: $.prometheus.prometheus.svc,
+    ingress+: {
+      host: "grafana." + $.external_dns_zone_name,
+    },
+  },
 
   edns: edns {
     azconf: kube.Secret(edns.p + "external-dns-azure-conf") {
