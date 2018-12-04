@@ -79,6 +79,13 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
   daemonset: kube.DaemonSet($.p + "fluentd-es") + $.metadata {
     spec+: {
       template+: $.criticalPod {
+        metadata+: {
+          annotations+: {
+            "prometheus.io/scrape": "true",
+            "prometheus.io/port": "24231",
+            "prometheus.io/path": "/metrics",
+          }
+        },
         spec+: {
           containers_+: {
             fluentd_es: kube.Container("fluentd-es") {
