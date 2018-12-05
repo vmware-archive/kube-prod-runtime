@@ -22,13 +22,16 @@ package integration
 import (
 	"encoding/json"
 	"fmt"
+	"time"
 
-	. "github.com/onsi/ginkgo"
-	. "github.com/onsi/gomega"
-
+	"github.com/onsi/gomega/types"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
+
+	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/ginkgo/extensions/table"
+	. "github.com/onsi/gomega"
 )
 
 const am_path = "/alertmanager"
@@ -80,6 +83,58 @@ func countEndpoints(endpoints []endpoint) int {
 func countAlerts(alerts []alert) int {
 	return len(alerts)
 }
+
+var _ = Describe("Exporters", func() {
+	var c kubernetes.Interface
+
+	BeforeEach(func() {
+		c = kubernetes.NewForConfigOrDie(clusterConfigOrDie())
+	})
+
+	DescribeTable("Exported timeseries", func(selector string, match types.GomegaMatcher) {
+		params := map[string]string{
+			"match[]": selector,
+			"start":   fmt.Sprintf("%d", time.Now().Add(-20*time.Minute).Unix()),
+		}
+		resultRaw, err := c.CoreV1().
+			Services("kubeprod").
+			ProxyGet("http", "prometheus", "9090", "api/v1/series", params).
+			DoRaw()
+		Expect(err).NotTo(HaveOccurred())
+
+		resp := promResponse{}
+		json.Unmarshal(resultRaw, &resp)
+		var series []map[string]string
+		json.Unmarshal(resp.Data, &series)
+
+		fmt.Fprintf(GinkgoWriter, "%s found %d timeseries:\n", selector, len(series))
+		for i, s := range series {
+			if i >= 10 {
+				fmt.Fprintf(GinkgoWriter, "(truncated ...)\n")
+				break
+			}
+			fmt.Fprintf(GinkgoWriter, "%s{", s["__name__"])
+			for k, v := range s {
+				if k != "__name__" {
+					fmt.Fprintf(GinkgoWriter, "%s=%q,", k, v)
+				}
+			}
+			fmt.Fprintf(GinkgoWriter, "}\n")
+		}
+
+		Expect(series).To(match)
+	},
+		Entry("prometheus", `prometheus_tsdb_head_chunks{kubernetes_namespace="kubeprod",name="prometheus"}`, Not(BeEmpty())),
+		Entry("alertmanager", `alertmanager_peer_position`, Not(BeEmpty())),
+		Entry("kube-state-metrics", `kube_deployment_status_replicas{kubernetes_namespace="kubeprod",deployment="nginx-ingress-controller"}`, Not(BeEmpty())),
+		Entry("node-exporter", `node_cpu_seconds_total`, Not(BeEmpty())),
+		Entry("cert-manager", `process_start_time_seconds{kubernetes_namespace="kubeprod",name="cert-manager"}`, Not(BeEmpty())),
+		Entry("elasticsearch", `elasticsearch_cluster_health_number_of_nodes{cluster="elasticsearch-cluster"}`, HaveLen(3)),
+		Entry("fluentd-es", `fluentd_output_status_buffer_total_bytes{type="elasticsearch"}`, Not(BeEmpty())),
+		Entry("external-dns", `process_start_time_seconds{kubernetes_namespace="kubeprod",name="external-dns"}`, Not(BeEmpty())),
+		Entry("nginx-ingress", `nginx_ingress_controller_nginx_process_requests_total{controller_namespace="kubeprod",controller_class="nginx"}`, Not(BeEmpty())),
+	)
+})
 
 var _ = Describe("Monitoring", func() {
 	var c kubernetes.Interface
