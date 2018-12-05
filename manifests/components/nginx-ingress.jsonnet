@@ -19,7 +19,7 @@
 
 local kube = import "../lib/kube.libsonnet";
 
-local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
+local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.21.0-r0";
 
 {
   p:: "",
@@ -49,42 +49,6 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
   },
 
   udpconf: kube.ConfigMap($.p + "udp-services") + $.metadata {
-  },
-
-  default: {
-    svc: kube.Service($.p + "default-http-backend") + $.metadata {
-      target_pod: $.default.deploy.spec.template,
-      port: 80,
-    },
-
-    deploy: kube.Deployment($.p + "default-http-backend") + $.metadata {
-      spec+: {
-        template+: {
-          spec+: {
-            terminationGracePeriodSeconds: 30,
-            containers_+: {
-              default: kube.Container("default-http-backend") {
-                image: "gcr.io/google_containers/defaultbackend:1.4",
-                readinessProbe: {
-                  httpGet: {path: "/healthz", port: 8080, scheme: "HTTP"},
-                  timeoutSeconds: 5,
-                },
-                livenessProbe: self.readinessProbe {
-                  initialDelaySeconds: 30,
-                },
-                ports_+: {
-                  default: {containerPort: 8080},
-                },
-                resources: {
-                  limits: {cpu: "10m", memory: "20Mi"},
-                  requests: self.limits,
-                },
-              },
-            },
-          },
-        },
-      },
-    },
   },
 
   ingressControllerClusterRole: kube.ClusterRole($.p+"nginx-ingress-controller") {
@@ -210,7 +174,6 @@ local NGNIX_INGRESS_IMAGE = "bitnami/nginx-ingress-controller:0.19.0-r8";
               },
               args_+: {
                 local fqname(o) = "%s/%s" % [o.metadata.namespace, o.metadata.name],
-                "default-backend-service": fqname($.default.svc),
                 configmap: fqname($.config),
                 // publish-service requires Service.Status.LoadBalancer.Ingress
                 "publish-service": fqname($.svc),

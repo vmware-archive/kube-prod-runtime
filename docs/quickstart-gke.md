@@ -51,6 +51,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   8. Finally, add the following redirect URIs and hit __Create__ .
       + https://prometheus.{GCLOUD_DNS_ZONE}/oauth2/callback.
       + https://kibana.{GCLOUD_DNS_ZONE}/oauth2/callback.
+      + https://grafana.{GCLOUD_DNS_ZONE}/oauth2/callback.
 
   > Replace `{GCLOUD_DNS_ZONE}` with the value of the `GCLOUD_DNS_ZONE` environment variable*
 

@@ -1,0 +1,158 @@
+/*
+ * Bitnami Kubernetes Production Runtime - A collection of services that makes it
+ * easy to run production workloads in Kubernetes.
+ *
+ * Copyright 2018 Bitnami
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *   http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+local kube = import "../lib/kube.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
+local utils = import "../lib/utils.libsonnet";
+
+local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
+local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
+
+// TODO: add blackbox-exporter
+
+{
+  p:: "",
+  metadata:: {
+    metadata+: {
+      namespace: "kubeprod",
+    },
+  },
+
+  prometheus:: error "No Prometheus service",
+
+  // Default to "Admin". See http://docs.grafana.org/permissions/overview/ for
+  // additional information.
+  //
+  // This effectively grants "Admin" to all Org user/ users (which are
+  // authenticated by OAuth2 Proxy). An less secure alternative consists of
+  // explicitly setting an Admin user by specifying its user name in the
+  // GF_SECURITY_ADMIN_USER environment variable and its password in the
+  // GF_SECURITY_ADMIN_PASSWORD environment variable, and setting `auto_role`
+  // to "Editor".
+  auto_role:: "Admin",
+
+  svc: kube.Service($.p + "grafana") + $.metadata {
+    target_pod: $.grafana.spec.template,
+  },
+
+  ingress: utils.AuthIngress($.p + "grafana") + $.metadata {
+    local this = self,
+    spec+: {
+      rules+: [
+        {
+          host: this.host,
+          http: {
+            paths: [
+              { path: "/", backend: $.svc.name_port },
+            ],
+          },
+        },
+      ],
+    },
+  },
+
+  // Generates YAML configuration under provisioning/datasources/
+  datasources: kube.ConfigMap($.p + "grafana-prometheus") + $.metadata {
+    local this = self,
+    datasources:: {
+      // Built-in datasource for BKPR's Prometheus
+      "BKPR Prometheus": {
+        type: "prometheus",
+        access: "server",
+        InsecureSkipVerify: "true",
+        orgId: 1,
+        url: "http://%s:9090/" % $.prometheus.host,
+      },
+    },
+    data+: {
+      _config:: {
+        apiVersion: 1,
+        datasources: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.datasources)],
+      },
+      "bkpr.yml": kubecfg.manifestYaml(self._config),
+    },
+  },
+
+  grafana: kube.StatefulSet($.p + "grafana") + $.metadata {
+    spec+: {
+      template+: {
+        spec+: {
+          volumes_+: {
+            datasources: kube.ConfigMapVolume($.datasources),
+          },
+          containers_+: {
+            grafana: kube.Container("grafana") {
+              image: GRAFANA_IMAGE,
+              resources: {
+                limits: { cpu: "100m", memory: "100Mi" },
+                requests: self.limits,
+              },
+              env_+: {
+                GF_AUTH_PROXY_ENABLED: "true",
+                GF_AUTH_PROXY_HEADER_NAME: "X-Auth-Request-User",
+                GF_AUTH_PROXY_HEADER_PROPERTY: "username",
+                GF_AUTH_PROXY_HEADERS: "Email:X-Auth-Request-Email",
+                GF_AUTH_PROXY_AUTO_SIGN_UP: "true",
+                GF_SERVER_PROTOCOL: "http",
+                GF_SERVER_DOMAIN: $.ingress.host,
+                GF_SERVER_ROOT_URL: "https://" + $.ingress.host,
+                GF_USERS_AUTO_ASSIGN_ORG_ROLE: $.auto_role,
+                GF_USERS_AUTO_ASSIGN_ORG: "true",
+                GF_USERS_ALLOW_SIGN_UP: "false",
+                GF_EXPLORE_ENABLED: "true",
+                GF_LOG_MODE: "console",
+                GF_LOG_LEVEL: "warn",
+                GF_METRICS_ENABLED: "true",
+              },
+              ports_+: {
+                dashboard: { containerPort: 3000 },
+              },
+              volumeMounts_+: {
+                datadir: { mountPath: "/var/lib/grafana" },
+                datasources: {
+                  mountPath: utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
+                  subPath: "bkpr.yml",
+                  readOnly: true,
+                },
+              },
+              livenessProbe: self.readinessProbe {
+                initialDelaySeconds: 60,
+                successThreshold: 1,
+              },
+              readinessProbe: {
+                tcpSocket: { port: "dashboard" },
+                successThreshold: 2,
+                initialDelaySeconds: 30,
+              },
+            },
+          },
+          securityContext: {
+            // make pvc owned by this gid (Bitnami non-root gid)
+            fsGroup: 1001,
+          },
+        },
+      },
+      volumeClaimTemplates_+: {
+        datadir: {
+          storage: "1Gi",
+        },
+      },
+    },
+  },
+}

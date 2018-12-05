@@ -21,11 +21,6 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local path_join(prefix, suffix) = (
-  if std.endsWith(prefix, "/") then prefix + suffix
-  else prefix + "/" + suffix
-);
-
 local PROMETHEUS_IMAGE = "bitnami/prometheus:2.4.3-r31";
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
@@ -212,7 +207,7 @@ local get_cm_web_hook_url = function(port, path) (
             annotations+: {
               "prometheus.io/scrape": "true",
               "prometheus.io/port": std.toString(PROMETHEUS_PORT),
-              "prometheus.io/path": path_join($.ingress.prom_path, "metrics"),
+              "prometheus.io/path": utils.path_join($.ingress.prom_path, "metrics"),
             },
           },
           spec+: {
@@ -319,7 +314,7 @@ local get_cm_web_hook_url = function(port, path) (
             annotations+: {
               "prometheus.io/scrape": "true",
               "prometheus.io/port": std.toString(ALERTMANAGER_PORT),
-              "prometheus.io/path": path_join($.ingress.am_path, "metrics"),
+              "prometheus.io/path": utils.path_join($.ingress.am_path, "metrics"),
             },
           },
           spec+: {
@@ -347,7 +342,7 @@ local get_cm_web_hook_url = function(port, path) (
                   storage: {mountPath: "/opt/bitnami/alertmanager/data"},
                 },
                 livenessProbe+: {
-                  httpGet: {path: path_join($.ingress.am_path, "-/healthy"), port: ALERTMANAGER_PORT},
+                  httpGet: {path: utils.path_join($.ingress.am_path, "-/healthy"), port: ALERTMANAGER_PORT},
                   initialDelaySeconds: 60,
                   failureThreshold: 10,
                 },
