@@ -35,10 +35,10 @@ def waitForRollout(String namespace, int minutes) {
             timeout(time: minutes, unit: 'MINUTES') {
                 sh """
 set +x
-for deploy in \$(kubectl --namespace ${namespace} get deploy --output name)
+for deploy in \$(kubectl --namespace ${namespace} get deploy,sts --output name)
 do
   echo -n "\nWaiting for rollout of \${deploy} in ${namespace} namespace"
-  while ! \$(kubectl --namespace ${namespace} rollout status \${deploy} --watch=false | grep -q "successfully rolled out")
+  while ! \$(kubectl --namespace ${namespace} rollout status \${deploy} --watch=false | grep -q -E 'successfully rolled out|rollout status is only available for|rolling update complete|partitioned roll out complete')
   do
     echo -n "."
     sleep 3
