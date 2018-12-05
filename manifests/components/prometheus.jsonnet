@@ -375,6 +375,13 @@ local get_cm_web_hook_url = function(port, path) (
       local this = self,
       spec+: {
         template+: {
+          metadata+: {
+            annotations+: {
+              "prometheus.io/scrape": "true",
+              "prometheus.io/port": "9100",
+              "prometheus.io/path": "/metrics",
+            },
+          },
           spec+: {
             hostNetwork: true,
             hostPID: true,
@@ -389,7 +396,7 @@ local get_cm_web_hook_url = function(port, path) (
             }],
             containers_+: {
               default: kube.Container("node-exporter") {
-                image: "prom/node-exporter:v0.15.2",
+                image: "bitnami/node-exporter:0.17.0-r1",
                 local v = self.volumeMounts_,
                 args_+: {
                   "path.procfs": v.procfs.mountPath,
