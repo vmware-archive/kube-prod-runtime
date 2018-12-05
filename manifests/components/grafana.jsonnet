@@ -23,6 +23,7 @@ local utils = import "../lib/utils.libsonnet";
 
 local GRAFANA_IMAGE = "bitnami/grafana:5.3.4-r6";
 local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
+local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
 
 // TODO: add blackbox-exporter
 
@@ -68,15 +69,14 @@ local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datas
   },
 
   // Generates YAML configuration under provisioning/datasources/
-  datasources: kube.ConfigMap($.p + "grafana-prometheus") + $.metadata {
+  datasources: kube.ConfigMap($.p + "grafana-prometheus-datasource") + $.metadata {
     local this = self,
     datasources:: {
       // Built-in datasource for BKPR's Prometheus
       "BKPR Prometheus": {
         type: "prometheus",
-        access: "server",
-        InsecureSkipVerify: "true",
-        orgId: 1,
+        access: "proxy",
+        isDefault: true,
         url: "http://%s:9090/" % $.prometheus.host,
       },
     },
@@ -124,7 +124,7 @@ local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datas
                 dashboard: { containerPort: 3000 },
               },
               volumeMounts_+: {
-                datadir: { mountPath: "/var/lib/grafana" },
+                datadir: { mountPath: GRAFANA_DATA_MOUNTPOINT },
                 datasources: {
                   mountPath: utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
                   subPath: "bkpr.yml",
