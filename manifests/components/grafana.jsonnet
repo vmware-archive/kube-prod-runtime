@@ -77,7 +77,8 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
         type: "prometheus",
         access: "proxy",
         isDefault: true,
-        url: "http://%s:9090/" % $.prometheus.host,
+        //url: "http://%s:9090/" % $.prometheus.host,
+        url: $.prometheus.http_url,
       },
     },
     data+: {
