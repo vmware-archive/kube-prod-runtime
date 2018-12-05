@@ -1,19 +1,21 @@
 # Prometheus Time Series Database migration
-This article provides a set of guidelines to migrate the time series database from an existing Prometheus deployment to the Bitnami Kubernetes Production Runtime one.
+This article provides a set of guidelines to migrate the time series database (TSDB from now on) from an existing Prometheus deployment to the Bitnami Kubernetes Production Runtime one.
 
 ## Prerequisites
 The following prerequisites should be met before starting with the migration process:
 
 * You ave a healthy Kubernetes cluster running.
-* You have a Prometheus deployment that *matches the BKPR Prometheus version*, which can be obtained [here]([GitHub - bitnami/kube-prod-runtime: A standard runtime environment for Kubernetes]https://github.com/bitnami/kube-prod-runtime#release-compatibility).
+* You have a Prometheus deployment that *matches the BKPR Prometheus version*, which can be obtained [here](https://github.com/bitnami/kube-prod-runtime#release-compatibility).
+
 This article will not cover the upgrade process of Prometheus itself. If you need to update your Prometheus deployment, check the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/migration/)
 
 ## Overview
-This chapter provides an overview of the required steps to migrate the Prometheus time series database (TSDB from now on) from an already running deployment to the BKPR Prometheus one.
 
-This process is meant to provide a zero downtime migration to the new StatefulSet  by having two Prometheus instances running at the same time during the whole process. These instances will be modified to include a sidecar container that will deploy an *rsync* client and server with access to the Prometheus data volume in order to move a Prometheus TSDB snapshot from one pod to another.
+This chapter provides an overview of the required steps to migrate the Prometheus TSDB from an already running deployment to the BKPR Prometheus one.
 
-As Prometheus doesn’t include yet a *flush* method to dump all the WAL file that is being written into a snapshot with a block format that doesn’t overlap time ranges (see [this issue](https://github.com/prometheus/tsdb/issues/346) for more context) it is necessary to sync with the Prometheus TSDB compact times, in order to ensure a minimal data loss (around 3 minutes).
+This process is meant to provide a zero downtime migration to the new StatefulSet by having two Prometheus instances running at the same time. These instances will be modified to include a sidecar container that will deploy an *rsync* client and server with access to the Prometheus data volume in order to move a Prometheus TSDB snapshot from one pod to another.
+
+As Prometheus doesn’t include yet a *flush* method to dump all the WAL file that is being written into a snapshot with a block format that doesn’t overlap time ranges (see [this issue](https://github.com/prometheus/tsdb/issues/346) for more context) it is necessary to sync with the Prometheus TSDB compact times, in order to ensure a minimal data loss (less than 5 minutes).
 
 These are the steps that will be made to accomplish this migration:
 
@@ -23,6 +25,7 @@ These are the steps that will be made to accomplish this migration:
 * Perform the snapshot and restore it in the new deployment
 
 ## Deploying the sidecar rsync server
+
 In order to access via rsync to the Prometheus TSDB snapshots, it will be necessary to deploy a rsync server with a minimal configuration to make it so.
 
 This way, you can use the following jsonnet snippet to add that sidecar container:
@@ -142,6 +145,7 @@ prometheus-rsync.NAMESPACE.svc.cluster.local (10.130.32.5:873) open
 ```
 
 ## Modifying the `kubeprod-manifest.jsonnet` to add the sidecar rsync container
+
 The `kubeprod-manifest.jsonnet` file will contain all the custom configuration you want to apply to the jsonnet manifests.  In this case, in order to add the rsync sidecar container the following configuration will have to be added:
 
 ```jsonnet
@@ -203,7 +207,7 @@ and:
 > Make sure previously you have deployed a test file in your Prometheus data directory so you can rsync it to the new container
 
 ## Syncing with the compact times of the Prometheus database
-Now that all the bits are in place you are ready to perform the Prometheus TSDB migration. To do so, you will first have to sync with the TSDB compact times of Prometheus to ensure the minimal data loss.
+Now that all bits are in place you are ready to perform the Prometheus TSDB migration. To do so, you will first have to sync with the TSDB compact times of Prometheus to ensure the minimal data loss.
 
 ### Doing a Prometheus TSDB migration
 
@@ -237,11 +241,11 @@ If I do this, I will find the following:
 
 This way I would have lost 1 hour of Prometheus metrics.
 
-In order to ensure the minimal data loss, the new Prometheus deployment *must* be deployed 55 mins (ensuring with this less than 5 mins of data loss) before  the next TSDB compact happens, so the new Prometheus deployment can start scrapping data before the snapshot is restored. Continuing with the last example:
+In order to ensure a minimal data loss, the new Prometheus deployment should be deployed 55 mins (ensuring with this less than 5 mins of data loss) before  the next TSDB compact happens, so the new Prometheus deployment can start scrapping data before the snapshot is restored. Continuing with the last example:
 
 If I notice the next TSDB compact will happen at 13:00 UTC I should deploy BKPR Prometheus in the cluster at 12:05 UTC, so Prometheus can start scrapping data and fill the gap that the snapshot will create. Then, at 13:00 UTC I will create a Prometheus snapshot and will restore it in the new deployment, creating the following:
 
-[../../images/prometheus-migration/tsdb_restored.png]
+![prometheus_successful_migration](../../images/prometheus-migration/tsdb_restored.png)
 
 ## Create a snapshot and restore it in the new Prometheus deployment
 
