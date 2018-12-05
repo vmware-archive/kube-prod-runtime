@@ -384,9 +384,6 @@
 
       updateStrategy: {
         type: "RollingUpdate",
-        rollingUpdate: {
-          partition: 0,
-        },
       },
 
       template: {
