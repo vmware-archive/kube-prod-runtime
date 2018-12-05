@@ -105,7 +105,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
   ```bash
   kubectl create clusterrolebinding cluster-admin-binding \
     --clusterrole=cluster-admin \
-    --user=$(gcloud info --format='value(config.account)')
+    --user=${GCLOUD_USER}
   ```
 
 ### Step 2: Deploy BKPR
