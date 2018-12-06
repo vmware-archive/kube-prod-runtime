@@ -8,48 +8,9 @@ The guide assumes you have a Kubernetes cluster with BKPR already installed. The
 
 Follow the instructions in the [Helm installation guide](https://docs.helm.sh/using_helm/#installing-the-helm-client) to install the latest release of the Helm binary to your machine.
 
-## Step 2: Install the Tiller server
+## Step 2: Install Tiller securely
 
-Tiller is the server-side component of Helm that runs inside your Kubernetes cluster. To install the Tiller server to the cluster you should use the `helm` client installed by the previous step. However, before you do so, for RBAC enabled clusters you need to create a service account for the Tiller server.
-
-For the purposes of this guide we'll create a Kubernetes service account with super-user cluster access (`cluster-admin`). Refer to the guide on [Tiller and Role-Based Access Control](https://github.com/helm/helm/blob/master/docs/rbac.md) to learn about restricting the scope of Tiller in the cluster.
-
-Begin by creating a file named `rbac-tiller.yaml` with the following content:
-
-```yaml
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: tiller
-  namespace: kube-system
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: tiller
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-admin
-subjects:
-  - kind: ServiceAccount
-    name: tiller
-    namespace: kube-system
-```
-
-Create the service account using the `kubectl` command tool:
-
-```bash
-kubectl create -f rbac-tiller.yaml
-```
-
-Next, use the `helm` client to install the Tiller server to the cluster:
-
-```bash
-helm init --service-account tiller
-```
-
-You have now installed Tiller on your cluster.
+Tiller is the server-side component of Helm that runs inside your Kubernetes cluster. Follow the Helm documentation to [configure role-based access control](https://docs.helm.sh/using_helm/#role-based-access-control) and [install Tiller securely to the cluster](https://docs.helm.sh/using_helm/#using-ssl-between-helm-and-tiller).
 
 ## Step 3: Install Kubeapps
 
@@ -67,16 +28,21 @@ Begin by configuring the Helm client to use the Bitnami charts repository.
 helm repo add bitnami https://charts.bitnami.com/bitnami
 ```
 
-Now you can easily Install Kubeapps on your Kubernetes cluster with the following command:
+Install Kubeapps on your Kubernetes cluster with the following command:
 
 ```bash
-helm install --name kubeapps --namespace kubeapps bitnami/kubeapps \
-    --set mongodb.metrics.enabled=true \
-    --set ingress.enabled=true \
-    --set ingress.hosts[0].name=kubeapps.[YOUR-BKPR-ZONE] \
-    --set ingress.hosts[0].tls=true \
-    --set ingress.hosts[0].tlsSecret=kubeapps-tls \
-    --set ingress.hosts[0].certManager=true
+helm install --tls \
+  --name kubeapps --namespace kubeapps \
+  --set tillerProxy.tls.ca="$(cat ca.cert.pem)" \
+  --set tillerProxy.tls.key="$(cat helm.key.pem)" \
+  --set tillerProxy.tls.cert="$(cat helm.cert.pem)" \
+  --set ingress.enabled=true \
+  --set ingress.hosts[0].name=kubeapps.[YOUR-BKPR-ZONE] \
+  --set ingress.hosts[0].tls=true \
+  --set ingress.hosts[0].tlsSecret=kubeapps-tls \
+  --set ingress.hosts[0].certManager=true \
+  --set mongodb.metrics.enabled=true \
+  bitnami/kubeapps
 ```
 
 The command line flags provided in the above command enable the Ingress resource in the Kubeapps chart and also enable TLS support. Once installed, you will be able to generate an access token and then access the Kubeapps dashboard securely (HTTPS) over the Internet at `https://kubeapps.[YOUR-BKPR-ZONE]`.
