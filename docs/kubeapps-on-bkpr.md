@@ -85,7 +85,7 @@ The command line flags provided in the above command enable the Ingress resource
 
 _Please replace the placeholder string `[YOUR-BKPR-ZONE]` in the above command with the DNS zone configured while setting up BKPR in you Kubernetes cluster._
 
-However, if you not would like the dashboard to be accessible externally over the Internet, please disable the Ingress support while installing the chart and follow the post-install instructions to access the dashboard using a proxy connection to the cluster.
+Kubeapps requires users to login before making requests.  However, if you would not like the dashboard to be accessible externally over the Internet, please disable the Ingress support while installing the chart.  If Ingress is disabled, you need to follow the Kubeapps post-install instructions to access the dashboard using a proxy connection to the cluster.
 
 The chart parameter `mongodb.metrics.enabled=true` in the above command, enables the Prometheus exporter for MongoDB in the Kubeapps chart.
 
