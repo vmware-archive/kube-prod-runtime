@@ -57,7 +57,7 @@ Voila, you have installed Helm to your cluster.
 
 Kubeapps is a open-source web-based UI for deploying and managing applications in Kubernetes clusters. It provides you a dashboard to:
 
-    -  Browse Helm charts from public or your own private chart repositories and deploy them to your cluster
+    - Browse Helm charts from public or your own private chart repositories and deploy them to your cluster
     - Upgrade, manage and delete the applications that are deployed in your cluster
     - Browse and provision external services from the Service Catalog
 
