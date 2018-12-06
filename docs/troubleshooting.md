@@ -13,10 +13,10 @@
 
 If you notice the following error message from `az aks create`, it could indicate the Azure authentication token has expired.
 
-    ```
-    Operation failed with status: 'Bad Request'. Details: Service principal clientID: <REDACTED>
-    not found in Active Directory tenant <REDACTED>, Please see https://aka.ms/acs-sp-help for more details.
-    ```
+```
+Operation failed with status: 'Bad Request'. Details: Service principal clientID: <REDACTED>
+not found in Active Directory tenant <REDACTED>, Please see https://aka.ms/acs-sp-help for more details.
+```
 
 __Resolution__:
 
