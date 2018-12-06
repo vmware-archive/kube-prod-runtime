@@ -284,8 +284,9 @@ func (conf *GKEConfig) Generate(ctx context.Context) error {
 				Do()
 			if err != nil {
 				// FIXME: retry on etag conflict
-				return fmt.Errorf("failed to set IAM policy on project %q: user lacks "+
-					"privileges to grant roles/dns.admin role to service account %s: %v",
+				return fmt.Errorf("failed to set IAM policy on project %q "+
+					"(possibly caused by not having privileges to grant "+
+					"roles/dns.admin role to service account %s): %v",
 					conf.ExternalDNS.Project, sa.Email, err)
 			}
 			log.Infof("Granted roles/dns.admin to service account %s", sa.Email)
