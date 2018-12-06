@@ -37,10 +37,10 @@ helm install --tls \
   --set tillerProxy.tls.key="$(cat helm.key.pem)" \
   --set tillerProxy.tls.cert="$(cat helm.cert.pem)" \
   --set ingress.enabled=true \
+  --set ingress.certManager=true \
   --set ingress.hosts[0].name=kubeapps.[YOUR-BKPR-ZONE] \
   --set ingress.hosts[0].tls=true \
   --set ingress.hosts[0].tlsSecret=kubeapps-tls \
-  --set ingress.hosts[0].certManager=true \
   --set mongodb.metrics.enabled=true \
   bitnami/kubeapps
 ```
@@ -84,5 +84,7 @@ You should now be able to login to the Kubeapps dashboard using the displayed ac
 
 ## Further reading
 
-- [Application Developer's Reference Guide](application-developers-reference-guide.md)
 - [BKPR FAQ](FAQ.md)
+- [Application Developer's Reference Guide](application-developers-reference-guide.md)
+- [Get Started with Kubeapps](https://github.com/kubeapps/kubeapps/blob/master/docs/user/getting-started.md)
+- [Securing Kubeapps installation](https://github.com/kubeapps/kubeapps/blob/master/docs/user/securing-kubeapps.md)
