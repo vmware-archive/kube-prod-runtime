@@ -14,7 +14,7 @@ Follow the instructions in [Helm installation guide](https://docs.helm.sh/using_
 
 Tiller is the server-side component of Helm that runs inside your Kubernetes cluster. To install the Tiller server to the cluster you should use the `helm` client installed by the previous step. However, before we do so, for RBAC enabled clusters we need to create a service account for the Tiller server.
 
-For the purposes of this guide we'll create a Kubernetes service account with super-user cluster access (`cluster-admin`), however in a production environment you would want to exercise restrictions. Check out the guide on [Tiller and Role-Based Access Control](https://github.com/helm/helm/blob/master/docs/rbac.md) to learn more.
+For the purposes of this guide we'll create a Kubernetes service account with super-user cluster access (`cluster-admin`). Check out the guide on [Tiller and Role-Based Access Control](https://github.com/helm/helm/blob/master/docs/rbac.md) to learn about restricting the scope of Tiller in the cluster.
 
 Begin by creating a file named `rbac-tiller.yaml` with the following content:
 
@@ -72,24 +72,6 @@ helm repo add bitnami https://charts.bitnami.com/bitnami
 Now you can easily install Kubeapps to your Kubernetes cluster with the following command:
 
 ```bash
-helm install \
-    --name kubeapps \
-    --namespace kubeapps \
-    --set mongodb.metrics.enabled=true \
-    bitnami/kubeapps
-```
-
-In addition to installing Kubeapps, the `mongodb.metrics.enabled=true` in the command enables the Prometheus exporter for MongoDB.
-
-> **Tip**:
->
-> When installing applications to your cluster, remember to enable Prometheus exporters in applications that support them. The exported instrumentation data will be automatically scrapped by the Prometheus server installed in the cluster by BKPR and will provide useful insights into the clusters performance.
-
-Access to the Kubeapps dashboard installed using the above command is only possible using a proxy connection to the cluster. Please follow the instructions displayed in the output of the command for accessing the dashboard.
-
-However, if you would like the dashboard to be accessible externally over the Internet, you can do so with the following command:
-
-```bash
 helm install --name kubeapps --namespace kubeapps bitnami/kubeapps \
     --set mongodb.metrics.enabled=true \
     --set ingress.enabled=true \
@@ -103,9 +85,17 @@ The command line flags provided in the above command enable the Ingress resource
 
 _Please replace the placeholder string `[YOUR-BKPR-ZONE]` in the above command with the DNS zone configured while setting up BKPR in you Kubernetes cluster._
 
+However, if you not would like the dashboard to be accessible externally over the Internet, please disable the Ingress support while installing the chart and follow the post-install instructions to access the dashboard using a proxy connection to the cluster.
+
+The chart parameter `mongodb.metrics.enabled=true` in the above command, enables the Prometheus exporter for MongoDB in the Kubeapps chart.
+
+> **Tip**:
+>
+> When installing applications to your cluster, remember to enable Prometheus exporters in applications that support them. The exported instrumentation data will be automatically scrapped by the Prometheus server installed in the cluster by BKPR and will provide useful insights into the clusters performance.
+
 ## Step 4: Generate a access token
 
-The Kubeapps dashboard will prompt you to provide a access token before allowing you to make any changes to the Kubernetes cluster. For the purpose of this guide we will generate a super-user access token using the commands listed below. But for production clusters you would like to exercise some restrictions. Check out the [Access Control in Kubeapps](https://github.com/kubeapps/kubeapps/blob/master/docs/user/access-control.md) document to learn more.
+The Kubeapps dashboard will prompt you to provide a access token before allowing you to make any changes to the Kubernetes cluster. For the purpose of this guide we will generate a super-user access token using the commands listed below. Check out the [Access Control in Kubeapps](https://github.com/kubeapps/kubeapps/blob/master/docs/user/access-control.md) document to learn about specifying access privileges for users of the dashboard.
 
 ![Kubeapps Login](images/kubeapps-login.png)
 
