@@ -69,7 +69,7 @@ Begin by configuring the Helm client to use the Bitnami charts repository.
 helm repo add bitnami https://charts.bitnami.com/bitnami
 ```
 
-Now you can easily Kubeapps to your Kubernetes cluster with the following command:
+Now you can easily install Kubeapps to your Kubernetes cluster with the following command:
 
 ```bash
 helm install \
