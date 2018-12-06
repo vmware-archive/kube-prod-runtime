@@ -62,9 +62,6 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
   export GCLOUD_OAUTH_CLIENT_SECRET="xxxxxx"
   ```
 
-9. Specify the OAuth Client id and secret in environment variables named `GCLOUD_OAUTH_CLIENT_KEY` and `GCLOUD_OAUTH_CLIENT_SECRET` respectively.
-
-
 * Authenticate the `gcloud` CLI with your Google Cloud account:
 
   ```bash
@@ -155,6 +152,10 @@ Please note, it can take a while for the DNS changes to propogate.
 After the DNS changes have propagated you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${GCLOUD_DNS_ZONE}` and `https://kibana.${GCLOUD_DNS_ZONE}` respectively.
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
+
+## Next steps
+
+- [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
 
 ## Teardown and cleanup
 
