@@ -31,7 +31,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   export GCLOUD_K8S_VERSION="1.10"
   ```
 
-  - `GCLOUD_USER` specifies the email address used in requests to Let's Encrypt.
+  - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
   - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
   - `GCLOUD_REGION` specifies the Google Cloud region. `gcloud compute regions list` lists the available Google Cloud regions.
   - `GCLOUD_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
@@ -105,7 +105,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
   ```bash
   kubectl create clusterrolebinding cluster-admin-binding \
     --clusterrole=cluster-admin \
-    --user=$(gcloud info --format='value(config.account)')
+    --user=${GCLOUD_USER}
   ```
 
 ### Step 2: Deploy BKPR
