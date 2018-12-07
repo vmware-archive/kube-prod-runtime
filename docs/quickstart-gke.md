@@ -194,5 +194,5 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
   ```bash
   GCLOUD_DISKS_FILTER=${GCLOUD_K8S_CLUSTER:0:18}
   gcloud compute disks delete --zone ${GCLOUD_DNS_ZONE} \
-    $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)') \
+    $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)')
   ```
