@@ -1,6 +1,6 @@
 # Prometheus Time Series Database Migration
 
-If you already have a running Kubernetes cluster and you are interestd on installing the Bitnami Kubernetes Production Runtime (BKPR) on it you may want to migrate the persisted data of your current services to the ones installed by BKPR. In this case, we will talk about the Prometheus Time Series Data Base (TSDB), which contains the metrics that Prometheus scrapped from your services.
+If you already have a running Kubernetes cluster and you are interestd on installing the Bitnami Kubernetes Production Runtime (BKPR) on it you may want to migrate the persisted data of your services with zero downtime and a minimal data loss. In this case, we will talk about the Prometheus Time Series Data Base (TSDB), which contains the metrics that Prometheus scrapped from your services.
 
 This document describes the steps to migrate the TSDB from an existing Prometheus deployment to the one installed by BKPR.
 
@@ -21,14 +21,20 @@ This section provides an overview of the required steps to migrate the Prometheu
 
 This process has been designed and tested to ensure the shortest possible downtime when migrating to the new StatefulSet by having two Prometheus instances running at the same time. These instances will be modified to include a sidecar container that will deploy an *rsync* client and server with access to the Prometheus data volume in order to move a Prometheus TSDB snapshot from one pod to another.
 
+Before starting the migration is recommended to get familiarized with the concepts of TSDB and Write-Ahead-Log (WAL) file. See the following links for more information about it:
+
+* [Prometheus TSDB](https://prometheus.io/docs/prometheus/latest/storage/)
+
+* [Write-Ahead-Log file](https://github.com/prometheus/tsdb/blob/master/docs/format/wal.md)
+
 As Prometheus doesn’t include yet a *flush* method to dump the WAL file that is being written into a snapshot with a block format that doesn’t overlap time ranges (see [this issue](https://github.com/prometheus/tsdb/issues/346) for more context) it is necessary to sync with the Prometheus TSDB compaction times, in order to ensure a minimal data loss (less than 5 minutes).
 
 These are the steps required to perform this migration:
 
-* Deploy an rsync server-side container (acting as the rsync server) in your current Prometheus deployment 
+* Deploy an rsync server-side container (acting as the rsync server) in your current Prometheus deployment
 * Modify the `kubeprod-manifest.jsonnet` file to add another sidecar rsync container (acting as a client)
 * Sync with the compaction times of the Prometheus database
-* Perform the snapshot and restore it in the new deployment
+* Create a TSDB snapshot and restore it in the new deployment
 * Check next TSDB compacts
 
 ## Step 1: Deploy the sidecar rsync server-side container
@@ -129,7 +135,7 @@ local stack = {
 kube.List() {items_+: stack}
 ```
 
-Note  how one extra argument has been added to the Prometheus container. In order to generate a snapshot of Prometheus it is mandatory to have the admin API enabled. Take a look at the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/querying/api/#tsdb-admin-apis) for more information about this.
+Note how one extra argument has been added to the Prometheus container. In order to generate a snapshot of Prometheus it is mandatory to have the admin API enabled. Take a look at the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/querying/api/#tsdb-admin-apis) for more information about this.
 
 After deploying the generated manifest you will have a rsync container that you can access with:
 
@@ -148,7 +154,7 @@ prometheus-rsync   ClusterIP   10.30.247.115   <none>        873/TCP    9d
 
 > Note: Make sure you change the NAMESPACE placeholder for the one where your Prometheus deployment lives.
 
-Now, you should be able to access the `prometheus-rsync` from other pod. You can do a quick test from other pod you can do:
+Now, you should be able to access the `prometheus-rsync` from other pod. You can do a quick test from other pod:
 
 ```bash
 / # nc -zv prometheus-rsync.NAMESPACE.svc.cluster.local 873
@@ -171,7 +177,7 @@ local kube = import "kube.libsonnet";
   config:: import "kubeprod-autogen.json",
 
   // Place your overrides here
-  prometheus+: { 
+  prometheus+: {
 
     // Add rsync sidecar container to the prometheus sts.
     // and adapt resources to our needs
@@ -198,19 +204,19 @@ local kube = import "kube.libsonnet";
 }
 ```
 
-Deploy the manifests in the cluster with:
+You can deploy the manifests in the cluster with:
 
 ```bash
 kubecfg update kubeprod-manifest.jsonnet
 ```
 
-Now, you can check that the Prometheus pod have 3 containers:
+After deploying them, Prometheus pod will have 3 containers:
 
 ```bash
 ~ $ kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | grep prometheus |\
 sort
 
-prometheus-0:	bitnami/prometheus:2.4.3-r31, jimmidyson/configmap-reload:v0.2.2, alpine:3.8,
+prometheus-0: bitnami/prometheus:2.4.3-r31, jimmidyson/configmap-reload:v0.2.2, alpine:3.8,
 ```
 
 ## Step 3: Sync with the compacton times of the Prometheus TSDB
@@ -245,15 +251,15 @@ If you do this, you will find the following:
 
 [Insert image of  Prometheus query with 1 hour of missing data due to snapshot]
 
-This way you would have lost 1 hour of Prometheus metrics.
+You would have lost 1 hour of Prometheus metrics.
 
-In order to ensure a minimal data loss, the new Prometheus deployment should be deployed 55 mins (ensuring with this less than 5 mins of data loss) before the next TSDB compact happens, so the new Prometheus deployment can start scraping data before the snapshot is restored. Continuing with the last example:
+In order to ensure a minimal data loss, the new Prometheus deployment should be deployed 55 mins (ensuring with this less than 5 mins of data loss) before the next TSDB compaction happens, so the new Prometheus deployment can start scraping data before the snapshot is restored. Continuing with the last example:
 
-If the next TSDB compact happens at 13:00 UTC you should deploy BKPR Prometheus in the cluster at 12:05 UTC, so Prometheus can start scraping data and fill the gap that the snapshot will create. Then, at 13:00 UTC you can create the Prometheus snapshot and will restore it in the new deployment, creating the following:
+If the next TSDB compaction happens at 13:00 UTC you should deploy BKPR Prometheus in the cluster at 12:05 UTC, so Prometheus can start scraping data and fill the gap that the snapshot will create. Then, at 13:00 UTC you can create the Prometheus snapshot and will restore it in the new deployment, creating the following:
 
 ![prometheus_successful_migration](../../images/prometheus-migration/tsdb_restored.png)
 
-## Step 4: Perform the Prometheus TSDB migration
+## Step 4: Create a TSDB snapshot and restore it in the new deployment
 
 Now that the process has been explained in detail, these are the commands that will have to be executed in order to migrate the TSDB from the old Prometheus deployment to the BKPR one.
 
@@ -269,7 +275,7 @@ Once the snapshot is done, connect to the sidecar rsync container in the new Pro
 
 > Note:  Make sure you change the NAMESPACE placeholder for the Kubernetes namespace where the old Prometheus deployment lives.
 
-After the rsync has finished, move the block directories to the main data folder of Prometheus. This an example of the structure you will find data directory of the new Prometheus deployment:
+After the rsync has finished, move the block directories to the main data directory of Prometheus. This an example of the structure you will find data directory of the new Prometheus deployment:
 
 ```bash
 /data # ls -la
@@ -310,14 +316,14 @@ level=info ts=2018-11-30T13:02:09.557987841Z caller=repair.go:35 component=tsdb 
 level=info ts=2018-11-30T13:02:09.566754786Z caller=repair.go:35 component=tsdb msg="found healthy block" mint=1540620000000 maxt=1540814400000 ulid=01CV05DT3E6QKSEMR2TAEEYWTQ
 level=info ts=2018-11-30T13:02:09.566884665Z caller=repair.go:35 component=tsdb msg="found healthy block" mint=1540814400000 maxt=1541008800000 ulid=01CV5YTF6Z4F22DJ5ECNM4PAH9
 level=info ts=2018-11-30T13:02:09.566960934Z caller=repair.go:35 component=tsdb msg="found healthy block" mint=1541008800000 maxt=1541203200000 ulid=01CVBR71YE4M97K3SDXXQ9449W
-level=info ts=2018-11-30T13:02:09.567034354Z caller=repair.go:35 component=tsdb msg="found 
+level=info ts=2018-11-30T13:02:09.567034354Z caller=repair.go:35 component=tsdb msg="found
 ...
 level=info ts=2018-11-30T13:02:17.548873548Z caller=main.go:564 msg="TSDB started"
 ```
 
 The migration is finished, you now can execute some queries in Prometheus to check that you can gather data from your backup.
 
-## Step 5: Check next TSDB compacts
+## Step 5: Check next TSDB compactions
 
 In order to ensure the the migration took place correctly and the new Prometheus TSDB is healthy and stable, you should check the Prometheus logs after several TSDB compacts.
 
