@@ -11,6 +11,7 @@ AWS_SECRET_ACCESS_KEY ?=
 AWS_DEFAULT_REGION ?= us-east-1
 export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY AWS_DEFAULT_REGION
 
+SHELL := /bin/bash
 GO = go
 HAS_JQ := $(shell command -v jq;)
 
@@ -48,7 +49,7 @@ ifndef GITHUB_TOKEN
 endif
 	github-release delete --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' || :
 	@set -e ; \
-	PRE_RELEASE=$${VERSION##*-rc} ; cat Release_Notes.md | github-release release $${PRE_RELEASE:+--pre-release} --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' -n 'BKPR $(VERSION)' -d -
+	PRE_RELEASE=$${VERSION/$${VERSION%-rc[0-9]*}/} ; cat Release_Notes.md | github-release release $${PRE_RELEASE:+--pre-release} --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' -n 'BKPR $(VERSION)' -d - ; \
 	for f in $$(ls kubeprod/_dist/*.gz kubeprod/_dist/*.zip) ; do github-release upload --user $(GITHUB_USER) --repo $(GITHUB_REPO) --tag '$(VERSION)' --name "$$(basename $${f})" --file "$${f}" ; done
 
 publish-to-s3: awless
