@@ -1,6 +1,6 @@
 # Prometheus Time Series Database Migration
 
-If you already have a running Kubernetes cluster and you are interested in installing the Bitnami Kubernetes Production Runtime (BKPR) on it, you may want to migrate the persisted data of your services with zero downtime and minimal data loss. In this case, we will talk about the Prometheus Time Series Database (TSDB), which contains the metrics that Prometheus scrapped from your services.
+If you already have a running Kubernetes cluster and you are interested in installing the Bitnami Kubernetes Production Runtime (BKPR) on it, you may want to migrate the persisted data of your services with zero downtime and minimal data loss. In this case, we will talk about the Prometheus Time Series Database (TSDB), which contains the metrics that Prometheus scrapes from your services.
 
 This document describes the steps to migrate the TSDB from an existing Prometheus deployment to the one installed by BKPR.
 
@@ -15,8 +15,7 @@ The following prerequisites should be met before starting with the migration pro
 * You have already read the [Kubeprod workflow documentation](https://github.com/bitnami/kube-prod-runtime/blob/a304cbc5b12042f2a17f96f23cd62a9759e81b4b/docs/workflow.md)
 * [Kubecfg binary](https://github.com/ksonnet/kubecfg/releases)
 
-
-This article will not cover the upgrade process of Prometheus itself. If you need to update your Prometheus deployment, check the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/migration/)
+This article will not cover the Proemtheus upgrade process. If you need to update your Prometheus deployment, check the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/migration/)
 
 ## Overview
 
@@ -213,7 +212,7 @@ You can deploy the manifests in the cluster with:
 kubecfg update kubeprod-manifest.jsonnet
 ```
 
-After deploying them, Prometheus pod will have 3 containers:
+After deploying them, the Prometheus pod will have 3 containers:
 
 ```bash
 ~ $ kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | grep prometheus |\
@@ -242,21 +241,21 @@ You can see how the delta between those two compactions is two hours.
 
 In order to do a safe migration and avoid time range overlaps in later compactions, it is necessary to create a snapshot in Prometheus skipping the WAL file, as it contains references to future time ranges.
 
-It is important to know that if you create a Prometheus snapshot skipping the WAL file the **last hour of data** will not be present in the snapshot. For example, if the Prometheus logs show the following operations:
+It is important to know that if you create a Prometheus snapshot skipping the WAL file, the **last hour of data** will not be present in the snapshot. For example, if the Prometheus logs show the following operations:
 
 ```bash
 level=info ts=2018-12-05T11:00:08.289897499Z caller=compact.go:398 component=tsdb msg="write block" mint=1543989600000 maxt=1543996800000 ulid=01CXYSH0M8RSWNJG3YM1S9YGY5
 level=info ts=2018-12-05T13:00:09.242667991Z caller=head.go:446 component=tsdb msg="head GC completed" duration=170.063092ms
 ```
 
-A good time to create a snapshot of the TSDB  to perform the migration would be at 13:01 UTC, so you create the snapshot just after Prometheus wrote the latest information stored in the WAL file to disk.
+A good time to create a snapshot of the TSDB  to perform the migration would be at 13:01 UTC, so you create the snapshot just after Prometheus writes the latest information stored in the WAL file to disk.
 If you do this, you will find the following:
 
 [Insert image of  Prometheus query with 1 hour of missing data due to snapshot]
 
 You would have lost 1 hour of Prometheus metrics.
 
-In order to ensure a minimal data loss, the new Prometheus deployment should be deployed 55 mins (ensuring with this less than 5 mins of data loss) before the next TSDB compaction happens, so the new Prometheus deployment can start scraping data before the snapshot is restored. Continuing with the last example:
+In order to ensure minimal data loss, the new Prometheus deployment should be deployed 55 mins (ensuring with this less than 5 mins of data loss) before the next TSDB compaction happens, so the new Prometheus deployment can start scraping data before the snapshot is restored. Continuing with the last example:
 
 If the next TSDB compaction happens at 13:00 UTC you should deploy BKPR Prometheus in the cluster at 12:05 UTC, so Prometheus can start scraping data and fill the gap that the snapshot will create. Then, at 13:00 UTC you can create the Prometheus snapshot and restore it in the new deployment, creating the following:
 
@@ -264,13 +263,13 @@ If the next TSDB compaction happens at 13:00 UTC you should deploy BKPR Promethe
 
 ## Step 4: Create a TSDB snapshot and restore it in the new deployment
 
-Now that the process has been explained in detail, these are the commands that will have to be executed in order to migrate the TSDB from the old Prometheus deployment to the BKPR one.
+Now that the process has been explained in detail, these are the commands to be executed in order to migrate the TSDB from the old Prometheus deployment to the BKPR one.
 
 After a previous sync with the TSDB, the command to generate the Prometheus snapshot is:
 
 `curl -XPOST http://localhost:9090/api/v1/admin/tsdb/snapshot?skip_head=true`
 
-That command is meant to be executed from the sidecar *rsync* container that is deployed in the old Prometheus deployment. As soon as you execute that command, the snapshot will be stored under Prometheus data directory, under `snapshots/`.
+That command is meant to be executed from the sidecar *rsync* container that is deployed in the old Prometheus deployment. As soon as you execute that command, the snapshot will be stored under the Prometheus data directory, under `snapshots/`.
 
 Once the snapshot is done, connect to the sidecar *rsync* container in the new Prometheus deployment and execute:
 
