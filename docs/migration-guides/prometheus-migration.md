@@ -6,12 +6,15 @@ This document describes the steps to migrate the TSDB from an existing Prometheu
 
 Furthermore, this process will not generate any downtime for your current Prometheus deployment, making it safe to be followed.
 
-## Prerequisites
+## Pre-requisites
 
 The following prerequisites should be met before starting with the migration process:
 
 * You have a healthy Kubernetes cluster running.
 * You have a Prometheus deployment that *matches the BKPR Prometheus version*, which can be obtained from [the BKPR release compatibility table](https://github.com/bitnami/kube-prod-runtime#release-compatibility).
+* You have already read the [Kubeprod workflow documentation](https://github.com/bitnami/kube-prod-runtime/blob/a304cbc5b12042f2a17f96f23cd62a9759e81b4b/docs/workflow.md)
+* [Kubecfg binary](https://github.com/ksonnet/kubecfg/releases)
+
 
 This article will not cover the upgrade process of Prometheus itself. If you need to update your Prometheus deployment, check the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/migration/)
 
