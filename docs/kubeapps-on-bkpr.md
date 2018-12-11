@@ -1,6 +1,6 @@
 # Installing Kubeapps on BKPR
 
-This guide documents the installation of [Kubeapps](https://kubeapps.com/) on the Kubernetes Production Runtime (BKPR) cluster. You will first install the [Helm](https://www.helm.sh/) package manager to the cluster, followed by the installation of Kubeapps using the [Kubeapps Helm chart](https://hub.kubeapps.com/charts/bitnami/kubeapps).
+This guide documents the installation of [Kubeapps](https://kubeapps.com/) on the Bitnami Kubernetes Production Runtime (BKPR) cluster. You will first install the [Helm](https://www.helm.sh/) package manager to the cluster, followed by the installation of Kubeapps using the [Kubeapps Helm chart](https://hub.kubeapps.com/charts/bitnami/kubeapps).
 
 The guide assumes you have a Kubernetes cluster with BKPR already installed. The [BKPR installation guide](install.md) documents the process of installing the BKPR client, followed by installing the BKPR server side components on the cluster.
 
@@ -45,13 +45,11 @@ helm install --tls \
   bitnami/kubeapps
 ```
 
-The command line flags provided in the above command enable the Ingress resource in the Kubeapps chart and also enable TLS support. Once installed, you will be able to generate an access token and then access the Kubeapps dashboard securely (HTTPS) over the Internet at `https://kubeapps.[YOUR-BKPR-ZONE]`.
+The parameters in the above command enable Ingress, TLS support and also enables the Prometheus exporter for MongoDB in the Kubeapps chart. Once installed, you will be able to generate an access token and then access the Kubeapps dashboard securely (HTTPS) over the Internet at `https://kubeapps.[YOUR-BKPR-ZONE]`.
 
 _Please replace the placeholder string `[YOUR-BKPR-ZONE]` in the above command with the DNS zone configured while setting up BKPR in your Kubernetes cluster._
 
 Kubeapps requires users to login before making requests.  However, if you would not like the dashboard to be accessible externally over the Internet, please disable the Ingress support while installing the chart.  If Ingress is disabled, you need to follow the Kubeapps post-install instructions to access the dashboard using a proxy connection to the cluster.
-
-The chart parameter `mongodb.metrics.enabled=true` in the above command enables the Prometheus exporter for MongoDB in the Kubeapps chart.
 
 > **Tip**:
 >
@@ -59,7 +57,7 @@ The chart parameter `mongodb.metrics.enabled=true` in the above command enables 
 
 ## Step 4: Generate an access token
 
-The Kubeapps dashboard will prompt you to provide a access token before allowing you to make any changes to the Kubernetes cluster. For the purpose of this guide you will generate a super-user access token using the commands listed below. Refer to the [Access Control in Kubeapps](https://github.com/kubeapps/kubeapps/blob/master/docs/user/access-control.md) document to learn about specifying access privileges for users of the dashboard.
+The Kubeapps dashboard will prompt you to provide an access token before allowing you to make any changes to the Kubernetes cluster. For the purpose of this guide you will generate a super-user access token using the commands listed below. Refer to the [Access Control in Kubeapps](https://github.com/kubeapps/kubeapps/blob/master/docs/user/access-control.md) document to learn about specifying access privileges for users of the dashboard.
 
 ![Kubeapps Login](images/kubeapps-login.png)
 
