@@ -27,7 +27,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 |     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
 |     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
 
-## ## Quickstart
+## Quickstart
 
 Please use the [installation guide](docs/install.md) to install the `kubeprod` binary before installing BKPR to your cluster.
 
