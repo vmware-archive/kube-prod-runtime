@@ -75,7 +75,7 @@ The following matrix shows which versions of each component are used and support
 |   Prometheus  |            `2.3.2` |
 |     Kibana    |           `5.6.12` |
 | Elasticsearch |           `5.6.12` |
-|  cert-manager |            `0.3.2` |
+|  cert-manager |            `0.5.2` |
 |  Alertmanager |           `0.15.2` |
 |  ExternalDNS  |            `0.5.4` |
 | nginx-ingress |           `0.19.0` |
