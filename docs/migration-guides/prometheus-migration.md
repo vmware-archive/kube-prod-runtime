@@ -244,12 +244,21 @@ In order to do a safe migration and avoid time range overlaps in later compactio
 It is important to know that if you create a Prometheus snapshot skipping the WAL file, the **last hour of data** will not be present in the snapshot. For example, if the Prometheus logs show the following operations:
 
 ```bash
-level=info ts=2018-12-05T11:00:08.289897499Z caller=compact.go:398 component=tsdb msg="write block" mint=1543989600000 maxt=1543996800000 ulid=01CXYSH0M8RSWNJG3YM1S9YGY5
+level=info ts=2018-12-05T13:00:08.289897499Z caller=compact.go:398 component=tsdb msg="write block" mint=1543989600000 maxt=1543996800000 ulid=01CXYSH0M8RSWNJG3YM1S9YGY5
 level=info ts=2018-12-05T13:00:09.242667991Z caller=head.go:446 component=tsdb msg="head GC completed" duration=170.063092ms
 ```
 
-A good time to create a snapshot of the TSDB  to perform the migration would be at 13:01 UTC, so you create the snapshot just after Prometheus writes the latest information stored in the WAL file to disk.
-If you do this, you will find the following:
+A good time to create a snapshot of the TSDB  to perform the migration would be at 15:01 UTC, after Prometheus writes the latest information stored in the WAL file to disk.
+
+At 15.00 UTC, you will see the following logs in Prometheus:
+
+```bash
+level=info ts=2018-12-12T15:00:03.39965259Z caller=compact.go:398 component=tsdb msg="write block" mint=1544616000000 maxt=1544623200000 ulid=01CYHEX2G8AXE4A02BSQTVE0KE
+level=info ts=2018-12-12T15:00:04.532120854Z caller=head.go:446 component=tsdb msg="head GC completed" duration=193.291625ms
+level=info ts=2018-12-12T15:00:07.820116817Z caller=compact.go:352 component=tsdb msg="compact blocks" count=3 mint=1544594400000 maxt=1544616000000 ulid=01CYHEX6PKCYF09AWBTA38599H sources="[01CYGT9XGJCEER0BMX0FVTTATM 01CYH15M02S4XG09B1KME83CX2 01CYH81B7YXEDC6G70PY8QJ5TY]"
+```
+
+And after restoring the database, you will find:
 
 ![prometheus_failed_migration](../../images/prometheus-migration/tsdb_failed_migration.png)
 
