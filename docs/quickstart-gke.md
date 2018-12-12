@@ -61,9 +61,6 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
   export GCLOUD_OAUTH_CLIENT_SECRET="xxxxxx"
   ```
 
-9. Specify the OAuth Client id and secret in environment variables named `GCLOUD_OAUTH_CLIENT_KEY` and `GCLOUD_OAUTH_CLIENT_SECRET` respectively.
-
-
 * Authenticate the `gcloud` CLI with your Google Cloud account:
 
   ```bash
@@ -155,6 +152,10 @@ After the DNS changes have propagated you should be able to access the Prometheu
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 
+## Next steps
+
+- [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
+
 ## Teardown and cleanup
 
 ### Step 1: Uninstall BKPR from your cluster
@@ -192,5 +193,5 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
   ```bash
   GCLOUD_DISKS_FILTER=${GCLOUD_K8S_CLUSTER:0:18}
   gcloud compute disks delete --zone ${GCLOUD_DNS_ZONE} \
-    $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)') \
+    $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)')
   ```
