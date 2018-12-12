@@ -251,7 +251,7 @@ level=info ts=2018-12-05T13:00:09.242667991Z caller=head.go:446 component=tsdb m
 A good time to create a snapshot of the TSDB  to perform the migration would be at 13:01 UTC, so you create the snapshot just after Prometheus writes the latest information stored in the WAL file to disk.
 If you do this, you will find the following:
 
-[Insert image of  Prometheus query with 1 hour of missing data due to snapshot]
+![prometheus_failed_migration](../../images/prometheus-migration/tsdb_failed_migration.png)
 
 You would have lost 1 hour of Prometheus metrics.
 
@@ -259,7 +259,7 @@ In order to ensure minimal data loss, the new Prometheus deployment should be de
 
 If the next TSDB compaction happens at 13:00 UTC you should deploy BKPR Prometheus in the cluster at 12:05 UTC, so Prometheus can start scraping data and fill the gap that the snapshot will create. Then, at 13:00 UTC you can create the Prometheus snapshot and restore it in the new deployment, creating the following:
 
-![prometheus_successful_migration](../../images/prometheus-migration/tsdb_restored.png)
+![prometheus_successful_migration](../../images/prometheus-migration/tsdb_successful_migration.png)
 
 ## Step 4: Create a TSDB snapshot and restore it in the new deployment
 
