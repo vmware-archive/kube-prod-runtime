@@ -117,6 +117,10 @@ After the DNS changes have propagated you should be able to access the Prometheu
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 
+## Next steps
+
+- [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
+
 ## Teardown and cleanup
 
 ### Step 1: Uninstall BKPR from your cluster
