@@ -8,6 +8,7 @@
     + [Object with the same value for property exists](#object-with-the-same-value-for-property-exists)
 - [Troublehooting DNS](#troubleshooting-dns)
     + [ExternalDNS pods are not starting](#externaldns-pods-are-not-starting)
+    + [ExternalDNS is not updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
 
 ## Troubleshooting AKS cluster creation
 
@@ -93,3 +94,31 @@ kubectl -n kubeprod logs $(kubectl -n kubeprod get pods -l name=external-dns -o 
 ```
 
 If you are unable to determine the cause of the error, create a support request describing your environment and remember to attach the output of the last two commands to the support request.
+
+### ExternalDNS is not updating DNS zone records
+
+The DNS host records (__A__) can be listed using the following command:
+
+On Google cloud:
+
+```bash
+gcloud dns record-sets list --zone $(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)') --filter type=A
+```
+
+On Azure cloud:
+
+```bash
+az network dns record-set list --resource-group ${AZURE_RESOURCE_GROUP} --zone-name ${BKPR_DNS_ZONE} --query "[?arecords!=null]" --output table
+```
+
+BKPR, by default, creates host records for Prometheus, Grafana and Kibana dashboards. These records should be listed in the output of the above command.
+
+__Troubleshooting__:
+
+ExternalDNS automatically manages host records for Ingress resources in the cluster. When a Ingress resource is created it could take a few minutes for it to be seen by ExternalDNS.
+
+If the records are not updated a few minutes after the Ingress resource is created, use the following command to inspect the container logs of the `external-dns` Pod to discover any error conditions that may have been encountered.
+
+```bash
+kubectl -n kubeprod logs $(kubectl -n kubeprod get pods -l name=external-dns -o name)
+```
