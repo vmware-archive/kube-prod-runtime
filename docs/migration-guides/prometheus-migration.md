@@ -6,7 +6,7 @@ This document describes the steps to migrate the TSDB from an existing Prometheu
 
 Furthermore, this process will not generate any downtime for your current Prometheus deployment, making it safe to be followed.
 
-## Pre-requisites
+## Prerequisites
 
 The following prerequisites should be met before starting with the migration process:
 
