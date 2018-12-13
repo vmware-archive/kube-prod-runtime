@@ -7,8 +7,11 @@
 - [Troubleshooting BKPR installation](#troubleshooting-bkpr-installation)
     + [Object with the same value for property exists](#object-with-the-same-value-for-property-exists)
 - [Troublehooting DNS](#troubleshooting-dns)
+    + [Unable to resolve DNS addresses](#unable-to-resolve-dns-addresses)
     + [ExternalDNS pods are not starting](#externaldns-pods-are-not-starting)
     + [ExternalDNS is not updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
+    + [DNS glue records are not configured](#dns-glue-records-are-not-configured)
+    + [DNS propagation has not completed](#dns-propagation-has-not-completed)
 
 ## Troubleshooting AKS cluster creation
 
@@ -122,3 +125,50 @@ If the records are not updated a few minutes after the Ingress resource is creat
 ```bash
 kubectl -n kubeprod logs $(kubectl -n kubeprod get pods -l name=external-dns -o name)
 ```
+
+### DNS glue records are not configured
+
+The DNS glue record setup is the most basic requirement for the DNS address resolution to work correctly. The glue records are typically configured at the DNS domain registrar.
+
+Use the following command to query the glue record configuration for your domain:
+
+```bash
+dig ${BKPR_DNS_ZONE} NS +noall +answer
+```
+
+The command should list one or more Nameserver (__NS__) records configured for your domain.
+
+__Troubleshooting__:
+
+If the above listed command does not return any __NS__ records, it indicates that the DNS glue records have not been configured at your domain registrar. At the same time, it is also possible the glue records are configured with wrong values.
+
+First, use the following command to query the values of the NS records that should be set up as glue records.
+
+On Google cloud,
+
+```bash
+gcloud dns managed-zones describe \
+  $(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)')
+```
+
+On Azure cloud,
+
+```bash
+az network dns zone show \
+  --name ${BKPR_DNS_ZONE} \
+  --resource-group ${AZURE_RESOURCE_GROUP} \
+  --query nameServers \
+  --output table
+```
+
+Next, use your domain registrar's portal to add __NS__ records for your domain with the values displayed in output of the previous command.
+
+### DNS propagation has not completed
+
+Nameserver changes can typically take 0 to 24 hours to take effect, but they are known to take as long as 48 hours to go into full effect. This is because it takes time for the DNS to take effect across the internet. The actual time of propagation may vary based on your network setup.
+
+__Resolution__:
+
+If [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-zone-records) and the [DNS glue records are configured](#dns-glue-records-are-not-configured) correctly, you need to wait for the DNS propagation to complete.
+
+[whatsmydns.net](https://www.whatsmydns.net) is a DNS propagation checker that can give you a rough idea of the DNS propagation status of your DNS records.
