@@ -48,6 +48,24 @@ This is typically encountered when you attempt to install BKPR with a DNS zone (
 
 ## Troublehooting DNS
 
+### Unable to resolve DNS addresses
+
+You have installed BKPR to your Kubernetes cluster, but are unable to access any of the ingress endpoints due to DNS resolution errors.
+
+```bash
+ping prometheus.my-domain.com
+ping: prometheus.my-domain.com: Name or service not known
+```
+
+__Troubleshooting__:
+
+DNS address resolution could be a result of configuration issues. For a working DNS setup you need to ensure all of the following conditions are met.
+
+- [ExternalDNS Pods are running](#externaldns-pods-are-not-starting)
+- [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
+- [DNS glue records are configured](#dns-glue-records-are-not-configured)
+- [DNS propagation has completed](#dns-propagation-has-not-completed)
+
 ### ExternalDNS Pods are not starting
 
 Use the following command to check the status of the `external-dns` deployment:
