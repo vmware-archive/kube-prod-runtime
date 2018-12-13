@@ -41,7 +41,7 @@ These are the steps required to perform this migration:
 
 ## Step 1: Deploy the sidecar *rsync* server-side container
 
-In order to access the Prometheus TSDB snapshots using *rsnyc*, it will be necessary to deploy an *rsync* server with a minimal configuration.
+In order to access the Prometheus TSDB snapshots using *rsync*, it will be necessary to deploy an *rsync* server with a minimal configuration.
 
 You can use the following Jsonnet snippet to add that sidecar container:
 
