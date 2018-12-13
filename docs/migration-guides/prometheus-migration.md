@@ -159,7 +159,7 @@ prometheus-rsync   ClusterIP   10.30.247.115   <none>        873/TCP    9d
 Now, you should be able to access the `prometheus-rsync` service. You can do a quick test from other pod:
 
 ```bash
-/ # nc -zv prometheus-rsync.NAMESPACE.svc.cluster.local 873
+~ $ nc -zv prometheus-rsync.NAMESPACE.svc.cluster.local 873
 prometheus-rsync.NAMESPACE.svc.cluster.local (10.130.32.5:873) open
 ```
 
