@@ -20,6 +20,7 @@
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
+// Import ElasticSearch image form 'images.json'
 local ELASTICSEARCH_IMAGE = (import "images.json")["elasticsearch"];
 
 // Mount point for the data volume (used by multiple containers, like the

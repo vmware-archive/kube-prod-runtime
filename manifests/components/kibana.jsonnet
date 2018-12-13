@@ -21,7 +21,6 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-// Import Kibana image from 'images.json'
 local KIBANA_IMAGE = (import "images.json")["kibana"];
 
 local strip_trailing_slash(s) = (
