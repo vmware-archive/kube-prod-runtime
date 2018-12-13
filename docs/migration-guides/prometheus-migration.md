@@ -12,10 +12,10 @@ The following prerequisites should be met before starting with the migration pro
 
 * You have a healthy Kubernetes cluster running.
 * You have a Prometheus deployment that *matches the BKPR Prometheus version*, which can be obtained from [the BKPR release compatibility table](https://github.com/bitnami/kube-prod-runtime#release-compatibility).
-* You have already read the [Kubeprod workflow documentation](https://github.com/bitnami/kube-prod-runtime/blob/a304cbc5b12042f2a17f96f23cd62a9759e81b4b/docs/workflow.md)
+* You have already read the [Kubeprod workflow documentation](https://github.com/bitnami/kube-prod-runtime/blob/master/docs/workflow.md)
 * [Kubecfg binary](https://github.com/ksonnet/kubecfg/releases)
 
-This article will not cover the Proemtheus upgrade process. If you need to update your Prometheus deployment, check the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/migration/)
+This article will not cover the Prometheus upgrade process. If you need to update your Prometheus deployment, check the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/migration/)
 
 ## Overview
 
@@ -26,7 +26,6 @@ This process has been designed and tested to ensure the shortest possible downti
 Before starting the migration it is recommended to get familiar with the concepts of TSDB and Write-Ahead-Log (WAL) file. See the following links for more information:
 
 * [Prometheus TSDB](https://prometheus.io/docs/prometheus/latest/storage/)
-
 * [Write-Ahead-Log file](https://github.com/prometheus/tsdb/blob/master/docs/format/wal.md)
 
 As Prometheus doesn’t yet include a *flush* method to dump the WAL file that is being written into a snapshot with a block format that doesn’t overlap time ranges (see [this issue](https://github.com/prometheus/tsdb/issues/346) for more context) it is necessary to sync with the Prometheus TSDB compaction times in order to ensure minimal data loss (less than 5 minutes).
