@@ -50,7 +50,7 @@ This is typically encountered when you attempt to install BKPR with a DNS zone (
 
 ### Unable to resolve DNS addresses
 
-You have installed BKPR to your Kubernetes cluster, but are unable to access any of the ingress endpoints due to DNS resolution errors.
+You have installed BKPR to your Kubernetes cluster, but are unable to access any of the Ingress endpoints due to DNS resolution errors.
 
 ```bash
 ping prometheus.my-domain.com
@@ -90,7 +90,7 @@ Waiting for deployment "external-dns" rollout to finish: 1 of 1 updated replicas
 
 The command will return with the message `deployment "external-dns" successfully rolled out` after all the Pods in the `external-dns` Deployment have started successfully. Please note it could take a few minutes for the `external-dns` Deployment to complete.
 
-If it takes an abnormally long time (>5m) for the `external-dns` Pods to enter the `Running` phase, it indicates that it may have encountered an error condition.
+If it takes an abnormally long time (>5m) for the `external-dns` Pods to enter the `Running` phase, they may have encountered an error condition.
 
 Check the status of the `external-dns` Pods with the command:
 
@@ -114,19 +114,19 @@ Additionally, the container logs may contain useful information about the error 
 kubectl -n kubeprod logs $(kubectl -n kubeprod get pods -l name=external-dns -o name)
 ```
 
-If you are unable to determine the cause of the error, create a support request describing your environment and remember to attach the output of the last two commands to the support request.
+If you are unable to determine the cause of the error, [create a support request](https://github.com/bitnami/kube-prod-runtime/issues/new) describing your environment and remember to attach the output of the last two commands to the support request.
 
 ### ExternalDNS is not updating DNS zone records
 
 The DNS host records (__A__) can be listed using the following command:
 
-On Google cloud:
+On Google Cloud Platform:
 
 ```bash
 gcloud dns record-sets list --zone $(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)') --filter type=A
 ```
 
-On Azure cloud:
+On Microsoft Azure:
 
 ```bash
 az network dns record-set list --resource-group ${AZURE_RESOURCE_GROUP} --zone-name ${BKPR_DNS_ZONE} --query "[?arecords!=null]" --output table
@@ -136,7 +136,7 @@ BKPR, by default, creates host records for Prometheus, Grafana and Kibana dashbo
 
 __Troubleshooting__:
 
-ExternalDNS automatically manages host records for Ingress resources in the cluster. When a Ingress resource is created it could take a few minutes for it to be seen by ExternalDNS.
+ExternalDNS automatically manages host records for Ingress resources in the cluster. When a Ingress resource is created, it could take a few minutes for it to be seen by ExternalDNS.
 
 If the records are not updated a few minutes after the Ingress resource is created, use the following command to inspect the container logs of the `external-dns` Pod to discover any error conditions that may have been encountered.
 
@@ -162,14 +162,14 @@ If the above listed command does not return any __NS__ records, it indicates tha
 
 First, use the following command to query the values of the NS records that should be set up as glue records.
 
-On Google cloud,
+On Google Cloud Platform:
 
 ```bash
 gcloud dns managed-zones describe \
   $(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)')
 ```
 
-On Azure cloud,
+On Microsoft Azure:
 
 ```bash
 az network dns zone show \
@@ -179,13 +179,13 @@ az network dns zone show \
   --output table
 ```
 
-Next, use your domain registrar's portal to add __NS__ records for your domain with the values displayed in output of the previous command.
+Next, use your domain registrar's portal to add __NS__ records for your domain with the values displayed in the output of the previous command.
 
 ### DNS propagation has not completed
 
-Nameserver changes can typically take 0 to 24 hours to take effect, but they are known to take as long as 48 hours to go into full effect. This is because it takes time for the DNS to take effect across the internet. The actual time of propagation may vary based on your network setup.
+Nameserver changes typically take 0 to 24 hours to take effect, but they may also take as long as 48 hours.
 
-__Resolution__:
+__Troubleshooting__:
 
 If [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-zone-records) and the [DNS glue records are configured](#dns-glue-records-are-not-configured) correctly, you need to wait for the DNS propagation to complete.
 
