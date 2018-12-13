@@ -217,7 +217,6 @@ After deploying them, the Prometheus pod will have 3 containers:
 ```bash
 ~ $ kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | grep prometheus |\
 sort
-
 prometheus-0: bitnami/prometheus:2.4.3-r31, jimmidyson/configmap-reload:v0.2.2, alpine:3.8,
 ```
 
