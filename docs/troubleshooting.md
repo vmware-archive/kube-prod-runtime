@@ -28,7 +28,7 @@ Please clear your Azure profile directory with `rm -rf ~/.azure` and retry after
 
 __[Reported in issue #242](https://github.com/bitnami/kube-prod-runtime/issues/242)__
 
-If you notice the following error message from `kubeprod install`, it indicates that another Azure service principal with the same value exists.
+While installing BKPR on a AKS cluster, if you notice the following error message from `kubeprod install`, it indicates that another Azure service principal with the same value exists.
 
 ```
 ERROR Error: graphrbac.ApplicationsClient#Create: Failure responding to request: StatusCode=400 -- Original Error: autorest/azure: Service returned an error. Status=400 Code="Unknown" Message="Unknown service error" Details=[{"odata.error":{"code":"Request_BadRequest","date":"2018-11-29T00:31:52","message":{"lang":"en","value":"Another object with the same value for property identifierUris already exists."},"requestId":"3c6f59e9-ad05-42fb-8ab2-3a9745eb9f68","values":[{"item":"PropertyName","value":"identifierUris"},{"item":"PropertyErrorCode","value":"ObjectConflict"}]}}]
