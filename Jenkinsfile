@@ -375,7 +375,7 @@ az aks create                      \
 
     // See:
     //  gcloud container get-server-config
-    def gkeKversions = ["1.9", "1.10"]
+    def gkeKversions = ["1.10"]
     for (x in gkeKversions) {
         def kversion = x  // local bind required because closures
         def platform = "gke-" + kversion
