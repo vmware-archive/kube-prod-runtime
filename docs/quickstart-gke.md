@@ -196,3 +196,8 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
   gcloud compute disks delete --zone ${BKPR_DNS_ZONE} \
     $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)')
   ```
+
+## Further reading
+
+- [BKPR FAQ](FAQ.md)
+- [Troubleshooting](troubleshooting.md)

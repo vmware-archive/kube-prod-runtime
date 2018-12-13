@@ -163,3 +163,8 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
   ```bash
   az group delete --name ${AZURE_RESOURCE_GROUP}
   ```
+
+## Further reading
+
+- [BKPR FAQ](FAQ.md)
+- [Troubleshooting](troubleshooting.md)
