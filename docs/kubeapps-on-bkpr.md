@@ -83,6 +83,7 @@ You should now be able to login to the Kubeapps dashboard using the displayed ac
 ## Further reading
 
 - [BKPR FAQ](FAQ.md)
+- [Troubleshooting](troubleshooting.md)
 - [Application Developer's Reference Guide](application-developers-reference-guide.md)
 - [Get Started with Kubeapps](https://github.com/kubeapps/kubeapps/blob/master/docs/user/getting-started.md)
 - [Securing Kubeapps installation](https://github.com/kubeapps/kubeapps/blob/master/docs/user/securing-kubeapps.md)

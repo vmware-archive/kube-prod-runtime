@@ -22,19 +22,19 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
 * Configure the following environment variables:
 
   ```bash
+  export BKPR_DNS_ZONE="my-domain.com"
   export GCLOUD_USER="$(gcloud info --format='value(config.account)')"
   export GCLOUD_PROJECT="my-gce-project"
   export GCLOUD_REGION="us-east1-d"
-  export GCLOUD_DNS_ZONE="my-domain.com"
   export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
   export GCLOUD_K8S_CLUSTER="my-gke-cluster"
   export GCLOUD_K8S_VERSION="1.10"
   ```
 
+  - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
   - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
   - `GCLOUD_REGION` specifies the Google Cloud region. `gcloud compute regions list` lists the available Google Cloud regions.
-  - `GCLOUD_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain. Alternatively, you could specify the value `*`, but be __WARNED__ that this will authorize any Google account holder to authenticate with OAuth to your cluster services.
   - `GCLOUD_K8S_CLUSTER` specifies the name of the GKE cluster.
   - `GCLOUD_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `gcloud container get-server-config --project ${GCLOUD_PROJECT} --zone ${GCLOUD_REGION}` lists the versions available in your region.
@@ -45,15 +45,15 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   2. Select the project from the drop down menu.
   3. In the center pane, select the __OAuth consent screen__ tab.
   4. Enter a __Application name__ .
-  5. Add the TLD of the domain specified in the `GCLOUD_DNS_ZONE` variable to the __Authorized domains__ and save the changes.
+  5. Add the TLD of the domain specified in the `BKPR_DNS_ZONE` variable to the __Authorized domains__ and save the changes.
   6. Choose the __Credentials__ tab and select the __Create Credentials > OAuth client ID__ .
   7. Select the __Web application__ option and fill in a name.
   8. Finally, add the following redirect URIs and hit __Create__ .
-      + https://prometheus.{GCLOUD_DNS_ZONE}/oauth2/callback.
-      + https://kibana.{GCLOUD_DNS_ZONE}/oauth2/callback.
-      + https://grafana.{GCLOUD_DNS_ZONE}/oauth2/callback.
+      + https://prometheus.{BKPR_DNS_ZONE}/oauth2/callback.
+      + https://kibana.{BKPR_DNS_ZONE}/oauth2/callback.
+      + https://grafana.{BKPR_DNS_ZONE}/oauth2/callback.
 
-  > Replace `{GCLOUD_DNS_ZONE}` with the value of the `GCLOUD_DNS_ZONE` environment variable*
+  > Replace `{BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
 
 Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY` and `GCLOUD_OAUTH_CLIENT_SECRET` environment variables, for example:
 
@@ -112,7 +112,7 @@ To bootstrap your Kubernetes cluster with BKPR:
   ```bash
   kubeprod install gke \
     --email "${GCLOUD_USER}" \
-    --dns-zone "${GCLOUD_DNS_ZONE}" \
+    --dns-zone "${BKPR_DNS_ZONE}" \
     --project "${GCLOUD_PROJECT}" \
     --oauth-client-id "${GCLOUD_OAUTH_CLIENT_KEY}" \
     --oauth-client-secret "${GCLOUD_OAUTH_CLIENT_SECRET}" \
@@ -138,10 +138,10 @@ BKPR creates and manages a Cloud DNS zone which is used to map external access t
 Query the name servers of the zone with the following command and configure the records with your domain registrar.
 
   ```bash
-  GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
+  BKPR_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)')
   gcloud dns record-sets list \
-    --zone ${GCLOUD_DNS_ZONE_NAME} \
-    --name ${GCLOUD_DNS_ZONE} --type NS \
+    --zone ${BKPR_DNS_ZONE_NAME} \
+    --name ${BKPR_DNS_ZONE} --type NS \
     --format=json | jq -r .[].rrdatas
   ```
 
@@ -149,7 +149,7 @@ Please note, it can take a while for the DNS changes to propogate.
 
 ### Step 4: Access logging and monitoring dashboards
 
-After the DNS changes have propagated you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${GCLOUD_DNS_ZONE}` and `https://kibana.${GCLOUD_DNS_ZONE}` respectively.
+After the DNS changes have propagated, you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}` and `https://kibana.${BKPR_DNS_ZONE}` respectively.
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 
@@ -168,15 +168,15 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 ### Step 2: Delete the Cloud DNS zone
 
   ```bash
-  GCLOUD_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${GCLOUD_DNS_ZONE} --format='value(name)')
-  gcloud dns record-sets import /dev/null --zone ${GCLOUD_DNS_ZONE_NAME} --delete-all-existing
-  gcloud dns managed-zones delete ${GCLOUD_DNS_ZONE_NAME}
+  BKPR_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)')
+  gcloud dns record-sets import /dev/null --zone ${BKPR_DNS_ZONE_NAME} --delete-all-existing
+  gcloud dns managed-zones delete ${BKPR_DNS_ZONE_NAME}
   ```
 
 ### Step 3: Delete service account and IAM profile
 
   ```bash
-  GCLOUD_SERVICE_ACCOUNT=$(gcloud iam service-accounts list --filter "displayName:${GCLOUD_DNS_ZONE} AND email:bkpr-edns" --format='value(email)')
+  GCLOUD_SERVICE_ACCOUNT=$(gcloud iam service-accounts list --filter "displayName:${BKPR_DNS_ZONE} AND email:bkpr-edns" --format='value(email)')
   gcloud projects remove-iam-policy-binding ${GCLOUD_PROJECT} \
     --member=serviceAccount:${GCLOUD_SERVICE_ACCOUNT} \
     --role=roles/dns.admin
@@ -193,6 +193,11 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
   ```bash
   GCLOUD_DISKS_FILTER=${GCLOUD_K8S_CLUSTER:0:18}
-  gcloud compute disks delete --zone ${GCLOUD_DNS_ZONE} \
+  gcloud compute disks delete --zone ${BKPR_DNS_ZONE} \
     $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)')
   ```
+
+## Further reading
+
+- [BKPR FAQ](FAQ.md)
+- [Troubleshooting](troubleshooting.md)
