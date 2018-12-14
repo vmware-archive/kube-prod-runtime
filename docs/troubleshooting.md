@@ -34,7 +34,7 @@ Please clear your Azure profile directory with `rm -rf ~/.azure` and retry after
 
 __[Reported in issue #242](https://github.com/bitnami/kube-prod-runtime/issues/242)__
 
-While installing BKPR on a AKS cluster, if you notice the following error message from `kubeprod install`, it indicates that another Azure service principal with the same value exists.
+While installing BKPR on an AKS cluster, if you notice the following error message from `kubeprod install`, it indicates that another Azure service principal with the same value exists.
 
 ```
 ERROR Error: graphrbac.ApplicationsClient#Create: Failure responding to request: StatusCode=400 -- Original Error: autorest/azure: Service returned an error. Status=400 Code="Unknown" Message="Unknown service error" Details=[{"odata.error":{"code":"Request_BadRequest","date":"2018-11-29T00:31:52","message":{"lang":"en","value":"Another object with the same value for property identifierUris already exists."},"requestId":"3c6f59e9-ad05-42fb-8ab2-3a9745eb9f68","values":[{"item":"PropertyName","value":"identifierUris"},{"item":"PropertyErrorCode","value":"ObjectConflict"}]}}]
@@ -42,7 +42,7 @@ ERROR Error: graphrbac.ApplicationsClient#Create: Failure responding to request:
 
 __Troubleshooting__:
 
-This is typically encountered when you attempt to install BKPR with a DNS zone (`--dns-zone`) that was used in a earlier installation on BKPR. Login to the [Azure Portal](https://portal.azure.com) and navigate to __Azure Active Directory > App registrations__ and filter the result with the keyword `kubeprod`. From the filtered results remove the entries that have the BKPR DNS zone in its name and retry the BKPR installation.
+This is typically encountered when you attempt to install BKPR with a DNS zone (`--dns-zone`) that was used in an earlier installation on BKPR. Login to the [Azure Portal](https://portal.azure.com) and navigate to __Azure Active Directory > App registrations__ and filter the result with the keyword `kubeprod`. From the filtered results remove the entries that have the BKPR DNS zone in its name and retry the BKPR installation.
 
 ![Azure SP Conflict](images/azure-sp-conflict.png)
 
@@ -136,7 +136,7 @@ BKPR, by default, creates host records for Prometheus, Grafana and Kibana dashbo
 
 __Troubleshooting__:
 
-ExternalDNS automatically manages host records for Ingress resources in the cluster. When a Ingress resource is created, it could take a few minutes for it to be seen by ExternalDNS.
+ExternalDNS automatically manages host records for Ingress resources in the cluster. When an Ingress resource is created, it could take a few minutes for it to be seen by ExternalDNS.
 
 If the records are not updated a few minutes after the Ingress resource is created, use the following command to inspect the container logs of the `external-dns` Pod to discover any error conditions that may have been encountered.
 
