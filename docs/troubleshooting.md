@@ -6,14 +6,14 @@
     + [Service principal clientID not found](#service-principal-clientid-not-found)
 - [Troubleshooting BKPR installation](#troubleshooting-bkpr-installation)
     + [Object with the same value for property exists](#object-with-the-same-value-for-property-exists)
+- [Troubleshooting BKPR ingress](#troubleshooting-bkpr-ingress)
+    + [Let's Encrypt](#lets-encrypt)
 - [Troublehooting DNS](#troubleshooting-dns)
     + [Unable to resolve DNS addresses](#unable-to-resolve-dns-addresses)
     + [ExternalDNS pods are not starting](#externaldns-pods-are-not-starting)
     + [ExternalDNS is not updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
     + [DNS glue records are not configured](#dns-glue-records-are-not-configured)
     + [DNS propagation has not completed](#dns-propagation-has-not-completed)
-- [Troubleshooting BKPR ingress](#troubleshooting-bkpr-ingress)
-    + [Let's Encrypt](#lets-encrypt)
 
 ## Troubleshooting AKS cluster creation
 
