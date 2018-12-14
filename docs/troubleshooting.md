@@ -12,6 +12,8 @@
     + [ExternalDNS is not updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
     + [DNS glue records are not configured](#dns-glue-records-are-not-configured)
     + [DNS propagation has not completed](#dns-propagation-has-not-completed)
+- [Troubleshooting BKPR ingress](#troubleshooting-bkpr-ingress)
+    + [Let's Encrypt](#lets-encrypt)
 
 ## Troubleshooting AKS cluster creation
 
@@ -190,3 +192,38 @@ __Troubleshooting__:
 If [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-zone-records) and the [DNS glue records are configured](#dns-glue-records-are-not-configured) correctly, you need to wait for the DNS propagation to complete.
 
 [whatsmydns.net](https://www.whatsmydns.net) is a DNS propagation checker that can give you a rough idea of the DNS propagation status of your DNS records.
+
+## Troubleshooting BKPR ingress
+
+### Let's Encrypt
+
+BKPR deploys [`cert-manager`](#components.md/cert-manager) Kubernetes add-on to automate the management and issuance of TLS certificates. `cert-manager` delegates on Let's Encrypt to retrieve valid X.509 certificates used to protect designated Kubernetes ingress resources with TLS encryption for HTTP traffic.
+
+A Kubernetes ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
+
+```
+Annotations:
+  kubernetes.io/ingress.class:                        nginx
+  kubernetes.io/tls-acme:                             true
+```
+
+`cert-manager` watches for Kubernetes ingress resources. When an ingress resource with the `"kubernetes.io/tls-acme": true` annotation is seen for the first time, `cert-manager` tries to issue an [ACME certificate using HTTP-01 challenge](http://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html). This works by creating a temporary ingress resource name like `cm-acme-http-solver-${pod_id}` and then triggering the HTTP-01 challenge protocol. This requires that Let's Encrypt is able to resolve the DNS name associated with the Kubernetes ingress resource. On a Kubernetes cluster where BKPR is deployed, this requires that External DNS is functioning properly.
+
+During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporatily uses a self-signed certificate. This situation should be transient and when it lasts for more than a couple of minutes there is a problem that prevents the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
+
+When everything works as expected, `cert-manager` will eventually install the certificate as seen next (example):
+
+```
+$ kubectl describe certificate example-com
+Events:
+  Type    Reason          Age      From          Message
+  ----    ------          ----     ----          -------
+  Normal  CreateOrder     57m      cert-manager  Created new ACME order, attempting validation...
+  Normal  DomainVerified  55m      cert-manager  Domain "example.com" verified with "http-01" validation
+  Normal  DomainVerified  55m      cert-manager  Domain "www.example.com" verified with "http-01" validation
+  Normal  IssueCert       55m      cert-manager  Issuing certificate...
+  Normal  CertObtained    55m      cert-manager  Obtained certificate from ACME server
+  Normal  CertIssued      55m      cert-manager  Certificate issued successfully
+```
+
+If this is not the case, Let's Encrypt will refuse to issue the certificate. Besides having NGINX serve a self-signed certificate, this is typically signalled because there are temporary Kubernetes ingress resources named like `cm-acme-http-solver-${pod_id}` lingering around for a while. At some point, certificate generation will time-out, these temporary ingress resources will be destroyed and the Kubernetes certificate will be marked accordingly in its events section. Make sure that External DNS is working properly. Let's Encrypt requires that the DNS name (subject) of the X.509 certificate can resolve properly. Please read the section about troubleshooting DNS and External DNS in this document.
