@@ -24,20 +24,20 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
 * Configure the following environment variables:
 
   ```bash
+  export BKPR_DNS_ZONE=my-domain.com
   export AZURE_USER=$(az account show --query user.name -o tsv)
   export AZURE_SUBSCRIPTION_ID=xxxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
   export AZURE_REGION=eastus
   export AZURE_RESOURCE_GROUP=my-kubeprod-group
-  export AZURE_DNS_ZONE=my-domain.com
   export AZURE_AKS_CLUSTER=my-aks-cluster
   export AZURE_AKS_K8S_VERSION=1.9.11
   ```
 
+  - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `AZURE_USER` specifies the email address used in requests to Let's Encrypt.
   - `AZURE_SUBSCRIPTION_ID` specifies the Azure subscription id. `az account list -o table` lists your Microsoft Azure subscriptions.
   - `AZURE_REGION` specifies the Azure region code.
   - `AZURE_RESOURCE_GROUP` specifies the name of the Azure resource group in which resources should be created.
-  - `AZURE_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `AZURE_AKS_CLUSTER` specifies the name of the AKS cluster.
   - `AZURE_AKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `az aks get-versions --location ${AZURE_REGION} -o table` lists the versions available in your region.
 
@@ -86,7 +86,7 @@ To bootstrap your Kubernetes cluster with BKPR:
   ```bash
   kubeprod install aks \
     --email ${AZURE_USER} \
-    --dns-zone "${AZURE_DNS_ZONE}" \
+    --dns-zone "${BKPR_DNS_ZONE}" \
     --dns-resource-group "${AZURE_RESOURCE_GROUP}"
   ```
 
@@ -104,7 +104,7 @@ Query the name servers of the zone with the following command and configure the 
 
   ```bash
   az network dns zone show \
-    --name ${AZURE_DNS_ZONE} \
+    --name ${BKPR_DNS_ZONE} \
     --resource-group ${AZURE_RESOURCE_GROUP} \
     --query nameServers -o tsv
   ```
@@ -113,9 +113,13 @@ Please note, it can take a while for the DNS changes to propagate.
 
 ### Step 4: Access logging and monitoring dashboards
 
-After the DNS changes have propagated you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${AZURE_DNS_ZONE}` and `https://kibana.${AZURE_DNS_ZONE}` respectively.
+After the DNS changes have propagated, you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}` and `https://kibana.${BKPR_DNS_ZONE}` respectively.
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
+
+## Next steps
+
+- [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
 
 ## Teardown and cleanup
 
@@ -129,7 +133,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
   ```bash
   az network dns zone delete \
-    --name ${AZURE_DNS_ZONE} \
+    --name ${BKPR_DNS_ZONE} \
     --resource-group ${AZURE_RESOURCE_GROUP}
   ```
 
@@ -159,3 +163,8 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
   ```bash
   az group delete --name ${AZURE_RESOURCE_GROUP}
   ```
+
+## Further reading
+
+- [BKPR FAQ](FAQ.md)
+- [Troubleshooting](troubleshooting.md)
