@@ -6,7 +6,7 @@
     + [Service principal clientID not found](#service-principal-clientid-not-found)
 - [Troubleshooting BKPR installation](#troubleshooting-bkpr-installation)
     + [Object with the same value for property exists](#object-with-the-same-value-for-property-exists)
-- [Troubleshooting BKPR ingress](#troubleshooting-bkpr-ingress)
+- [Troubleshooting BKPR Ingress](#troubleshooting-bkpr-ingress)
     + [Let's Encrypt](#lets-encrypt)
 - [Troublehooting DNS](#troubleshooting-dns)
     + [Unable to resolve DNS addresses](#unable-to-resolve-dns-addresses)
