@@ -415,4 +415,41 @@ BKPR defaults to the production environment offered by Let's Encrypt. However, f
 
 ### Invalid email address (MX records for email domain did not exist)
 
-TBW (to be written)
+This condition is usually signaled by `cert-manager` with log messages like the following:
+
+```
+I1218 17:06:03.204699       1 controller.go:171] certificates controller: syncing item 'kubeprod/prometheus-tls'
+I1218 17:06:03.204812       1 sync.go:120] Issuer letsencrypt-prod not ready
+E1218 17:06:03.204903       1 controller.go:180] certificates controller: Re-queuing item "kubeprod/prometheus-tls" due to error processing: Issuer letsencrypt-prod not ready
+```
+
+If the e-mail address used when installing BKPR uses an invalid domain or an e-mail domain that can't be resolved properly (missing MX DNS record), Let's Encrypt will refuse to accept requests from `cert-manager`. The actual error can be inspected by looking at the ClusterIssuer object in Kubernetes:
+
+```bash
+$ kubectl --namespace=kubeprod describe clusterissuer letsencrypt-prod
+Name:         letsencrypt-prod
+Namespace:
+Labels:       kubecfg.ksonnet.io/garbage-collect-tag=kube_prod_runtime
+              name=letsencrypt-prod
+Annotations:  kubecfg.ksonnet.io/garbage-collect-tag: kube_prod_runtime
+API Version:  certmanager.k8s.io/v1alpha1
+Kind:         ClusterIssuer
+...
+Events:
+  Type     Reason                Age   From          Message
+  ----     ------                ----  ----          -------
+  Warning  ErrVerifyACMEAccount  13m   cert-manager  Failed to verify ACME account: acme: urn:ietf:params:acme:error:invalidEmail: Error creating new account :: invalid contact domain. Contact emails @example.com are forbidden
+```
+
+To fix the issue make sure the domain part for the e-mail address used when installing BKPR has a corresponding MX DNS record. For example:
+
+```bash
+$ nslookup -tMX bitnami.com
+*** Invalid option: tMX
+Server:         192.168.0.1
+Address:        192.168.0.1#53
+
+Non-authoritative answer:
+Name:   bitnami.com
+Address: 50.17.235.25
+```
