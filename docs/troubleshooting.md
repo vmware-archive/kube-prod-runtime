@@ -228,13 +228,42 @@ If [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-z
 
 [whatsmydns.net](https://www.whatsmydns.net) is a DNS propagation checker that can give you a rough idea of the DNS propagation status of your DNS records.
 
-## Troubleshooting BKPR ingress
+## Troubleshooting BKPR Ingress
 
 ### Let's Encrypt
 
-BKPR deploys [`cert-manager`](#components.md/cert-manager) Kubernetes add-on to automate the management and issuance of TLS certificates. `cert-manager` delegates on Let's Encrypt to retrieve valid X.509 certificates used to protect designated Kubernetes ingress resources with TLS encryption for HTTP traffic.
+The inability to access a Kubernetes Ingress resource over HTTP/S is likely caused by one the following scenarios:
 
-A Kubernetes ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
+1. Ingress resource lacks the necessary annotations
+1. Domain self-check fails
+1. Let's Encrypt rate-limiting
+1. Invalid email address (MX records for email domain did not exist)
+
+In the next sections we will describe the troubleshooting steps required to identify the underlying problem and how to fix it.
+
+__Accessing `cert-manager` logs__:
+
+`cert-manager` logs can be retrieved directly from the pod:
+
+The first step for troubleshooting self-signed certificates consists of checking the logs in `cert-manager`. `cert-manager` logs can be retrieved by logging into Kibana and querying .... However, if you are unable to access Kibana, `cert-manager` the most recent logs can be retrieve directly from the running pod by performing the following steps:
+
+```
+$ kubectl --namespace=kubeprod get pods --selector=name=cert-manager
+NAME                            READY   STATUS    RESTARTS   AGE
+cert-manager-75668b9d76-t5659   1/1     Running   0          10m
+```
+
+The following command retrieves the most recent set of logs from the `cert-manager` pod named as shown above:
+
+```
+$ kubectl --namespace=kubeprod logs cert-manager-75668b9d76-t5659
+```
+
+__Troubleshooting__:
+
+#### Ingress resource lacks the necessary annotations
+
+A Kubernetes Ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
 
 ```
 Annotations:
@@ -242,23 +271,150 @@ Annotations:
   kubernetes.io/tls-acme:                             true
 ```
 
-`cert-manager` watches for Kubernetes ingress resources. When an ingress resource with the `"kubernetes.io/tls-acme": true` annotation is seen for the first time, `cert-manager` tries to issue an [ACME certificate using HTTP-01 challenge](http://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html). This works by creating a temporary ingress resource name like `cm-acme-http-solver-${pod_id}` and then triggering the HTTP-01 challenge protocol. This requires that Let's Encrypt is able to resolve the DNS name associated with the Kubernetes ingress resource. On a Kubernetes cluster where BKPR is deployed, this requires that External DNS is functioning properly.
+Make sure the Ingress resource you are trying to reach over HTTP/S has these annotations. For example:
 
-During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporatily uses a self-signed certificate. This situation should be transient and when it lasts for more than a couple of minutes there is a problem that prevents the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
+```bash
+$ kubectl --namespace=kubeprod describe ingress grafana
+Name:             grafana
+Namespace:        kubeprod
+Address:          35.241.253.114
+Default backend:  default-http-backend:80 (10.48.1.8:8080)
+TLS:
+  grafana-tls terminates grafana.example.com
+Rules:
+  Host                  Path      Backends
+  ----                  ----      --------
+  grafana.example.com
+                        /oauth2   oauth2-proxy:4180 (<none>)
+  grafana.example.com
+                        /         grafana:3000 (<none>)
+Annotations:
+  kubecfg.ksonnet.io/garbage-collect-tag:             kube_prod_runtime
+  kubernetes.io/ingress.class:                        nginx
+  kubernetes.io/tls-acme:                             true
+  nginx.ingress.kubernetes.io/auth-response-headers:  X-Auth-Request-User, X-Auth-Request-Email
+  nginx.ingress.kubernetes.io/auth-signin:            https://grafana.example.com/oauth2/start
+  nginx.ingress.kubernetes.io/auth-url:               https://grafana.example.com/oauth2/auth
+```
 
-When everything works as expected, `cert-manager` will eventually install the certificate as seen next (example):
+If this is not the case, ensure that at least `"kubernetes.io/ingress.class": true` and `"kubernetes.io/tls-acme": true` are present.
+
+### Domain self check failure
+
+This condition is usually signaled by `cert-manager` with log messages like the following:
 
 ```
-$ kubectl describe certificate example-com
+E1217 16:12:27.728123       1 controller.go:180] certificates controller: Re-queuing item "kubeprod/grafana-tls" due to error processing: http-01 self check failed for domain "grafana.example.com"
+```
+
+This usually means that the DNS domain name `grafana.example.com` does not resolve or the ACME protocol is not working as expected. Let's Encrypt is unable to probe that you (your Kubernetes cluster) is actually in control of the DNS domain name and refuses to issue a signed certificate.
+
+To troubelshoot this issue, first, determine the IPv4 address that `grafana` is using:
+
+```
+$ kubectl --namespace=kubeprod get ing
+NAME                        HOSTS                                           ADDRESS          PORTS     AGE
+cm-acme-http-solver-px56z   grafana.example.com                             35.241.253.114   80        1m
+cm-acme-http-solver-rdxkg   kibana.example.com                              35.241.253.114   80        1m
+cm-acme-http-solver-sdgdc   prometheus.example.com                          35.241.253.114   80        1m
+grafana                     grafana.exampl.ecom,grafana.example.com         35.241.253.114   80, 443   1m
+kibana-logging              kibana.example.com,kibana.example.com           35.241.253.114   80, 443   1m
+prometheus                  prometheus.example.com,prometheus.example.com   35.241.253.114   80, 443   1m
+```
+
+In this example, `grafana.example.com` should resolve to `35.241.253.114`. In this example, this is not the case:
+
+```
+$ nslookup grafana.example.com 8.8.8.8
+Server:         8.8.8.8
+Address:        8.8.8.8#53
+
+** server can't find grafana.example.com: NXDOMAIN
+```
+
+This typically means that DNS glue records for `example.com` are not properly configured. Please check the section named [Unable to resolve DNS addresses](#unable-to-resolve-dns-addresses) above.
+
+If the DNS glue records are properly configured but still the DNS name for your Ingress resource does not resolve, it could mean that the NGINX ingress controller is not getting an IPv4 address. Th
+
+It could also mean that NGINX ingress controller hasn't got a public IPv4 address:
+
+```bash
+$ kubectl --namespace=kubeprod get ing
+NAME             HOSTS                                           ADDRESS   PORTS     AGE
+grafana          grafana.example.com,grafana.example.com                   80, 443   49s
+kibana-logging   kibana.example.com,kibana.example.com                     80, 443   47s
+prometheus       prometheus.example.com,prometheus.example.com             80, 443   44s
+```
+
+Please wait a few minutes and check back again. If this is still the case, there must be some error condition that prevents NGINX ingress controller from getting a public IPv4 address. The conditions that can trigger this situation depend greatly on the underlying computing platform for Kubernetes. For example, Kubernetes on AKS or GKE depend on the public cloud infrastructure to provide a routable IPv4 address which is usually tied to some form of load-balancing resource.
+
+However, if the NGINX ingress controller is able to get a public IPv4 address, `grafana.example.com` must resolve to that same IPv4 address. For example:
+
+```
+$ kubectl --namespace=kubeprod get ing grafana
+NAME      HOSTS                                                         ADDRESS          PORTS     AGE
+grafana   grafana.gke.felipe-alfaro.com,grafana.gke.felipe-alfaro.com   35.241.253.114   80, 443   6m
+```
+
+The `grafana.example.com` DNS name should resolve to `35.231.253.114`. However, in this example this is not the case as seen below:
+
+```bash
+$ nslookup grafana.gke.felipe-alfaro.com 8.8.8.8
+Server:         8.8.8.8
+Address:        8.8.8.8#53
+
+Non-authoritative answer:
+Name:   grafana.gke.felipe-alfaro.com
+Address: 35.241.251.76
+```
+
+As the reader will notice in this example, `grafana.example.com` does not resolve to the IPv4 address stated in the correspoding Kubernetes ingress resource. This could be caused by DNS caching and propagation issues (e.g. the TTL for the DNS record has not expired yet and Google DNS servers are not re-querying from the authoritative name server). Again, wait a few minutes and check back whether `grafana.example.com` resolves to same the IPv4 address as seen in the Ingress resource (in this example, `35.241.253.114`).
+
+As long as `grafana.example.com` does not resolve to the IPv4 address stated in the Ingress resource, Let's Encrypt will refuse to issue the certificate. Let's Encrypt uses the ACME HTTP-01 protocol and as long as the ACME protocol is running you will notice some transient Ingress resources named like `cm-acme-http-solver-*`:
+
+```bash
+$ kubectl --namespace=kubeprod get ing
+NAME                        HOSTS                                           ADDRESS          PORTS     AGE
+cm-acme-http-solver-px56z   grafana.example.com                             35.241.253.114   80        1m
+cm-acme-http-solver-rdxkg   kibana.example.com                              35.241.253.114   80        1m
+cm-acme-http-solver-sdgdc   prometheus.example.com                          35.241.253.114   80        1m
+grafana                     grafana.exampl.ecom,grafana.example.com         35.241.253.114   80, 443   1m
+kibana-logging              kibana.example.com,kibana.example.com           35.241.253.114   80, 443   1m
+prometheus                  prometheus.example.com,prometheus.example.com   35.241.253.114   80, 443   1m
+```
+
+Once `grafana.example.com` resolves properly to the IPv4 address of the Ingress resource, the certiticate will be eventually issued and installed:
+
+```bash
+$ kubectl --namespace=kubeprod describe cert grafana-tls
+Name:         grafana-tls
+Namespace:    kubeprod
+...
 Events:
-  Type    Reason          Age      From          Message
-  ----    ------          ----     ----          -------
-  Normal  CreateOrder     57m      cert-manager  Created new ACME order, attempting validation...
-  Normal  DomainVerified  55m      cert-manager  Domain "example.com" verified with "http-01" validation
-  Normal  DomainVerified  55m      cert-manager  Domain "www.example.com" verified with "http-01" validation
-  Normal  IssueCert       55m      cert-manager  Issuing certificate...
-  Normal  CertObtained    55m      cert-manager  Obtained certificate from ACME server
-  Normal  CertIssued      55m      cert-manager  Certificate issued successfully
+  Type     Reason          Age                From          Message
+  ----     ------          ----               ----          -------
+  Warning  IssuerNotReady  32m                cert-manager  Issuer letsencrypt-prod not ready
+  Normal   CreateOrder     30m (x2 over 32m)  cert-manager  Created new ACME order, attempting validation...
+  Normal   DomainVerified  28m                cert-manager  Domain "grafana.example.com" verified with "http-01" validation
+  Normal   IssueCert       28m                cert-manager  Issuing certificate...
+  Normal   CertObtained    28m                cert-manager  Obtained certificate from ACME server
+  Normal   CertIssued      28m                cert-manager  Certificate issued successfully
+  ```
+
+At this point check that you can access the Kubernetes Ingress resource correctly over HTTP/S.
+
+### Rate-limit issues
+
+This condition is usually signaled by `cert-manager` with log messages like the following:
+
+```
+E1217 22:24:31.237112       1 controller.go:180] certificates controller: Re-queuing item "kubeprod/grafana-tls" due to error processing: error getting certificate from acme server: acme: urn:ietf:params:acme:error:rateLimited: Error finalizing order :: too many certificates already issued for exact set of domains: grafana.example.com: see https://letsencrypt.org/docs/rate-limits/
 ```
 
-If this is not the case, Let's Encrypt will refuse to issue the certificate. Besides having NGINX serve a self-signed certificate, this is typically signalled because there are temporary Kubernetes ingress resources named like `cm-acme-http-solver-${pod_id}` lingering around for a while. At some point, certificate generation will time-out, these temporary ingress resources will be destroyed and the Kubernetes certificate will be marked accordingly in its events section. Make sure that External DNS is working properly. Let's Encrypt requires that the DNS name (subject) of the X.509 certificate can resolve properly. Please read the section about troubleshooting DNS and External DNS in this document.
+This means that `cert-manager` has requested too many certificates and has exceeded the [Let's Encrypt rate limits](https://letsencrypt.org/docs/rate-limits/). This situation can happen when you install and uninstall BKPR too many times or when a particular DNS domain is shared among several BKPR clusters.
+
+BKPR defaults to the production environment offered by Let's Encrypt. However, for a non-production use of BKPR you can switch to using the staging environment that Let's Encrypt provides. You can find more information on how to switch to [using the staging environment](components.md#lets-encrypt-environments) in the BKPR documentation.
+
+### Invalid email address (MX records for email domain did not exist)
+
+TBW (to be written)
