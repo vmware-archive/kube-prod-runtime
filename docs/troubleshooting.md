@@ -228,7 +228,7 @@ __Troubleshooting__:
 
 #### Ingress resource lacks the necessary annotations
 
-A Kubernetes Ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
+A Kubernetes Ingress resource is designated as TLS-terminated at the NGINX controller when the following annotations are present:
 
 ```
 Annotations:
