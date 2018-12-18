@@ -213,6 +213,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
         // An endpoint is considered ready if its address is in the addresses field
         // of the EndpointSubset object, or the corresponding service has the following
         // annotation set to true.
+        // NOTE: Deprecated in k8s 1.11
         "service.alpha.kubernetes.io/tolerate-unready-endpoints": "true",
       },
     },

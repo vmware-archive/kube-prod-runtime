@@ -28,7 +28,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   export GCLOUD_REGION="us-east1-d"
   export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
   export GCLOUD_K8S_CLUSTER="my-gke-cluster"
-  export GCLOUD_K8S_VERSION="1.10"
+  export GCLOUD_K8S_VERSION="1.11"
   ```
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
