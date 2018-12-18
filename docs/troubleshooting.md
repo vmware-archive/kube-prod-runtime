@@ -62,7 +62,7 @@ Annotations:
 
 `cert-manager` watches for Kubernetes ingress resources. When an ingress resource with the `"kubernetes.io/tls-acme": true` annotation is seen for the first time, `cert-manager` tries to issue an [ACME certificate using HTTP-01 challenge](http://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html). It does this by creating a temporary Ingress resource named cm-acme-http-solver-${pod_id} and then triggering the HTTP-01 challenge protocol. This requires Let's Encrypt to resolve the DNS name associated with the Kubernetes Ingress resource and this, in turn, requires External DNS to be functioning properly.
 
-During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporarily uses a self-signed certificate. This situation should be transient and when it lasts for more than a couple of minutes there is a problem that prevents the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
+During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporarily uses a self-signed certificate. This situation should be transient and when it lasts for more than a few minutes, it implies that there is a problem preventing the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
 
 When everything works as expected, `cert-manager` will eventually install the certificate as seen next (example):
 
