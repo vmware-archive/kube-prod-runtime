@@ -366,7 +366,7 @@ Name:   grafana.example.com
 Address: 35.241.251.76
 ```
 
-As the reader will notice in this example, `grafana.example.com` does not resolve to the IPv4 address stated in the correspoding Kubernetes ingress resource. This could be caused by DNS caching and propagation issues (e.g. the TTL for the DNS record has not expired yet and Google DNS servers are not re-querying from the authoritative name server). Again, wait a few minutes and check back whether `grafana.example.com` resolves to same the IPv4 address as seen in the Ingress resource (in this example, `35.241.253.114`).
+As the reader will notice in this example, `grafana.example.com` does not resolve to the IPv4 address stated in the corresponding Kubernetes ingress resource. This could be caused by DNS caching and propagation issues (e.g. the TTL for the DNS record has not expired yet and Google DNS servers are not re-querying from the authoritative name server). Again, wait a few minutes and check back whether `grafana.example.com` resolves to the same the IPv4 address as seen in the Ingress resource (in this example, `35.241.253.114`).
 
 As long as `grafana.example.com` does not resolve to the IPv4 address stated in the Ingress resource, Let's Encrypt will refuse to issue the certificate. Let's Encrypt uses the ACME HTTP-01 protocol and as long as the ACME protocol is running you will notice some transient Ingress resources named like `cm-acme-http-solver-*`:
 
@@ -381,7 +381,7 @@ kibana-logging              kibana.example.com,kibana.example.com           35.2
 prometheus                  prometheus.example.com,prometheus.example.com   35.241.253.114   80, 443   1m
 ```
 
-Once `grafana.example.com` resolves properly to the IPv4 address of the Ingress resource, the certiticate will be eventually issued and installed:
+Once `grafana.example.com` resolves properly to the IPv4 address of the Ingress resource, the certificate will be eventually issued and installed:
 
 ```bash
 $ kubectl --namespace=kubeprod describe cert grafana-tls
