@@ -1,0 +1,4 @@
+{
+    "cert-manager": "0.5.2-r36",
+    "external-dns": "0.5.9-r18"
+}
