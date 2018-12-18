@@ -8,7 +8,7 @@
     + [Object with the same value for property exists](#object-with-the-same-value-for-property-exists)
 - [Troubleshooting BKPR Ingress](#troubleshooting-bkpr-ingress)
     + [Let's Encrypt](#lets-encrypt)
-- [Troublehooting DNS](#troubleshooting-dns)
+- [Troubleshooting DNS](#troubleshooting-dns)
     + [Unable to resolve DNS addresses](#unable-to-resolve-dns-addresses)
     + [ExternalDNS pods are not starting](#externaldns-pods-are-not-starting)
     + [ExternalDNS is not updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
@@ -52,9 +52,7 @@ This is typically encountered when you attempt to install BKPR with a DNS zone (
 
 ### Let's Encrypt
 
-BKPR deploys [`cert-manager`](#components.md/cert-manager) Kubernetes add-on to automate the management and issuance of TLS certificates. `cert-manager` delegates on Let's Encrypt to retrieve valid X.509 certificates used to protect designated Kubernetes ingress resources with TLS encryption for HTTP traffic.
-
-A Kubernetes ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
+`cert-manager` uses Let's Encrypt to retrieve valid X.509 certificates that protect designated Kubernetes Ingress resources with TLS encryption for HTTPS traffic. A Kubernetes ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
 
 ```
 Annotations:
@@ -62,9 +60,9 @@ Annotations:
   kubernetes.io/tls-acme:                             true
 ```
 
-`cert-manager` watches for Kubernetes ingress resources. When an ingress resource with the `"kubernetes.io/tls-acme": true` annotation is seen for the first time, `cert-manager` tries to issue an [ACME certificate using HTTP-01 challenge](http://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html). This works by creating a temporary ingress resource name like `cm-acme-http-solver-${pod_id}` and then triggering the HTTP-01 challenge protocol. This requires that Let's Encrypt is able to resolve the DNS name associated with the Kubernetes ingress resource. On a Kubernetes cluster where BKPR is deployed, this requires that External DNS is functioning properly.
+`cert-manager` watches for Kubernetes ingress resources. When an ingress resource with the `"kubernetes.io/tls-acme": true` annotation is seen for the first time, `cert-manager` tries to issue an [ACME certificate using HTTP-01 challenge](http://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html). It does this by creating a temporary Ingress resource named cm-acme-http-solver-${pod_id} and then triggering the HTTP-01 challenge protocol. This requires Let's Encrypt to resolve the DNS name associated with the Kubernetes Ingress resource and this, in turn, requires External DNS to be functioning properly.
 
-During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporatily uses a self-signed certificate. This situation should be transient and when it lasts for more than a couple of minutes there is a problem that prevents the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
+During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporarily uses a self-signed certificate. This situation should be transient and when it lasts for more than a couple of minutes there is a problem that prevents the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
 
 When everything works as expected, `cert-manager` will eventually install the certificate as seen next (example):
 
@@ -81,9 +79,9 @@ Events:
   Normal  CertIssued      55m      cert-manager  Certificate issued successfully
 ```
 
-If this is not the case, Let's Encrypt will refuse to issue the certificate. Besides having NGINX serve a self-signed certificate, this is typically signalled because there are temporary Kubernetes ingress resources named like `cm-acme-http-solver-${pod_id}` lingering around for a while. At some point, certificate generation will time-out, these temporary ingress resources will be destroyed and the Kubernetes certificate will be marked accordingly in its events section. Make sure that External DNS is working properly. Let's Encrypt requires that the DNS name (subject) of the X.509 certificate can resolve properly. Please read the section about troubleshooting DNS and External DNS in this document.
+If this is not the case, Let's Encrypt will refuse to issue the certificate. Besides having NGINX serve a self-signed certificate, this is typically signaled because there are temporary Kubernetes ingress resources named like `cm-acme-http-solver-${pod_id}` lingering around for a while. At some point, certificate generation will time-out, these temporary ingress resources will be destroyed, and the Kubernetes certificate will be marked accordingly in its events section. Make sure that External DNS is working properly. Let's Encrypt requires that the DNS name (subject) of the X.509 certificate can resolve properly. Please read the section about troubleshooting DNS and External DNS in this document.
 
-## Troublehooting DNS
+## Troubleshooting DNS
 
 ### Unable to resolve DNS addresses
 
@@ -96,7 +94,7 @@ ping: prometheus.my-domain.com: Name or service not known
 
 __Troubleshooting__:
 
-DNS address resolution could be a result of configuration issues. For a working DNS setup you need to ensure all of the following conditions are met.
+DNS address resolution could be a result of configuration issues. For a working DNS setup, you need to ensure all of the following conditions are met.
 
 - [ExternalDNS Pods are running](#externaldns-pods-are-not-starting)
 - [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
@@ -117,7 +115,7 @@ The `AVAILABLE` column indicates the number of Pods that have started successful
 
 __Troubleshooting__:
 
-A Pod goes through various [lifecyle phases](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/) before it enters the `Running` phase. You can use the following command to watch the rollout status of the `external-dns` Deployment:
+A Pod goes through various [lifecycle phases](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/) before it enters the `Running` phase. You can use the following command to watch the rollout status of the `external-dns` Deployment:
 
 ```bash
 kubectl -n kubeprod rollout status deployments external-dns
@@ -245,7 +243,7 @@ __Accessing `cert-manager` logs__:
 
 `cert-manager` logs can be retrieved directly from the pod:
 
-The first step for troubleshooting self-signed certificates consists of checking the logs in `cert-manager`. `cert-manager` logs can be retrieved by logging into Kibana and querying .... However, if you are unable to access Kibana, `cert-manager` the most recent logs can be retrieve directly from the running pod by performing the following steps:
+The first step for troubleshooting self-signed certificates consists of checking the logs in `cert-manager`. `cert-manager` logs can be retrieved by logging into Kibana and querying .... However, if you are unable to access Kibana, `cert-manager` the most recent logs can be retrieved directly from the running pod by performing the following steps:
 
 ```
 $ kubectl --namespace=kubeprod get pods --selector=name=cert-manager
@@ -299,17 +297,17 @@ Annotations:
 
 If this is not the case, ensure that at least `"kubernetes.io/ingress.class": true` and `"kubernetes.io/tls-acme": true` are present.
 
-### Domain self check failure
+### Domain self-check failure
 
 This condition is usually signaled by `cert-manager` with log messages like the following:
 
 ```
-E1217 16:12:27.728123       1 controller.go:180] certificates controller: Re-queuing item "kubeprod/grafana-tls" due to error processing: http-01 self check failed for domain "grafana.example.com"
+E1217 16:12:27.728123       1 controller.go:180] certificates controller: Re-queuing item "kubeprod/grafana-tls" due to error processing: http-01 self-check failed for domain "grafana.example.com"
 ```
 
 This usually means that the DNS domain name `grafana.example.com` does not resolve or the ACME protocol is not working as expected. Let's Encrypt is unable to probe that you (your Kubernetes cluster) is actually in control of the DNS domain name and refuses to issue a signed certificate.
 
-To troubelshoot this issue, first, determine the IPv4 address that `grafana` is using:
+To troubleshoot this issue, first, determine the IPv4 address that `grafana` is using:
 
 ```
 $ kubectl --namespace=kubeprod get ing
@@ -352,19 +350,19 @@ However, if the NGINX ingress controller is able to get a public IPv4 address, `
 
 ```
 $ kubectl --namespace=kubeprod get ing grafana
-NAME      HOSTS                                                         ADDRESS          PORTS     AGE
-grafana   grafana.gke.felipe-alfaro.com,grafana.gke.felipe-alfaro.com   35.241.253.114   80, 443   6m
+NAME      HOSTS                                     ADDRESS          PORTS     AGE
+grafana   grafana.example.com,grafana.example.com   35.241.253.114   80, 443   6m
 ```
 
 The `grafana.example.com` DNS name should resolve to `35.231.253.114`. However, in this example this is not the case as seen below:
 
 ```bash
-$ nslookup grafana.gke.felipe-alfaro.com 8.8.8.8
+$ nslookup grafana.example.com 8.8.8.8
 Server:         8.8.8.8
 Address:        8.8.8.8#53
 
 Non-authoritative answer:
-Name:   grafana.gke.felipe-alfaro.com
+Name:   grafana.example.com
 Address: 35.241.251.76
 ```
 
