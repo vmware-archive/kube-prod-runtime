@@ -48,39 +48,6 @@ This is typically encountered when you attempt to install BKPR with a DNS zone (
 
 ![Azure SP Conflict](images/azure-sp-conflict.png)
 
-## Troubleshooting BKPR ingress
-
-### Let's Encrypt
-
-`cert-manager` uses Let's Encrypt to retrieve valid X.509 certificates that protect designated Kubernetes Ingress resources with TLS encryption for HTTPS traffic. A Kubernetes ingress resource is designated to be TLS-terminated at the NGINX controller when the following annotations are present:
-
-```
-Annotations:
-  kubernetes.io/ingress.class:                        nginx
-  kubernetes.io/tls-acme:                             true
-```
-
-`cert-manager` watches for Kubernetes ingress resources. When an ingress resource with the `"kubernetes.io/tls-acme": true` annotation is seen for the first time, `cert-manager` tries to issue an [ACME certificate using HTTP-01 challenge](http://docs.cert-manager.io/en/latest/tutorials/acme/http-validation.html). It does this by creating a temporary Ingress resource named cm-acme-http-solver-${pod_id} and then triggering the HTTP-01 challenge protocol. This requires Let's Encrypt to resolve the DNS name associated with the Kubernetes Ingress resource and this, in turn, requires External DNS to be functioning properly.
-
-During the time while `cert-manager` negotiates the certificate issue with Let's Encrypt, NGNIX controller temporarily uses a self-signed certificate. This situation should be transient and when it lasts for more than a few minutes, it implies that there is a problem preventing the certificate from being issued. Please note that when using the staging environment for Let's Encrypt the certificates issued by it not be recognized as valid (the signing CA is not a recognized one). 
-
-When everything works as expected, `cert-manager` will eventually install the certificate as seen next (example):
-
-```
-$ kubectl describe certificate example-com
-Events:
-  Type    Reason          Age      From          Message
-  ----    ------          ----     ----          -------
-  Normal  CreateOrder     57m      cert-manager  Created new ACME order, attempting validation...
-  Normal  DomainVerified  55m      cert-manager  Domain "example.com" verified with "http-01" validation
-  Normal  DomainVerified  55m      cert-manager  Domain "www.example.com" verified with "http-01" validation
-  Normal  IssueCert       55m      cert-manager  Issuing certificate...
-  Normal  CertObtained    55m      cert-manager  Obtained certificate from ACME server
-  Normal  CertIssued      55m      cert-manager  Certificate issued successfully
-```
-
-If this is not the case, Let's Encrypt will refuse to issue the certificate. Besides having NGINX serve a self-signed certificate, this is typically signaled because there are temporary Kubernetes ingress resources named like `cm-acme-http-solver-${pod_id}` lingering around for a while. At some point, certificate generation will time-out, these temporary ingress resources will be destroyed, and the Kubernetes certificate will be marked accordingly in its events section. Make sure that External DNS is working properly. Let's Encrypt requires that the DNS name (subject) of the X.509 certificate can resolve properly. Please read the section about troubleshooting DNS and External DNS in this document.
-
 ## Troubleshooting DNS
 
 ### Unable to resolve DNS addresses
@@ -230,7 +197,7 @@ If [ExternalDNS is updating DNS zone records](#externaldns-is-not-updating-dns-z
 
 ### Let's Encrypt
 
-The inability to access a Kubernetes Ingress resource over HTTP/S is likely caused by one the following scenarios:
+The inability to access a Kubernetes Ingress resource over HTTP/S is likely caused by one of the following scenarios:
 
 1. Ingress resource lacks the necessary annotations
 1. Domain self-check fails
@@ -241,9 +208,9 @@ In the next sections we will describe the troubleshooting steps required to iden
 
 __Accessing `cert-manager` logs__:
 
-`cert-manager` logs can be retrieved directly from the pod:
+`cert-manager` logs can be retrieved directly from the pod.
 
-The first step for troubleshooting self-signed certificates consists of checking the logs in `cert-manager`. `cert-manager` logs can be retrieved by logging into Kibana and querying .... However, if you are unable to access Kibana, `cert-manager` the most recent logs can be retrieved directly from the running pod by performing the following steps:
+The first step for troubleshooting self-signed certificates consists of checking the logs in `cert-manager`. `cert-manager` logs can be queried directly from Kibana. Or if you are unable to access Kibana, the most recent logs from `cert-manager` can be retrieved directly from the running pod by performing the following steps:
 
 ```
 $ kubectl --namespace=kubeprod get pods --selector=name=cert-manager
@@ -307,7 +274,7 @@ E1217 16:12:27.728123       1 controller.go:180] certificates controller: Re-que
 
 This usually means that the DNS domain name `grafana.example.com` does not resolve or the ACME protocol is not working as expected. Let's Encrypt is unable to probe that you (your Kubernetes cluster) is actually in control of the DNS domain name and refuses to issue a signed certificate.
 
-To troubleshoot this issue, first, determine the IPv4 address that `grafana` is using:
+To troubleshoot this issue, first determine the IPv4 address that `grafana` is using:
 
 ```
 $ kubectl --namespace=kubeprod get ing
@@ -315,7 +282,7 @@ NAME                        HOSTS                                           ADDR
 cm-acme-http-solver-px56z   grafana.example.com                             35.241.253.114   80        1m
 cm-acme-http-solver-rdxkg   kibana.example.com                              35.241.253.114   80        1m
 cm-acme-http-solver-sdgdc   prometheus.example.com                          35.241.253.114   80        1m
-grafana                     grafana.exampl.ecom,grafana.example.com         35.241.253.114   80, 443   1m
+grafana                     grafana.example.com,grafana.example.com         35.241.253.114   80, 443   1m
 kibana-logging              kibana.example.com,kibana.example.com           35.241.253.114   80, 443   1m
 prometheus                  prometheus.example.com,prometheus.example.com   35.241.253.114   80, 443   1m
 ```
@@ -332,9 +299,9 @@ Address:        8.8.8.8#53
 
 This typically means that DNS glue records for `example.com` are not properly configured. Please check the section named [Unable to resolve DNS addresses](#unable-to-resolve-dns-addresses) above.
 
-If the DNS glue records are properly configured but still the DNS name for your Ingress resource does not resolve, it could mean that the NGINX ingress controller is not getting an IPv4 address. Th
+If the DNS glue records are properly configured but still the DNS name for your Ingress resource does not resolve, it could mean that the NGINX Ingress controller is not getting an IPv4 address.
 
-It could also mean that NGINX ingress controller hasn't got a public IPv4 address:
+It could also mean that NGINX Ingress controller hasn't got a public IPv4 address:
 
 ```bash
 $ kubectl --namespace=kubeprod get ing
@@ -344,9 +311,9 @@ kibana-logging   kibana.example.com,kibana.example.com                     80, 4
 prometheus       prometheus.example.com,prometheus.example.com             80, 443   44s
 ```
 
-Please wait a few minutes and check back again. If this is still the case, there must be some error condition that prevents NGINX ingress controller from getting a public IPv4 address. The conditions that can trigger this situation depend greatly on the underlying computing platform for Kubernetes. For example, Kubernetes on AKS or GKE depend on the public cloud infrastructure to provide a routable IPv4 address which is usually tied to some form of load-balancing resource.
+Please wait a few minutes and check back again. If this is still the case, there must be some error condition that prevents tbe NGINX Ingress controller from getting a public IPv4 address. The conditions that can trigger this situation depend greatly on the underlying computing platform for Kubernetes. For example, Kubernetes on AKS or GKE depend on the public cloud infrastructure to provide a routable IPv4 address which is usually tied to some form of load-balancing resource.
 
-However, if the NGINX ingress controller is able to get a public IPv4 address, `grafana.example.com` must resolve to that same IPv4 address. For example:
+However, if the NGINX Ingress controller is able to get a public IPv4 address, `grafana.example.com` must resolve to that same IPv4 address. For example:
 
 ```
 $ kubectl --namespace=kubeprod get ing grafana
@@ -366,7 +333,7 @@ Name:   grafana.example.com
 Address: 35.241.251.76
 ```
 
-As the reader will notice in this example, `grafana.example.com` does not resolve to the IPv4 address stated in the corresponding Kubernetes ingress resource. This could be caused by DNS caching and propagation issues (e.g. the TTL for the DNS record has not expired yet and Google DNS servers are not re-querying from the authoritative name server). Again, wait a few minutes and check back whether `grafana.example.com` resolves to the same the IPv4 address as seen in the Ingress resource (in this example, `35.241.253.114`).
+As the reader will notice in this example, `grafana.example.com` does not resolve to the IPv4 address stated in the corresponding Kubernetes Ingress resource. This could be caused by DNS caching and propagation issues (e.g. the TTL for the DNS record has not expired yet and Google DNS servers are not re-querying from the authoritative name server). Again, wait a few minutes and check back whether `grafana.example.com` resolves to the same the IPv4 address as seen in the Ingress resource (in this example, `35.241.253.114`).
 
 As long as `grafana.example.com` does not resolve to the IPv4 address stated in the Ingress resource, Let's Encrypt will refuse to issue the certificate. Let's Encrypt uses the ACME HTTP-01 protocol and as long as the ACME protocol is running you will notice some transient Ingress resources named like `cm-acme-http-solver-*`:
 
