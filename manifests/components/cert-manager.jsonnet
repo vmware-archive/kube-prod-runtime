@@ -18,7 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local CERT_MANAGER_IMAGE = "bitnami/cert-manager:%s" % (import "versions.json")["cert-manager"];
+local CERT_MANAGER_IMAGE = (import "versions.json")["cert-manager"];
 
 {
   p:: "",

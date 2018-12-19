@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local FLUENTD_ES_IMAGE = "bitnami/fluentd:1.2.2-r22";
+local FLUENTD_ES_IMAGE = (import "versions.json")["fluentd"];
 local FLUENTD_ES_CONF_PATH = "/opt/bitnami/fluentd/conf";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_FILE = "/opt/bitnami/fluentd/logs/fluentd.log";
