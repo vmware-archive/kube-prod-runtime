@@ -343,7 +343,7 @@ NAME                        HOSTS                                           ADDR
 cm-acme-http-solver-px56z   grafana.example.com                             35.241.253.114   80        1m
 cm-acme-http-solver-rdxkg   kibana.example.com                              35.241.253.114   80        1m
 cm-acme-http-solver-sdgdc   prometheus.example.com                          35.241.253.114   80        1m
-grafana                     grafana.exampl.ecom,grafana.example.com         35.241.253.114   80, 443   1m
+grafana                     grafana.example.com,grafana.example.com         35.241.253.114   80, 443   1m
 kibana-logging              kibana.example.com,kibana.example.com           35.241.253.114   80, 443   1m
 prometheus                  prometheus.example.com,prometheus.example.com   35.241.253.114   80, 443   1m
 ```
