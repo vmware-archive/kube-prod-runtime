@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local PROMETHEUS_IMAGE = "bitnami/prometheus:2.4.3-r31";
+local PROMETHEUS_IMAGE = (import "versions.json")["prometheus"];
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 

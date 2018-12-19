@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local EXTERNAL_DNS_IMAGE = (import "versions.json")["external-dns"];
 
 {
   p:: "",
@@ -76,7 +77,7 @@ local kube = import "../lib/kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             edns: kube.Container("external-dns") {
-              image: "bitnami/external-dns:0.5.4-r8",
+              image: EXTERNAL_DNS_IMAGE,
               args_+: {
                 sources_:: ["service", "ingress"],
                 "txt-owner-id": this.ownerId,

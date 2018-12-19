@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local CERT_MANAGER_IMAGE = (import "versions.json")["cert-manager"];
 
 {
   p:: "",
@@ -105,7 +106,7 @@ local kube = import "../lib/kube.libsonnet";
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             default: kube.Container("cert-manager") {
-              image: "bitnami/cert-manager:0.5.2-r22",
+              image: CERT_MANAGER_IMAGE,
               args_+: {
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
                 "leader-election-namespace": "$(POD_NAMESPACE)",
