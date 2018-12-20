@@ -47,9 +47,15 @@ local strip_trailing_slash(s) = (
     spec+: {
       template+: {
         spec+: {
+          securityContext: {
+            fsGroup: 1001,
+          },
           containers_+: {
             kibana: kube.Container("kibana") {
               image: KIBANA_IMAGE,
+              securityContext: {
+                runAsUser: 1001,
+              },
               resources: {
                 requests: {
                   cpu: "10m",
