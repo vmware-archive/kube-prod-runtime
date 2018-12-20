@@ -21,14 +21,14 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local PROMETHEUS_IMAGE = (import "versions.json")["prometheus"];
+local PROMETHEUS_IMAGE = (import "images.json")["prometheus"];
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
-local ALERTMANAGER_IMAGE = "bitnami/alertmanager:0.15.2-r36";
+local ALERTMANAGER_IMAGE = (import "images.json")["alertmanager"];
 local ALERTMANAGER_PORT = 9093;
 
-local CONFIGMAP_RELOADER_IMAGE = "jimmidyson/configmap-reload:v0.2.2";
+local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
 
 // Builds the `webhook-url` used by a container to trigger a reload
 // after a ConfigMap change
@@ -269,7 +269,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               config_reload: kube.Container("configmap-reload") {
-                image: CONFIGMAP_RELOADER_IMAGE,
+                image: CONFIGMAP_RELOAD_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
                   "webhook-url": get_cm_web_hook_url(PROMETHEUS_PORT, $.ingress.prom_path),
@@ -353,7 +353,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               config_reload: kube.Container("configmap-reload") {
-                image: CONFIGMAP_RELOADER_IMAGE,
+                image: CONFIGMAP_RELOAD_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
                   "webhook-url": get_cm_web_hook_url(ALERTMANAGER_PORT, $.ingress.am_path),

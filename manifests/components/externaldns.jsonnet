@@ -18,7 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local EXTERNAL_DNS_IMAGE = (import "versions.json")["external-dns"];
+local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
 
 {
   p:: "",

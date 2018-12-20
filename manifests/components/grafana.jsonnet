@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local GRAFANA_IMAGE = (import "versions.json")["grafana"];
+local GRAFANA_IMAGE = (import "images.json")["grafana"];
 local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
 local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
 
