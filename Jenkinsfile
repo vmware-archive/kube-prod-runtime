@@ -256,7 +256,7 @@ spec:
     // See:
     //  az aks get-versions -l centralus
     //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-    def aksKversions = ["1.9.11", "1.10.8"]
+    def aksKversions = ["1.9.11", "1.10.8", "1.11.5"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
         def platform = "aks-" + kversion
@@ -375,7 +375,7 @@ az aks create                      \
 
     // See:
     //  gcloud container get-server-config
-    def gkeKversions = ["1.10"]
+    def gkeKversions = ["1.10", "1.11"]
     for (x in gkeKversions) {
         def kversion = x  // local bind required because closures
         def platform = "gke-" + kversion

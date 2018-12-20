@@ -30,7 +30,7 @@ In this section, you will deploy an Azure Kubernetes Service (AKS) cluster using
   export AZURE_REGION=eastus
   export AZURE_RESOURCE_GROUP=my-kubeprod-group
   export AZURE_AKS_CLUSTER=my-aks-cluster
-  export AZURE_AKS_K8S_VERSION=1.9.11
+  export AZURE_AKS_K8S_VERSION=1.11.5
   ```
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
