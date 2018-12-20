@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local KIBANA_IMAGE = (import "versions.json")["kibana"];
+local KIBANA_IMAGE = (import "images.json")["kibana"];
 
 local strip_trailing_slash(s) = (
   if std.endsWith(s, "/") then

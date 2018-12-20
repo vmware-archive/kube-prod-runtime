@@ -18,7 +18,8 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local OAUTH2_PROXY_IMAGE = (import "versions.json")["oauth2_proxy"];
+
+local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
 
 {
   p:: "",

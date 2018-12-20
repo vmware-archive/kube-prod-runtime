@@ -19,7 +19,7 @@
 
 local kube = import "../lib/kube.libsonnet";
 
-local NGNIX_INGRESS_IMAGE = (import "versions.json")["nginx-ingress-controller"];
+local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
 
 {
   p:: "",

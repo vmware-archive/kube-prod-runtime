@@ -20,7 +20,7 @@
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = (import "versions.json")["elasticsearch"];
+local ELASTICSEARCH_IMAGE = (import "images.json")["elasticsearch"];
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
