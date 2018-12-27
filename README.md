@@ -26,6 +26,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 |:------------:|:-------------------:|:---:|:---:|
 |     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
 |     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
+|     `1.1`    |   `1.10`-`1.11`     | Yes | Yes |
 
 ## Quickstart
 
