@@ -52,10 +52,14 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 * [Fluentd](docs/components.mdfluentd): A data collector for unified logging layer
 * [Kibana](docs/components.md#kibana): A visualization tool for Elasticsearch data
 
+![Logging stack](docs/images/logging-stack.png)
+
 ### Monitoring stack
 
 * [Prometheus](docs/components.md#prometheus): A monitoring system and time series database
 * [Alertmanager](docs/components.md#alertmanager): An alert manager and router
+
+![Monitoring stack](docs/images/monitoring-stack.png)
 
 ### Ingress stack
 
@@ -63,6 +67,8 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 * [cert-manager](docs/components.md#cert-manager): A Kubernetes add-on to automate the management and issuance of TLS certificates from various sources
 * [OAuth2 Proxy](docs/components.md#oauth2-proxy): A reverse proxy and static file server that provides authentication using Providers (Google, GitHub, and others) to validate accounts by email, domain or group
 * [ExternalDNS](docs/components.md#externaldns): A component to synchronize exposed Kubernetes Services and Ingresses with DNS providers
+
+![Ingress stack](docs/images/ingress-stack.png)
 
 ## Release compatibility
 
