@@ -356,7 +356,7 @@ level=info ts=2018-12-05T11:00:09.952061917Z caller=head.go:446 component=tsdb m
 
 It is good practice to leave the old Prometheus database running until you are satisfied that the migration has completed without errors.
 
-## Step 6: Cleaning up sidecar container
+## Step 6: Clean up sidecar container
 
 Once you finished the migration, it's time to cleaning up the sidecar containers we added to help us with the TSDB migration. To do so, remove the block related to the rsync container:
 
