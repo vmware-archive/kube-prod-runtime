@@ -37,14 +37,14 @@ import (
 
 // Overridden at link time by Makefile.
 var version = ""
-var releasesBaseUrl = ""
+var releasesBaseURL = ""
 
 func init() {
 	if version != "" {
 		cmd.Version = version
 	}
-	if releasesBaseUrl != "" {
-		cmd.ReleasesBaseUrl = releasesBaseUrl
+	if releasesBaseURL != "" {
+		cmd.ReleasesBaseUrl = releasesBaseURL
 	}
 }
 

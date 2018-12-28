@@ -7,7 +7,7 @@ PACKAGE = kubeprod
 
 GO = go
 GOFLAGS =
-GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION) -X main.releasesBaseUrl=$(RELEASES_BASE_URL)'
+GOBUILDFLAGS = $(GOFLAGS) -ldflags='-X main.version=$(VERSION) -X main.releasesBaseURL=$(RELEASES_BASE_URL)'
 GORELEASEFLAGS = $(GOBUILDFLAGS) -tags netgo -installsuffix netgo
 GOTESTFLAGS = $(GOFLAGS) -race
 GOFMT = gofmt
