@@ -102,35 +102,34 @@ local containers_obj(containers) = {
 };
 
 local stack = {
-  
   target_with_sidecar: target {
-    spec+: {
-      template+: {
-        spec+: {
-          // convert containers array to obj for easier jsonnet
-          // handling: in particular, if we just added the new container
-          // to existing containers[] array, we wouldn't be able to re-run
-          // this, as we'd get duplicated containers.
-          // By referring the added container via rsync_container_name, we
-          // can easily override it.
+   spec+: {
+     template+: {
+       spec+: {
+         // convert containers array to obj for easier jsonnet
+         // handling: in particular, if we just added the new container
+         // to existing containers[] array, we wouldn't be able to re-run
+         // this, as we'd get duplicated containers.
+         // By referring the added container via rsync_container_name, we
+         // can easily override it.
 
-          local containers = super.containers,
-          containers: kube.PodSpec {
-            default_container:: containers[0].name,
-            // create or override(existing) rsync_container
-            containers_+: containers_obj(containers) {
-              [rsync_container_name]: rsync_container,
-              [prometheus_container_name]+:{
-                args+: [
-                  "--web.enable-admin-api",
-                ],
-              },
-            },
-          }.containers,
-        },
-      },
-    },
-  },
+         local containers = super.containers,
+         containers: kube.PodSpec {
+           default_container:: containers[0].name,
+           // create or override(existing) rsync_container
+           containers_+: containers_obj(containers) {
+             [rsync_container_name]: rsync_container,
+             [prometheus_container_name]+:{
+               args+: [
+                 "--web.enable-admin-api",
+               ],
+             },
+           },
+         }.containers,
+       },
+     },
+   },
+ },
 };
 
 kube.List() {items_+: stack}
@@ -144,7 +143,16 @@ After deploying the generated manifest you will have a *rsync* container that yo
 
 > Note: Make sure you change the placeholders NAMESPACE and PROMETHEUS_POD_NAME for the Kubernetes namespace and Prometheus pod name you have. For example: `kubectl exec -it -n monitoring prometheus-d776d68fb-vc7gt -c sidecar-rsync sh`
 
-Check also that a new service has been created for Prometheus, as shown in the example command and output below:
+You should now expose the rsync service running on the recently added container.
+
+Obtain the Prometheus pod name:
+
+```bash
+~ $ POD=$(kubectl -n NAMESPACE get pods -l name=prometheus -o NAME)
+~ $ kubectl expose -n NAMESPACE $POD --name=prometheus-rsync --port=873
+```
+
+Check if a new service has been created for Prometheus, as shown in the example command and output below:
 
 ```bash
 ~ $ kubectl get svc -n NAMESPACE
@@ -347,3 +355,25 @@ level=info ts=2018-12-05T11:00:09.952061917Z caller=head.go:446 component=tsdb m
 ```
 
 It is good practice to leave the old Prometheus database running until you are satisfied that the migration has completed without errors.
+
+## Step 6: Cleaning up sidecar container
+
+Once you finished the migration, it's time to cleaning up the sidecar containers we added to help us with the TSDB migration. To do so, remove the block related to the rsync container:
+
+```jsonnet
+-                rsync: kube.Container("sidecar-rsync") {
+-                  image: "alpine:3.8",
+-                  args+: ["sh", "-c", "apk update && apk add rsync curl && tail -f /dev/null"],
+-                  volumeMounts_+: {
+-                   data: { mountPath: "/data" },
+-                  },
+-               },
+```
+
+Then, apply the configuration:
+
+```bash
+~ $ kubecfg update kubeprod-manifest.jsonnet
+```
+
+The `sidecar-rsync` container is now removed from your Prometheus StatefulSet.
