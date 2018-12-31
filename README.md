@@ -77,18 +77,18 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 
 The following matrix shows which versions of each component are used and supported in the most recent releases of BKPR:
 
-|   Component   |          BKPR 1.0  |
-|:-------------:|-------------------:|
-|   Prometheus  |            `2.3.2` |
-|     Kibana    |           `5.6.12` |
-| Elasticsearch |           `5.6.12` |
-|  cert-manager |            `0.5.2` |
-|  Alertmanager |           `0.15.2` |
-|  ExternalDNS  |            `0.5.4` |
-| nginx-ingress |           `0.19.0` |
-|  oauth2_proxy | `0.20180625.74543` |
-|    Heapster   |            `1.5.2` |
-|    Fluentd    |            `1.2.2` |
+|   Component   |          BKPR 1.0  |          BKPR 1.1  |
+|:-------------:|-------------------:|-------------------:|
+|   Prometheus  |            `2.3.2` |            `2.6.0` |
+|     Kibana    |           `5.6.12` |           `5.6.14` |
+| Elasticsearch |           `5.6.12` |           `5.6.14` |
+|  cert-manager |            `0.5.2` |            `0.5.2` |
+|  Alertmanager |           `0.15.2` |           `0.15.3` |
+|  ExternalDNS  |            `0.5.4` |            `0.5.9` |
+| nginx-ingress |           `0.19.0` |           `0.21.0` |
+|  oauth2_proxy | `0.20180625.74543` | `0.20180625.74543` |
+|    Heapster   |            `1.5.2` |              `N/A` |
+|    Fluentd    |            `1.2.2` |            `1.3.2` |
 
 ## Contribute code
 
