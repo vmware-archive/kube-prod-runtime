@@ -407,6 +407,7 @@ gcloud container clusters create ${clusterName} \
  --machine-type n1-standard-2 \
  --num-nodes 3 \
  --zone ${zone} \
+ --preemptible \
  --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
 """
 
