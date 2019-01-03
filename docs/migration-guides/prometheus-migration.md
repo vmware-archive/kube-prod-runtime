@@ -52,7 +52,7 @@ You can use the following Jsonnet snippet to add that sidecar container:
 // but rather doing an override from original sts / deploy output json
 
 // 1) Save existing deployment/sts to target.json:
-//   kubectl get deployments -n NAMESPACE NAME -o target.json
+//   kubectl get deployments -n NAMESPACE NAME -o json >target.json
 local target = import "target.json";
 
 // volume_name must be the name of existing volume name inside target's podSpec
@@ -65,9 +65,8 @@ local volume_name = "data";
 //    kubectl run --image=nginx:latest --overrides '{"spec":{"template":{"spec":{ "volumes": [{"name": "data", "emptyDir": {}}]}}}}' nginx-tgt
 //    kubectl get deploy nginx-tgt -ojson > target.json
 
-local kube = import "./kube.libsonnet";
+local kube = import "kube.libsonnet";
 local prometheus_container_name = "prometheus";
-
 local rsync_conf_b64 = std.base64(
   |||
     [data]
@@ -87,7 +86,7 @@ local rsync_container = kube.Container(rsync_container_name) {
     "sh",
     "-c",
     |||
-      apk update && apk add rsync curl
+      apk update && apk add rsync
       echo '%s' | base64 -d > /rsync.conf
       rsync -vvv --daemon --no-detach --config=/rsync.conf
     ||| % [rsync_conf_b64],
@@ -98,41 +97,38 @@ local rsync_container = kube.Container(rsync_container_name) {
 };
 
 local containers_obj(containers) = {
-  [container.name]: container for container in containers
+  [container.name]: container
+  for container in containers
 };
 
 local stack = {
+  // Create a <NAME>-rsync service to expose rsync
+  rsync_svc: kube.Service($.target_with_sidecar.metadata.name + "-rsync") {
+    metadata+: { namespace: $.target_with_sidecar.metadata.namespace },
+    spec+: {
+      selector: $.target_with_sidecar.spec.template.metadata.labels,
+      ports: [{ name: "rsync", port: 873, targetPort: self.port }],
+      type: "ClusterIP",
+    },
+  },
   target_with_sidecar: target {
-   spec+: {
-     template+: {
-       spec+: {
-         // convert containers array to obj for easier jsonnet
-         // handling: in particular, if we just added the new container
-         // to existing containers[] array, we wouldn't be able to re-run
-         // this, as we'd get duplicated containers.
-         // By referring the added container via rsync_container_name, we
-         // can easily override it.
-
-         local containers = super.containers,
-         containers: kube.PodSpec {
-           default_container:: containers[0].name,
-           // create or override(existing) rsync_container
-           containers_+: containers_obj(containers) {
-             [rsync_container_name]: rsync_container,
-             [prometheus_container_name]+:{
-               args+: [
-                 "--web.enable-admin-api",
-               ],
-             },
-           },
-         }.containers,
-       },
-     },
-   },
- },
+    spec+: {
+      template+: {
+        spec+: {
+          containers: containers_obj(super.containers) {
+            [rsync_container_name]: rsync_container,
+            [prometheus_container_name]+: {
+              args+: ["--web.enable-admin-api"],
+            },
+          },
+        },
+      },
+    },
+  },
 };
 
-kube.List() {items_+: stack}
+// Print object
+stack
 ```
 
 Note how one extra argument has been added to the Prometheus container. In order to generate a snapshot of Prometheus it is mandatory to have the admin API enabled. Take a look at the [Prometheus docs](https://prometheus.io/docs/prometheus/latest/querying/api/#tsdb-admin-apis) for more information about this.
@@ -143,14 +139,6 @@ After deploying the generated manifest you will have a *rsync* container that yo
 
 > Note: Make sure you change the placeholders NAMESPACE and PROMETHEUS_POD_NAME for the Kubernetes namespace and Prometheus pod name you have. For example: `kubectl exec -it -n monitoring prometheus-d776d68fb-vc7gt -c sidecar-rsync sh`
 
-You should now expose the rsync service running on the recently added container.
-
-Obtain the Prometheus pod name:
-
-```bash
-~ $ POD=$(kubectl -n NAMESPACE get pods -l name=prometheus -o NAME)
-~ $ kubectl expose -n NAMESPACE $POD --name=prometheus-rsync --port=873
-```
 
 Check if a new service has been created for Prometheus, as shown in the example command and output below:
 
@@ -358,19 +346,8 @@ It is good practice to leave the old Prometheus database running until you are s
 
 ## Step 6: Clean up sidecar container
 
-Once you finished the migration, it's time to cleaning up the sidecar containers we added to help us with the TSDB migration. To do so, remove the block related to the rsync container:
-
-```jsonnet
--                rsync: kube.Container("sidecar-rsync") {
--                  image: "alpine:3.8",
--                  args+: ["sh", "-c", "apk update && apk add rsync curl && tail -f /dev/null"],
--                  volumeMounts_+: {
--                   data: { mountPath: "/data" },
--                  },
--               },
-```
-
-Then, apply the configuration:
+Once the migration is finished, it is time to clean up the sidecar container that were added to help with the TSDB migration.
+To do so, re-push the original unmodified config file with:
 
 ```bash
 ~ $ kubecfg update kubeprod-manifest.jsonnet
