@@ -1,0 +1,14 @@
+# See https://bors.tech/documentation/
+
+status = [
+  "continuous-integration/jenkins/branch"
+]
+
+pr_status = [
+  "continuous-integration/jenkins/pr-merge"
+]
+
+required_approvals = 1
+
+# Extend to 3h - default is 1h
+timeout_sec = 10800
