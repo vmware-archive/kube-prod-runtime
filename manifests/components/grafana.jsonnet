@@ -35,6 +35,9 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     },
   },
 
+  // Amount of persistent storage required by Alertmanager
+  storage:: "1Gi",
+
   prometheus:: error "No Prometheus service",
 
   // Default to "Admin". See http://docs.grafana.org/permissions/overview/ for
@@ -150,7 +153,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
       },
       volumeClaimTemplates_+: {
         datadir: {
-          storage: "1Gi",
+          storage: $.storage,
         },
       },
     },

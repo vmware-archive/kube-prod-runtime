@@ -59,6 +59,7 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 
 * [Prometheus](docs/components.md#prometheus): A monitoring system and time series database
 * [Alertmanager](docs/components.md#alertmanager): An alert manager and router
+* [Grafana](docs/components.md#grafana): An open source metric analytics & visualization suite
 
 ![Monitoring stack](docs/images/monitoring-stack.png)
 

@@ -7,6 +7,7 @@
 - [Monitoring stack](#monitoring-stack)
     - [Prometheus](#prometheus)
     - [Alertmanager](#alertmanager)
+    - [Grafana](#grafana)
 - [Ingress stack](#ingress-stack)
     - [NGINX Ingress Controller](#nginx-ingress-controller)
     - [cert-manager](#cert-manager)
@@ -328,6 +329,50 @@ $ cat kubeprod-manifest.jsonnet
         alertmanager+: {
             storage:: "9Gi",
         },
+    },
+}
+```
+
+### Grafana
+
+[Grafana](http://docs.grafana.org/) is an open source metric analytics & visualization suite. It is most commonly used for visualizing time series data for infrastructure and application analytics but many use it in other domains including industrial sensors, home automation, weather and process control.
+
+#### Implementation
+
+Grafana runs on top of Kubernetes as a [StatefulSet](https://kubernetes.io/docs/concepts/workloads/controllers/statefulset/) with just 1 non-root pod named `grafana-0` under the `kubeprod` namespace and also provides a Kubernetes Ingress resource named `grafana` which allows end-user access to Grafana from the Internet. It is implemented inside the [Grafana](../manifests/components/grafana.jsonnet) manifest.
+
+#### Authentication
+
+Grafana delegates authentication to [OAuth2 Proxy](#oauth2-proxy). Once authenticated, the user is allowed access to Grafana as an administrator.
+
+#### Configuration
+
+Grafana ships with a default configuration that configures Prometheus as a datasource for Grafana. This configuration is implemented by the `datasources` ConfigMap resource which defines a single datasource named `BKPR Prometheus` pointing to BKPR's Prometheus instance.
+
+##### Networking
+
+Grafana exposes port `3000/tcp` internally to the Kubernetes cluster, but allows external access via HTTP/S by means of the deployed `nginx-ingress-controller`. Grafana can connect to Prometheus via a datasource that ships with the default configuration.
+
+##### Storage
+
+To assure durability of the underlying Grafana storage, each pod relies on a Kubernetes PersistentVolume named `datadir-grafana-%i` where `%i` is an index that matches the pod index. By default, each PersistentVolume is allocated 1Gi of storage. In the Overrides section below there are instructions for reconfiguring this.
+
+#### Overrides
+
+The following deployment parameters are supported, tested, and will be honored across upgrades. Any other details of the configuration may also be overridden, but may change on subsequent releases.
+
+##### Override storage parameters
+
+The following example shows how to override the amount of persistent storage required by Grafana:
+
+```
+$ cat kubeprod-manifest.jsonnet
+# Cluster-specific configuration
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    // Place your overrides here
+    grafana+: {
+        storage:: "9Gi",
     },
 }
 ```
