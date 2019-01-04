@@ -25,7 +25,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   export BKPR_DNS_ZONE="my-domain.com"
   export GCLOUD_USER="$(gcloud info --format='value(config.account)')"
   export GCLOUD_PROJECT="my-gce-project"
-  export GCLOUD_REGION="us-east1-d"
+  export GCLOUD_ZONE="us-east1-d"
   export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
   export GCLOUD_K8S_CLUSTER="my-gke-cluster"
   export GCLOUD_K8S_VERSION="1.11"
@@ -34,10 +34,10 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
   - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
-  - `GCLOUD_REGION` specifies the Google Cloud region. `gcloud compute regions list` lists the available Google Cloud regions.
+  - `GCLOUD_ZONE` specifies the Google Cloud zone. `gcloud compute zones list` lists the Google Cloud zones.
   - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain. Alternatively, you could specify the value `*`, but be __WARNED__ that this will authorize any Google account holder to authenticate with OAuth to your cluster services.
   - `GCLOUD_K8S_CLUSTER` specifies the name of the GKE cluster.
-  - `GCLOUD_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `gcloud container get-server-config --project ${GCLOUD_PROJECT} --zone ${GCLOUD_REGION}` lists the versions available in your region.
+  - `GCLOUD_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `gcloud container get-server-config --project ${GCLOUD_PROJECT} --zone ${GCLOUD_ZONE}` lists the versions available in your region.
 
 * Create an OAuth Client ID by following these steps:
 
@@ -83,7 +83,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
 * Set the default region:
 
   ```bash
-  gcloud config set compute/zone ${GCLOUD_REGION}
+  gcloud config set compute/zone ${GCLOUD_ZONE}
   ```
 
 * Create the GKE cluster:
@@ -93,7 +93,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
     --project ${GCLOUD_PROJECT} \
     --num-nodes 3 \
     --machine-type n1-standard-2 \
-    --zone ${GCLOUD_REGION} \
+    --zone ${GCLOUD_ZONE} \
     --cluster-version ${GCLOUD_K8S_VERSION}
   ```
 
