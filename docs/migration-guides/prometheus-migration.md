@@ -115,12 +115,14 @@ local stack = {
     spec+: {
       template+: {
         spec+: {
-          containers: containers_obj(super.containers) {
-            [rsync_container_name]: rsync_container,
-            [prometheus_container_name]+: {
-              args+: ["--web.enable-admin-api"],
+          containers: kube.objectValues(
+            containers_obj(super.containers) {
+              [rsync_container_name]: rsync_container,
+              [prometheus_container_name]+: {
+                args+: ["--web.enable-admin-api"],
+              },
             },
-          },
+          ),
         },
       },
     },
