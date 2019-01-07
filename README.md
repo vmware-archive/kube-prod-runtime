@@ -37,7 +37,7 @@ Please use the [installation guide](docs/install.md) to install the `kubeprod` b
 
 ## Frequently Asked Questions (FAQ)
 
-Please read the [FAQ](docs/FAQ.md).
+See the separate [FAQ](docs/FAQ.md) and [roadmap](docs/roadmap.md) documents.
 
 ## Versioning
 
