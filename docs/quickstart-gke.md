@@ -7,17 +7,38 @@ This document walks you through setting up a Google Kubernetes Engine (GKE) clus
 ## Prerequisites
 
 * [Google Cloud account](https://cloud.google.com/billing/docs/how-to/manage-billing-account)
+* [Google Cloud Platform (GCP) project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
+  + [Kubernetes Engine API](https://console.developers.google.com/apis/api/container.googleapis.com/overview) should be enabled
+  + [Google Cloud DNS API](https://console.developers.google.com/apis/api/dns.googleapis.com/overview) should be enabled
 * [Google Cloud SDK](https://cloud.google.com/sdk/)
 * [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [BKPR installer](install.md)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
 
+### DNS and G Suite requirements
+
+In addition to the requirements listed above, a domain name is also required for setting up Ingress endpoints to services running in the cluster. The specified domain name can be a top-level domain (TLD) or a subdomain. In either case you have to manually [set up the NS records](#configure-domain-registration-records) for the specified TLD or subdomain so as to delegate DNS resolution queries to a Google Cloud DNS zone created and managed by BKPR.
+
+BKPR on GKE uses AuthZ domain based authorization, specified in `GCLOUD_AUTHZ_DOMAIN`, for verifying users as they login to the Elasticsearch, Kibana and Grafana dashboards. As such you need a [G Suite](https://gsuite.google.co.in/intl/en_in/) account configured set up for your authorization domain to enable users to login with their G Suite user accounts.
+
 ## Installation and setup
 
 ### Step 1: Set up the cluster
 
 In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using the `gcloud` CLI.
+
+* Authenticate the `gcloud` CLI with your Google Cloud account:
+
+  ```bash
+  gcloud auth login
+  ```
+
+* Set the Google Cloud application default credentials:
+
+  ```bash
+  gcloud auth application-default login
+  ```
 
 * Configure the following environment variables:
 
@@ -45,33 +66,21 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   2. Select the project from the drop down menu.
   3. In the center pane, select the __OAuth consent screen__ tab.
   4. Enter a __Application name__ .
-  5. Add the TLD of the domain specified in the `BKPR_DNS_ZONE` variable to the __Authorized domains__ and save the changes.
+  5. Add the TLD of the domain specified in the `BKPR_DNS_ZONE` variable to the __Authorized domains__ and __Save__ the changes.
   6. Choose the __Credentials__ tab and select the __Create Credentials > OAuth client ID__ .
   7. Select the __Web application__ option and fill in a name.
   8. Finally, add the following redirect URIs and hit __Create__ .
-      + https://prometheus.{BKPR_DNS_ZONE}/oauth2/callback.
-      + https://kibana.{BKPR_DNS_ZONE}/oauth2/callback.
-      + https://grafana.{BKPR_DNS_ZONE}/oauth2/callback.
+      + https://prometheus.${BKPR_DNS_ZONE}/oauth2/callback
+      + https://kibana.${BKPR_DNS_ZONE}/oauth2/callback
+      + https://grafana.${BKPR_DNS_ZONE}/oauth2/callback
 
-  > Replace `{BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
+  > Replace `${BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
 
 Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY` and `GCLOUD_OAUTH_CLIENT_SECRET` environment variables, for example:
 
   ```bash
   export GCLOUD_OAUTH_CLIENT_KEY="xxxxxxx.apps.googleusercontent.com"
   export GCLOUD_OAUTH_CLIENT_SECRET="xxxxxx"
-  ```
-
-* Authenticate the `gcloud` CLI with your Google Cloud account:
-
-  ```bash
-  gcloud auth login
-  ```
-
-* Set the Google Cloud application default credentials:
-
-  ```bash
-  gcloud auth application-default login
   ```
 
 * Set the default project:
@@ -145,11 +154,17 @@ Query the name servers of the zone with the following command and configure the 
     --format=json | jq -r .[].rrdatas
   ```
 
+The following screenshot illustrates the NS record configuration on a DNS registrar when a subdomain is used.
+
+![Google Domains NS Configuration for subdomain](images/google-domains-gke-zone-ns-config.png)
+
 Please note, it can take a while for the DNS changes to propogate.
 
 ### Step 4: Access logging and monitoring dashboards
 
-After the DNS changes have propagated, you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}` and `https://kibana.${BKPR_DNS_ZONE}` respectively.
+After the DNS changes have propagated, you should be able to access the Prometheus, Kibana and Grafana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}`, `https://kibana.${BKPR_DNS_ZONE}` and `https://grafana.${BKPR_DNS_ZONE}` respectively.
+
+> Replace `${BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 

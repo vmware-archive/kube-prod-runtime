@@ -13,6 +13,10 @@ This document walks you through setting up an Azure Kubernetes Service (AKS) clu
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
 
+### DNS requirements
+
+In addition to the requirements listed above, a domain name is also required for setting up Ingress endpoints to services running in the cluster. The specified domain name can be a top-level domain (TLD) or a subdomain. In either case you have to manually [set up the NS records](#configure-domain-registration-records) for the specified TLD or subdomain so as to delegate DNS resolution queries to a Azure DNS zone created and managed by BKPR.
+
 ## Installation and setup
 
 ### Step 1: Set up the cluster
@@ -108,6 +112,10 @@ Query the name servers of the zone with the following command and configure the 
     --resource-group ${AZURE_RESOURCE_GROUP} \
     --query nameServers -o tsv
   ```
+
+The following screenshot illustrates the NS record configuration on a DNS registrar when a subdomain is used.
+
+![Google Domains NS Configuration for subdomain](images/google-domains-aks-zone-ns-config.png)
 
 Please note, it can take a while for the DNS changes to propagate.
 
