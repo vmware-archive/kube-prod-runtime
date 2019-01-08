@@ -4,7 +4,10 @@
 A: The Bitnami Kubernetes Production Runtime ([BKPR](https://kubeprod.io)) is a collection of services that make it easy to run production workloads in Kubernetes. The services are ready-to-run, and pre-integrated with each other so they work out of the box. They are based on best-of-breed popular projects such as Prometheus and Kibana, and cover logging, monitoring, DNS, certificate management and other common infrastructure needs.
 
 #### Q: What Kubernetes platforms does BKPR support?
-At the time of writing, BKPR supports [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/) and [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine/). Other Kubernetes platforms will be supported in future.
+A: At the time of writing, BKPR supports [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/) and [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine/). Other Kubernetes platforms will be supported in future.
+
+#### Q: When will XYZ be supported?
+A: See the [roadmap document](roadmap.md). Generally work is prioritised based on perceived demand and effort, so open a GitHub issue or propose a PR directly if you want to influence this.
 
 #### Q: What is the difference between BKPR and `kubeprod`?
 A: BKPR consists of a collection of Kubernetes manifests written in *jsonnet* plus the accompanying `kubeprod` binary which deals with all the platform-specific details, evaluates the *jsonnet* manifests, and applies them to the existing Kubernetes cluster.
@@ -39,7 +42,7 @@ A: Please refer to the BKPR upgrades and support document.
 A: Please refer to the BKPR upgrades and support document.
 
 #### Q: Where can I subscribe to an update feed, specially for security-updates?
-A: Follow the [releases section in the GitHub project](https://github.com/bitnami/kube-prod-runtime/releases). The *changelog* for every release describes the bug fixes, security updates and new features. 
+A: Follow the [releases section in the GitHub project](https://github.com/bitnami/kube-prod-runtime/releases). The *changelog* for every release describes the bug fixes, security updates and new features.
 
-#### Q: I found a bug /  I want XYZ component to be added, etc.
+#### Q: I found a bug / I want XYZ component to be added, etc.
 A: When there are any issues or comments you want to report, please do report them by [creating an issue in GitHub](https://github.com/bitnami/kube-prod-runtime/issues).
