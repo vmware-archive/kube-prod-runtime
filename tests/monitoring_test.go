@@ -129,7 +129,11 @@ var _ = Describe("Exporters", func() {
 		Entry("kube-state-metrics", `kube_deployment_status_replicas{kubernetes_namespace="kubeprod",deployment="nginx-ingress-controller"}`, Not(BeEmpty())),
 		Entry("node-exporter", `node_cpu_seconds_total`, Not(BeEmpty())),
 		Entry("cert-manager", `process_start_time_seconds{kubernetes_namespace="kubeprod",name="cert-manager"}`, Not(BeEmpty())),
-		Entry("elasticsearch", `elasticsearch_cluster_health_number_of_nodes{cluster="elasticsearch-cluster"}`, HaveLen(3)),
+		Entry("elasticsearch", `elasticsearch_cluster_health_number_of_nodes{cluster="elasticsearch-cluster"}`, And(
+			ContainElement(HaveKeyWithValue("kubernetes_pod_name", "elasticsearch-logging-0")),
+			ContainElement(HaveKeyWithValue("kubernetes_pod_name", "elasticsearch-logging-1")),
+			ContainElement(HaveKeyWithValue("kubernetes_pod_name", "elasticsearch-logging-2")),
+		)),
 		Entry("fluentd-es", `fluentd_output_status_buffer_total_bytes{type="elasticsearch"}`, Not(BeEmpty())),
 		Entry("external-dns", `process_start_time_seconds{kubernetes_namespace="kubeprod",name="external-dns"}`, Not(BeEmpty())),
 		Entry("nginx-ingress", `nginx_ingress_controller_nginx_process_requests_total{controller_namespace="kubeprod",controller_class="nginx"}`, Not(BeEmpty())),
