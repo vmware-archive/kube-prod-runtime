@@ -129,7 +129,26 @@ $ kubecfg diff kubeprod-manifest.jsonnet
 $ kubecfg update --ignore-unknown=true --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
 ```
 
-NOTE: There is a [bug in kubecfg](https://github.com/ksonnet/kubecfg/issues/211) that always requires using `--ignore-unknown=true`, even if this command-line flag defaults to `true`.
+The `kube_prod_runtime` garbage collection tag specified in the `kubecfg update` command takes care of garbage collection to ensure there is no leakage of Kubernetes resources.
+
+> **NOTE**
+> A [bug in kubecfg](https://github.com/ksonnet/kubecfg/issues/211) requires that the `--ignore-unknown=true` flag always be specified.
+
+### Upgrading
+
+The instructions provided here are the generic upgrade steps. Before you perform the upgrade please read the release notes for any additional steps you may need to take before or after performing an upgrade.
+
+### Step 1: Update the installer
+
+Follow the [installation guide](install.md) to update the BKPR installer binary to the latest release.
+
+### Step 2: Edit `kubeprod-manifest.jsonnet`
+
+Edit the `kubeprod-manifest.jsonnet` file and update the `import` statement to point to the location of the manifests from the downloaded BKPR release.
+
+### Step 3: Perform the upgrade
+
+Re-run the `kubeprod install` command, from the [Prepare the cluster](step-2-deploy-bkpr) step, in the directory containing the existing `kubeprod-autogen.json` and updated `kubeprod-manifest.jsonnet` files.
 
 ### Check-in changes
 
