@@ -20,7 +20,7 @@ This document walks you through setting up a Google Kubernetes Engine (GKE) clus
 
 In addition to the requirements listed above, a domain name is also required for setting up Ingress endpoints to services running in the cluster. The specified domain name can be a top-level domain (TLD) or a subdomain. In either case you have to manually [set up the NS records](#configure-domain-registration-records) for the specified TLD or subdomain so as to delegate DNS resolution queries to a Google Cloud DNS zone created and managed by BKPR.
 
-BKPR on GKE uses AuthZ domain based authorization, specified in `GCLOUD_AUTHZ_DOMAIN`, for verifying users as they login to the Elasticsearch, Kibana and Grafana dashboards. As such you need a [G Suite](https://gsuite.google.co.in/intl/en_in/) account configured set up for your authorization domain to enable users to login with their G Suite user accounts.
+BKPR on GKE uses domain-based authorization, specified in `GCLOUD_AUTHZ_DOMAIN`, for verifying users as they login to the Elasticsearch, Kibana and Grafana dashboards. As such you need a [G Suite](https://gsuite.google.com/) account configured set up for your authorization domain to enable users to login with their G Suite user accounts.
 
 ## Installation and setup
 
