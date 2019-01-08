@@ -56,7 +56,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
   - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
   - `GCLOUD_ZONE` specifies the Google Cloud zone. `gcloud compute zones list` lists the Google Cloud zones.
-  - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain. Alternatively, you could specify the value `*`, but be __WARNED__ that this will authorize any Google account holder to authenticate with OAuth to your cluster services.
+  - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain.
   - `GCLOUD_K8S_CLUSTER` specifies the name of the GKE cluster.
   - `GCLOUD_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `gcloud container get-server-config --project ${GCLOUD_PROJECT} --zone ${GCLOUD_ZONE}` lists the versions available in your region.
 
