@@ -206,7 +206,7 @@ local kube = import "kube.libsonnet";
 You can deploy the manifests in the cluster with:
 
 ```bash
-kubecfg update kubeprod-manifest.jsonnet
+kubecfg update kubeprod-manifest.jsonnet --gc-tag kube_prod_runtime
 ```
 
 After deploying them, the Prometheus pod will have 3 containers:
@@ -352,7 +352,7 @@ Once the migration is finished, it is time to clean up the sidecar container tha
 To do so, re-push the original unmodified config file with:
 
 ```bash
-~ $ kubecfg update kubeprod-manifest.jsonnet
+~ $ kubecfg update kubeprod-manifest.jsonnet --gc-tag kube_prod_runtime
 ```
 
 The `sidecar-rsync` container is now removed from your Prometheus StatefulSet.
