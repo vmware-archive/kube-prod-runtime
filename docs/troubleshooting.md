@@ -4,8 +4,11 @@
 
 - [Troubleshooting AKS cluster creation](#troubleshooting-aks-cluster-creation)
     + [Service principal clientID not found](#service-principal-clientid-not-found)
+- [Troubleshooting GKE cluster creation](#troubleshooting-gke-cluster-creation)
+    + [Kubernetes Engine API is not enabled](#kubernetes-engine-api-is-not-enabled)
 - [Troubleshooting BKPR installation](#troubleshooting-bkpr-installation)
     + [Object with the same value for property exists](#object-with-the-same-value-for-property-exists)
+    + [Google Cloud DNS API is not enabled](#google-cloud-dns-api-is-not-enabled)
 - [Troubleshooting BKPR Ingress](#troubleshooting-bkpr-ingress)
     + [Let's Encrypt](#lets-encrypt)
 - [Troubleshooting DNS](#troubleshooting-dns)
@@ -30,6 +33,20 @@ __Troubleshooting__:
 
 Please clear your Azure profile directory with `rm -rf ~/.azure` and retry after logging in again.
 
+## Troubleshooting GKE cluster creation
+
+### Kubernetes Engine API is not enabled
+
+If you encounter the following error message from `gcloud container clusters create`, it indicates the Kubernetes API has not been enabled for your Google Cloud Platform (GCP) project.
+
+```
+ERROR: (gcloud.container.clusters.create) ResponseError: code=403, message=Kubernetes Engine API is not enabled for this project. Please ensure it is enabled in Google Cloud Console and try again
+```
+
+__Troubleshooting__:
+
+In order to be able to provision Kubernetes clusters, the Kubernetes Engine API should be enabled for the GCP project. Visit https://console.developers.google.com/apis/api/container.googleapis.com/overview and enable the Kubernetes API for your project before retrying.
+
 ## Troubleshooting BKPR installation
 
 ### Object with the same value for property exists
@@ -47,6 +64,18 @@ __Troubleshooting__:
 This is typically encountered when you attempt to install BKPR with a DNS zone (`--dns-zone`) that was used in an earlier installation on BKPR. Login to the [Azure Portal](https://portal.azure.com) and navigate to __Azure Active Directory > App registrations__ and filter the result with the keyword `kubeprod`. From the filtered results remove the entries that have the BKPR DNS zone in its name and retry the BKPR installation.
 
 ![Azure SP Conflict](images/azure-sp-conflict.png)
+
+### Google Cloud DNS API is not enabled
+
+While installing BKPR on an GKE cluster, if you encounter the following error message from `kubeprod install`, it indicates the Google Cloud DNS API has not been enabled for your Google Cloud Platform (GCP) project.
+
+```
+ERROR Error: failed to create Google managed-zone "demo.allaboutif.com": googleapi: Error 403: Google Cloud DNS API has not been used in project xxxxxxxxxxx before or it is disabled.
+```
+
+__Troubleshooting__:
+
+The BKPR installer creates a Google Cloud DNS zone for the domain specified in the `--dns-zone` flag of the `kubeprod install` command. For the installer to be able to create the Google Cloud DNS zone the Google Cloud DNS API should be enabled for the GCP project. Visit https://console.developers.google.com/apis/api/dns.googleapis.com/overview and enable the Google Cloud DNS API for your project before retrying.
 
 ## Troubleshooting DNS
 
