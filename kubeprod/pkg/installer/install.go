@@ -135,7 +135,7 @@ func (c InstallCmd) ReadPlatformConfig(into interface{}) error {
 	path := c.PlatformConfigPath
 
 	if err := unmarshalFile(path, into); err == nil {
-		log.Debug("Reading existing cluster settings from %q", path)
+		log.Debugf("Reading existing cluster settings from %q", path)
 	} else if !os.IsNotExist(err) {
 		return err
 	}
