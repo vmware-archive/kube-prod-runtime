@@ -32,6 +32,7 @@ const (
 	flagDNSSuffix          = "dns-zone"
 	flagAWSAccessKeyID     = "access-key-id"
 	flagAWSSecretAccessKey = "secret-access-key"
+	flagAWSUserPoolID      = "user-pool-id"
 )
 
 var eksCmd = &cobra.Command{
@@ -55,4 +56,5 @@ func init() {
 	eksCmd.PersistentFlags().String(flagDNSSuffix, "", "External DNS zone for public endpoints")
 	eksCmd.PersistentFlags().String(flagAWSAccessKeyID, "", "Access key ID for External DNS integration")
 	eksCmd.PersistentFlags().String(flagAWSSecretAccessKey, "", "Secret access key for External DNS integration")
+	eksCmd.PersistentFlags().String(flagAWSUserPoolID, "", "User Poold ID from AWS Cognito for OAuth2 Proxy integration")
 }

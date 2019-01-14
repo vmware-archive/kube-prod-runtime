@@ -95,6 +95,7 @@ type InstallCmd struct {
 	ManifestBase       *url.URL
 }
 
+// Run runs the installer
 func (c InstallCmd) Run(out io.Writer) error {
 	var err error
 	log.Info("Installing platform ", c.Platform)
