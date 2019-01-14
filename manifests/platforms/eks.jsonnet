@@ -35,7 +35,7 @@ local kube = import '../lib/kube.libsonnet';
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
-  letsencrypt_environment:: 'staging',
+  letsencrypt_environment:: 'prod',
 
   version: import '../components/version.jsonnet',
 
@@ -75,11 +75,7 @@ local kube = import '../lib/kube.libsonnet';
 
   oauth2_proxy: oauth2_proxy {
     secret+: {
-      data_+: {
-      client_id: '42ohkq7cmp72akptr0ltomteci',
-      client_secret: '1ucuhu0jck7dahhb1n3tail711a6vv8uo92n42d9abi0jncnml28',
-      cookie_secret: 'sXXawOw8C4eFoP14jROminFXqFyhonUk',
-      }
+      data_+: $.config.oauthProxy,
     },
 
     deploy+: {
@@ -90,8 +86,16 @@ local kube = import '../lib/kube.libsonnet';
               proxy+: {
                 args_+: {
                   provider: 'oidc',
-                  'cookie-secure': 'false',
-                  'oidc-issuer-url': 'https://cognito-idp.eu-central-1.amazonaws.com/eu-central-1_P7sIQ92Cd',
+                  'oidc-issuer-url': 'https://cognito-idp.%s.amazonaws.com/%s' % [
+                    $.config.oauthProxy.aws_region,
+                    $.config.oauthProxy.aws_user_pool_id
+                  ],
+                  /* NOTE: disable cookie refresh token.
+                   * As per https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html:
+                   * The refresh token is defined in the specification, but is not currently implemented to
+                   * be returned from the Token Endpoint.
+                   */
+                  'cookie-refresh': '0',
                 },
               },
             },
