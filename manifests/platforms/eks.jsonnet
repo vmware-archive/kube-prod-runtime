@@ -19,8 +19,8 @@
 
 // Top-level file for AWS EKS
 
+local kube = import '../lib/kube.libsonnet';
 local cert_manager = import '../components/cert-manager.jsonnet';
-local dex = import '../components/dex.jsonnet';
 local edns = import '../components/externaldns.jsonnet';
 local nginx_ingress = import '../components/nginx-ingress.jsonnet';
 local prometheus = import "../components/prometheus.jsonnet";
@@ -28,7 +28,7 @@ local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
 local fluentd_es = import "../components/fluentd-es.jsonnet";
 local elasticsearch = import "../components/elasticsearch.jsonnet";
 local kibana = import "../components/kibana.jsonnet";
-local kube = import '../lib/kube.libsonnet';
+local grafana = import "../components/grafana.jsonnet";
 
 {
   config:: error 'no kubeprod configuration',
@@ -41,6 +41,13 @@ local kube = import '../lib/kube.libsonnet';
   letsencrypt_environment:: 'prod',
 
   version: import '../components/version.jsonnet',
+
+  grafana: grafana {
+    prometheus:: $.prometheus.prometheus.svc,
+    ingress+: {
+      host: "grafana." + $.external_dns_zone_name,
+    },
+  },
 
   edns: edns {
     deploy+: {
@@ -69,12 +76,6 @@ local kube = import '../lib/kube.libsonnet';
   },
 
   nginx_ingress: nginx_ingress,
-
-  dex: dex {
-    ingress+: {
-      host: "dex." + $.external_dns_zone_name,
-    },
-  },
 
   oauth2_proxy: oauth2_proxy {
     secret+: {
