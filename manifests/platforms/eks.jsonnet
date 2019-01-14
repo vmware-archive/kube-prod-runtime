@@ -25,6 +25,9 @@ local edns = import '../components/externaldns.jsonnet';
 local nginx_ingress = import '../components/nginx-ingress.jsonnet';
 local prometheus = import "../components/prometheus.jsonnet";
 local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
+local fluentd_es = import "../components/fluentd-es.jsonnet";
+local elasticsearch = import "../components/elasticsearch.jsonnet";
+local kibana = import "../components/kibana.jsonnet";
 local kube = import '../lib/kube.libsonnet';
 
 {
@@ -108,6 +111,20 @@ local kube = import '../lib/kube.libsonnet';
   prometheus: prometheus {
     ingress+: {
       host: "prometheus." + $.external_dns_zone_name,
+    },
+  },
+
+  fluentd_es: fluentd_es {
+    es:: $.elasticsearch,
+  },
+
+  elasticsearch: elasticsearch {
+  },
+
+  kibana: kibana {
+    es:: $.elasticsearch,
+    ingress+: {
+      host: "kibana." + $.external_dns_zone_name,
     },
   },
 }
