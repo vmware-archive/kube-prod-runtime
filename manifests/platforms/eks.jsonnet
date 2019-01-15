@@ -50,6 +50,18 @@ local grafana = import "../components/grafana.jsonnet";
   },
 
   edns: edns {
+    local this = self,
+
+    // NOTE: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
+    // for additional information on how to use environment variables to configure a particular user when accessing
+    // the AWS API.
+    secret: kube.Secret(edns.p + "external-dns-aws-conf") {
+      metadata+: {
+        namespace: "kubeprod",
+      },
+      data_+: $.config.externalDns,
+    },
+
     deploy+: {
       ownerId: $.external_dns_zone_name,
       spec+: {
@@ -57,6 +69,10 @@ local grafana = import "../components/grafana.jsonnet";
           spec+: {
             containers_+: {
               edns+: {
+                env_+: {
+                  AWS_ACCESS_KEY_ID: kube.SecretKeyRef(this.secret, "aws_access_key_id"),
+                  AWS_SECRET_ACCESS_KEY: kube.SecretKeyRef(this.secret, "aws_access_key_secret"),
+                },
                 args_+: {
                   provider: 'aws',
                   'aws-zone-type': 'public',
