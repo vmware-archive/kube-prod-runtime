@@ -32,7 +32,7 @@
       client_secret: "mysecret",
       cookie_secret: "cookiesecret",
       aws_region: "us-east-1",
-      aws_user_pool_id: "userpool",
+      aws_user_pool_id: "us-east-1_userpool",
     },
   },
 }
