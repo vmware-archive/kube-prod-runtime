@@ -7,6 +7,7 @@
 // - kubernetes
 // - jobcacher
 // - azure-credentials
+// - aws-credentials
 
 import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
@@ -159,6 +160,16 @@ podTemplate(
         containerTemplate(
             name: 'az',
             image: 'microsoft/azure-cli:2.0.45',
+            ttyEnabled: true,
+            command: 'cat',
+            resourceRequestCpu: '1m',
+            resourceRequestMemory: '100Mi',
+            resourceLimitCpu: '100m',
+            resourceLimitMemory: '500Mi',
+        ),
+        containerTemplate(
+            name: 'aws',
+            image: 'mikesir87/aws-cli:1.16.89',
             ttyEnabled: true,
             command: 'cat',
             resourceRequestCpu: '1m',
@@ -391,7 +402,7 @@ az aks create                      \
                                 dir('src/github.com/bitnami/kube-prod-runtime') {
                                     def project = 'bkprtesting'
                                     def zone = 'us-east1-d'
-                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
                                     def dnsPrefix = "${clusterName}"
                                     def adminEmail = "${clusterName}@${parentZone}"
                                     def dnsZone = "${dnsPrefix}.${parentZone}"
@@ -469,6 +480,90 @@ gcloud container clusters create ${clusterName} \
                                             sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
                                         }
                                         deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    def eksVersions = ["1.10", "1.11"]
+    for (x in eksVersions) {
+        def kversion = x // local bind required because closures
+        def platform = "eks-${kversion}"
+        platforms[platform] = {
+            stage(platform) {
+                node(label) {
+                    withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-kubeprod-jenkins']]) {
+                        withGo() {
+                            withEnv(["PATH+EKSCTL=${tool 'eksctl'}"]) {
+                                dir('src/github.com/bitnami/kube-prod-runtime') {
+                                    def region = 'us-east-1'
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
+                                    def dnsPrefix = "${clusterName}"
+                                    def adminEmail = "${clusterName}@${parentZone}"
+                                    def dnsZone = "${dnsPrefix}.${parentZone}"
+
+                                    try {
+                                        runIntegrationTest(platform, "eks --config=${clusterName}-autogen.json --region=${region} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                            ansiColor('xterm') {
+                                                sh """
+eksctl create cluster \
+ --name ${clusterName} \
+ --region ${region} \
+ --version ${kversion} \
+ --node-type m5.large \
+ --nodes-min 3 \
+ --timeout 60m \
+ --kubeconfig \$KUBECONFIG \
+ --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL}'
+"""
+
+                                                waitForRollout("kube-system", 30)
+                                            }
+
+                                            // NB: writeJSON doesn't work without approvals(?)
+                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+                                            writeFile([file: "${clusterName}-autogen.json", text: """
+{
+  "dnsZone": "${dnsZone}",
+  "contactEmail": "${adminEmail}",
+  "externalDns": {
+    "aws_access_key_id": "${AWS_ACCESS_KEY_ID}",
+    "aws_access_key_secret": "${AWS_SECRET_ACCESS_KEY}"
+  },
+  "oauthProxy": {
+    "aws_region": "${region}",
+    "aws_user_pool_id": "${fixme}",
+    "client_id": "${fixme}",
+    "client_secret": "${fixme}"
+  }
+}
+"""
+                                            ])
+
+                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
+(import "manifests/platforms/eks.jsonnet") {
+  config:: import "${clusterName}-autogen.json",
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
+}
+"""
+                                            ])
+                                        }
+                                    }{
+                                        // update glue records in parent zone
+                                        container('aws') {
+                                            def output = sh(returnStdout: true, script: """
+id=$(aws route53 list-hosted-zones --query 'HostedZones[?Name==`bkpr.run.`].Id' --output text)
+aws route53 get-hosted-zone --id $id --query DelegationSet.NameServers
+""")
+                                            def nameServers = readJson(text: output)
+                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                        }
                                     }
                                 }
                             }
