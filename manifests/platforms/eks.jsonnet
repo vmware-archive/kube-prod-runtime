@@ -2,7 +2,7 @@
  * Bitnami Kubernetes Production Runtime - A collection of services that makes it
  * easy to run production workloads in Kubernetes.
  *
- * Copyright 2018 Bitnami
+ * Copyright 2019 Bitnami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +20,7 @@
 // Top-level file for AWS EKS
 
 local kube = import '../lib/kube.libsonnet';
+local version = import "../components/version.jsonnet";
 local cert_manager = import '../components/cert-manager.jsonnet';
 local edns = import '../components/externaldns.jsonnet';
 local nginx_ingress = import '../components/nginx-ingress.jsonnet';
@@ -31,16 +32,16 @@ local kibana = import "../components/kibana.jsonnet";
 local grafana = import "../components/grafana.jsonnet";
 
 {
-  config:: error 'no kubeprod configuration',
+  config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: kube.Namespace('kubeprod'),
+  kubeprod: kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
-  letsencrypt_environment:: 'prod',
+  letsencrypt_environment:: "prod",
 
-  version: import '../components/version.jsonnet',
+  version: version,
 
   grafana: grafana {
     prometheus:: $.prometheus.prometheus.svc,
@@ -55,7 +56,7 @@ local grafana = import "../components/grafana.jsonnet";
     // NOTE: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
     // for additional information on how to use environment variables to configure a particular user when accessing
     // the AWS API.
-    secret: kube.Secret(edns.p + "external-dns-aws-conf") {
+    secret: kube.Secret(this.p + "external-dns-aws-conf") {
       metadata+: {
         namespace: "kubeprod",
       },
@@ -74,9 +75,8 @@ local grafana = import "../components/grafana.jsonnet";
                   AWS_SECRET_ACCESS_KEY: kube.SecretKeyRef(this.secret, "aws_access_key_secret"),
                 },
                 args_+: {
-                  provider: 'aws',
-                  'aws-zone-type': 'public',
-                  registry: 'txt',
+                  provider: "aws",
+                  "aws-zone-type": "public",
                 },
               },
             },
@@ -105,8 +105,8 @@ local grafana = import "../components/grafana.jsonnet";
             containers_+: {
               proxy+: {
                 args_+: {
-                  provider: 'oidc',
-                  'oidc-issuer-url': 'https://cognito-idp.%s.amazonaws.com/%s' % [
+                  provider: "oidc",
+                  "oidc-issuer-url": "https://cognito-idp.%s.amazonaws.com/%s" % [
                     $.config.oauthProxy.aws_region,
                     $.config.oauthProxy.aws_user_pool_id
                   ],
@@ -115,7 +115,7 @@ local grafana = import "../components/grafana.jsonnet";
                    * The refresh token is defined in the specification, but is not currently implemented to
                    * be returned from the Token Endpoint.
                    */
-                  'cookie-refresh': '0',
+                  "cookie-refresh": "0",
                 },
               },
             },
