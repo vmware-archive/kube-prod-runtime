@@ -65,7 +65,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster. A TLD or a sub-domain may be used.
   - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
-  - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
+  - `GCLOUD_PROJECT` specifies the Google Cloud project id. `gcloud projects list` lists your Google Cloud projects.
   - `GCLOUD_ZONE` specifies the Google Cloud zone. `gcloud compute zones list` lists the Google Cloud zones.
   - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain.
   - `GCLOUD_K8S_CLUSTER` specifies the name of the GKE cluster.
