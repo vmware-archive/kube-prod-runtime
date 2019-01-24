@@ -80,9 +80,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
               image: EXTERNAL_DNS_IMAGE,
               args_+: {
                 sources_:: ["service", "ingress"],
-                registry: "txt",
                 "txt-owner-id": this.ownerId,
-                "txt-prefix": "_externaldns",
                 "domain-filter": this.ownerId,
               },
               args+: ["--source=%s" % s for s in self.args_.sources_],
