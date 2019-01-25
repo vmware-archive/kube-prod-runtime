@@ -108,7 +108,7 @@ local grafana = import "../components/grafana.jsonnet";
                   provider: "oidc",
                   "oidc-issuer-url": "https://cognito-idp.%s.amazonaws.com/%s" % [
                     $.config.oauthProxy.aws_region,
-                    $.config.oauthProxy.aws_user_pool_id
+                    $.config.oauthProxy.aws_user_pool_id,
                   ],
                   /* NOTE: disable cookie refresh token.
                    * As per https://docs.aws.amazon.com/cognito/latest/developerguide/token-endpoint.html:
