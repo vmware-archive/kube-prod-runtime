@@ -135,8 +135,7 @@ local grafana = import "../components/grafana.jsonnet";
     es:: $.elasticsearch,
   },
 
-  elasticsearch: elasticsearch {
-  },
+  elasticsearch: elasticsearch,
 
   kibana: kibana {
     es:: $.elasticsearch,
