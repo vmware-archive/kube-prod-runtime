@@ -19,11 +19,11 @@
 
 // Top-level file for AWS EKS
 
-local kube = import '../lib/kube.libsonnet';
+local kube = import "../lib/kube.libsonnet";
 local version = import "../components/version.jsonnet";
-local cert_manager = import '../components/cert-manager.jsonnet';
-local edns = import '../components/externaldns.jsonnet';
-local nginx_ingress = import '../components/nginx-ingress.jsonnet';
+local cert_manager = import "../components/cert-manager.jsonnet";
+local edns = import "../components/externaldns.jsonnet";
+local nginx_ingress = import "../components/nginx-ingress.jsonnet";
 local prometheus = import "../components/prometheus.jsonnet";
 local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
 local fluentd_es = import "../components/fluentd-es.jsonnet";
