@@ -1,0 +1,25 @@
+#!groovy
+
+// Force using our pod
+def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+
+podTemplate(
+  cloud: 'kubernetes-cluster',
+  label: label,
+  yaml: """
+apiVersion: v1
+kind: Pod
+"""
+) {
+  node(label) {
+    withEnv([
+      "PATH+JQ=${tool 'jq'}",
+      "PATH+HUB=${tool 'hub'}",
+    ]) {
+      checkout scm
+      withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_TOKEN')]) {
+        sh './jenkins/automation/automatic-updates.sh ${PWD}'
+      }
+    }
+  }
+}
