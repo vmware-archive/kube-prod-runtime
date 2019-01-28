@@ -15,9 +15,12 @@ kind: Pod
     withEnv([
       "PATH+JQ=${tool 'jq'}",
       "PATH+HUB=${tool 'hub'}",
+      "DEVELOPMENT_REPO_URL=https://github.com/sameersbn-bot/kube-prod-runtime",
+      "GIT_AUTHOR_NAME=The Botfather",
+      "GIT_AUTHOR_EMAIL=sameer+sameersbn-bot@fuloi.com",
     ]) {
       checkout scm
-      withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_TOKEN')]) {
+      withCredentials([usernamePassword(credentialsId: 'github-sameersbn-bot', usernameVariable: 'GITHUB_USER', passwordVariable: 'GITHUB_TOKEN')]) {
         sh './jenkins/automation/automatic-updates.sh ${PWD}'
       }
     }
