@@ -144,7 +144,16 @@ create_pull_request() {
   local base_branch="${1?base branch not specified}"
   local pr_title="${2?PR title not specified}"
 
-  hub pull-request -b "${base_branch}" -m "${pr_title}" >/dev/null
+  local REVIEWERS=
+  if [[ -f MAINTAINERS ]]; then
+    local SEPERATOR=
+    while read -r reviewer; do
+      REVIEWERS+="${SEPERATOR}${reviewer}"
+      SEPERATOR=","
+    done < MAINTAINERS
+  fi
+
+  hub pull-request -b "${base_branch}" -m "${pr_title}" ${REVIEWERS:+-r "${REVIEWERS}"} >/dev/null
 }
 
 delete_branch() {
