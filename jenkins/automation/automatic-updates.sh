@@ -35,6 +35,8 @@ for base_branch in "${BRANCHES[@]}"; do
   if [[ -f "${MANIFESTS_IMAGES_JSON}" ]]; then
     for component in $(grep -oE "${IMAGE_NAME_REGEX}" "${MANIFESTS_IMAGES_JSON}"); do
       info "[${base_branch}] Checking updates for '${component%%:*}'..."
+      # loop through every published image tag until `update_component_image` returns 0
+      # this loop natually switches to the relavant version series for release branches
       for tag in $(curl -sSL "https://registry.hub.docker.com/v1/repositories/${component%%:*}/tags" | jq -r '.[]|select(.name|test("[0-9]+\\.[0-9]+\\.[0-9]+-r[0-9]+"))|.name' | sort -Vr); do
         if update_component_image "${GITHUB_USER}" "${base_branch}" "${component%%:*}:${tag}"; then
           break
