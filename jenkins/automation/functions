@@ -1,0 +1,276 @@
+#!/usr/bin/env bash
+
+UPSTREAM_REPO_URL="${UPSTREAM_REPO_URL:-https://github.com/bitnami/kube-prod-runtime}"
+DEVELOPMENT_REPO_URL="${DEVELOPMENT_REPO_URL:-https://github.com/bitnami-bot/kube-prod-runtime}"
+MANIFESTS_IMAGES_JSON="manifests/components/images.json"
+
+GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-Bitnami Containers}"
+GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-containers@bitnami.com}"
+
+# bitnami tag naming regex
+IMAGE_TAG_REGEX="[0-9]+\\.[0-9]+\\.[0-9]+-r[0-9]+"
+IMAGE_NAME_REGEX="bitnami/.*:${IMAGE_TAG_REGEX}"
+
+# BKPR release branch naming glob
+RELEASES_BRANCH_GLOB="release-[0-9]*\\.[0-9]*"
+
+# Logging helpers
+log() {
+  echo -e "${@}"
+}
+
+info() {
+  log "INFO  ==> ${@}"
+}
+
+warn() {
+  log "WARN  ==> ${@}"
+}
+
+error() {
+  2>&1 log "ERROR ==> ${@}"
+}
+
+# compares two versions
+# if a == b, returns 0
+# if a < b,  returns negative integer
+# if a > b,  returns non-negative integer
+vercmp() {
+  expr '(' "$1" : '\([^.]*\)' ')' '-' '(' "$2" : '\([^.]*\)' ')' '|' \
+       '(' "$1.0" : '[^.]*[.]\([^.]*\)' ')' '-' '(' "$2.0" : '[^.]*[.]\([^.]*\)' ')' '|' \
+       '(' "$1.0.0" : '[^.]*[.][^.]*[.]\([^.]*\)' ')' '-' '(' "$2.0.0" : '[^.]*[.][^.]*[.]\([^.]*\)' ')' '|' \
+       '(' "$1.0.0.0" : '[^.]*[.][^.]*[.][^.]*[.]\([^.]*\)' ')' '-' '(' "$2.0.0.0" : '[^.]*[.][^.]*[.][^.]*[.]\([^.]*\)' ')'
+}
+
+# utility function to check existence of command line tools
+check_tool() {
+  local toolname="${1?tool name not specified}"
+  if ! which "${toolname}" >/dev/null; then
+    error "'${toolname}' command not found."
+    return 1
+  fi
+}
+
+# checks existence of required tools and environment variables
+validate_environment() {
+  check_tool "curl"
+  check_tool "jq"
+  check_tool "hub"
+
+  if [[ -z "${GIT_AUTHOR_NAME}" || -z "${GIT_AUTHOR_EMAIL}" ]]; then
+    error "Git author configuration not found in script environment"
+    return 1
+  fi
+
+  if [[ -z "${GITHUB_USER}" || -z "${GITHUB_TOKEN}" ]]; then
+    error "Github credentials not found in script environment"
+    return 1
+  fi
+
+  export GITHUB_USER GITHUB_TOKEN
+}
+
+# clones git repository at specified directory
+# if destination directory already exists, then does a remote origin fetch
+clone_repo() {
+  local repo_url="${1?git repository not specified}"
+  local repo_dir="${2?clone directory not specified}"
+
+  if [[ ! -d "${repo_dir}" ]]; then
+    if ! git clone "${repo_url}" "${repo_dir}"; then
+      error "Some error occured while cloning '${repo_url}'"
+      return 1
+    fi
+  elif [[ ! -d "${repo_dir}/.git" ]]; then
+    error "'${repo_dir}' is not a git repository"
+    return 1
+  else
+    git fetch origin --quiet
+  fi
+}
+
+# updates git committer config and github access credentials
+configure_git() {
+  git config user.name "${GIT_AUTHOR_NAME}"
+  git config user.email "${GIT_AUTHOR_EMAIL}"
+  git config --global credential.helper store
+  echo "https://$GITHUB_USER:$GITHUB_TOKEN@github.com" > ~/.git-credentials
+}
+
+# adds specified url as a git remote and performs a fetch on the remote
+add_remote() {
+  local remote_name="${1?remote name not specified}"
+  local remote_url="${2?remote url not specified}"
+  git remote remove "${remote_name}" 2>/dev/null || true
+  git remote add "${remote_name}" "${remote_url}"
+  if ! git fetch "${remote_name}" --quiet; then
+    error "Unable to fetch from '${remote_url}'"
+    return 1
+  fi
+}
+
+# filters git branches from the specified regex pattern
+filter_branches() {
+  local pattern="${1?regex not specified}"
+  # git branch --remote --format '%(refname:lstrip=-1)' --list "${pattern}" # requires git 2.17.1
+  git branch --remote --list "${pattern}" | cut -d'/' -f2
+}
+
+# checks if the specified branch exists
+branch_exists() {
+  local branch_name="${1?branch name not specified}"
+  if [[ -z "$(filter_branches "${branch_name}")" ]]; then
+    return 1
+  fi
+}
+
+# checks out the specified branch and pulls changes from the remote
+checkout_branch() {
+  local remote_name="${1?remote name not specified}"
+  local branch_name="${2?branch name not specified}"
+
+  git checkout "${branch_name}" --quiet 2>/dev/null
+  git pull "${remote_name}" "${branch_name}" --quiet
+}
+
+# creates a new branch from the specified base branch
+create_branch() {
+  local base_branch="${1?base branch not specified}"
+  local branch_name="${2?branch name not specified}"
+
+  git checkout "${base_branch}" --quiet
+  git pull origin "${base_branch}" --quiet
+  git checkout -b "${branch_name}" --quiet
+}
+
+# commits the specified file with the specified message
+commit_changes() {
+  local file_path="${1?file not specified}"
+  local commit_message="${2?commit message not specified}"
+
+  git add "${file_path}"
+  git commit --signoff -m "${commit_message}" >/dev/null
+}
+
+# pushes branch to the specified remote
+push_changes() {
+  local remote_name="${1?remote name not specified}"
+  local branch_name="${2?branch not specified}"
+
+  git push "${remote_name}" "${branch_name}" --force 2>/dev/null
+}
+
+# creates a new pull request, with MAINTAINERS as reviewers
+create_pull_request() {
+  local base_branch="${1?base branch not specified}"
+  local pr_title="${2?PR title not specified}"
+
+  local REVIEWERS=
+  if [[ -f MAINTAINERS ]]; then
+    local SEPERATOR=
+    while read -r reviewer; do
+      REVIEWERS+="${SEPERATOR}${reviewer}"
+      SEPERATOR=","
+    done < MAINTAINERS
+  fi
+
+  hub pull-request -b "${base_branch}" -m "${pr_title}" ${REVIEWERS:+-r "${REVIEWERS}"} >/dev/null
+}
+
+# deletes a branch from the specified remote, as well as locally
+delete_branch() {
+  local remote_name=${1?remote name not specified}
+  local branch_name=${2?branch name not specified}
+
+  git push "${remote_name}" ":${branch_name}" --quiet
+  git branch -D "${branch_name}" --quiet 2>/dev/null || true
+}
+
+# applies the specified component image update and sumbits a PR upstream
+# returns 1 if
+#   - update cannot be applied because it's a newer version series
+# returns 0, if
+#   - image is not used
+#   - already using a newer version
+#   - update was applied
+update_component_image() {
+  local remote_name="${1?remote name not specified}"
+  local base_branch="${2?base branch not specified}"
+  local image_fullname="${3?image not specified}"
+
+  local image_name="${image_fullname%:*}"
+  local image_tag="${image_fullname##*:}"
+  local image_revision=${image_tag##*-r}
+  local app_name=${image_name##*/}
+  local app_version="${image_tag%%-*}"
+  local app_version_series="${app_version%.*}"
+  local dev_branch_prefix="autoupdate-${base_branch}-${app_name}"
+  local dev_branch="${dev_branch_prefix}-${app_version}"
+
+  pr_exists=0
+  if branch_exists "${remote_name}/${dev_branch}"; then
+    # if branch exists, it implies that a PR already exists
+    pr_exists=1
+
+    # checkout to the existing branch so that branch checks are proper in the next step
+    checkout_branch "${remote_name}" "${dev_branch}"
+  fi
+
+  local branch_image_tag="$(sed -n -e "s|.*\"${image_name}:\([0-9]*.[0-9]*.[0-9]*-r[0-9]*\)\".*|\1|p" "${MANIFESTS_IMAGES_JSON}")"
+  local branch_image_revision=${branch_image_tag##*-r}
+  local branch_app_version="${branch_image_tag%%-*}"
+  local branch_app_version_series="${branch_app_version%.*}"
+
+  if [[ -z "${branch_image_tag}" ]]; then
+    # image is not used, nothing to do!
+    return 0
+  fi
+
+  if [[ $(vercmp "${app_version}" "${branch_app_version}") -lt 0 ]]; then
+    # current version is higher then specified, nothing to do!
+    return 0
+  fi
+
+  if [[ $(vercmp "${app_version}" "${branch_app_version}") -eq 0 ]]; then
+    # app version is the same, can only update existing pr's
+    if [[ $(vercmp "${image_revision}" "${branch_image_revision}") -le 0 ]]; then
+      # image revision is the same, nothing to do!
+      return 0
+    elif [[ "${pr_exists}" -eq 0 ]]; then
+      # image revision has updated, but skip_revision_updates is set
+      return 0
+    fi
+  fi
+
+  # release branches only permit PATCH version updates
+  if [[ "${base_branch}" =~ ${RELEASES_BRANCH_GLOB} ]] && [[ $(vercmp "${app_version_series}" "${branch_app_version_series}") -ne 0 ]]; then
+    return 1
+  fi
+
+  info "[${base_branch}] New image '${image_fullname}' available"
+
+  if [[ "${pr_exists}" -eq 0 ]]; then
+    info "[${base_branch}] Creating branch '${dev_branch}'"
+    create_branch "${base_branch}" "${dev_branch}"
+  else
+    info "[${base_branch}] Will update existing '${dev_branch}' branch..."
+  fi
+
+  # apply the update and commit the changes
+  sed -i "s|${image_name}:[0-9]*\.[0-9]*\.[0-9]*-r[0-9]*|${image_fullname}|" "${MANIFESTS_IMAGES_JSON}"
+  commit_changes "${MANIFESTS_IMAGES_JSON}" "${app_name}: component image updated to '${image_fullname}'"
+
+  info "[${base_branch}] Pushing changes to '${dev_branch}'"
+  push_changes "${remote_name}" "${dev_branch}"
+
+  if [[ "${pr_exists}" -eq 0 ]]; then
+    info "[${base_branch}] Creating pull request with '${dev_branch}'"
+    create_pull_request "${base_branch}" "[maintenance/${base_branch}] '${app_name}' updated '${branch_app_version}' -> '${app_version}'"
+  fi
+
+  # clean up old branches
+  for b in $(filter_branches "${remote_name}/${dev_branch_prefix}-*" | grep -v "${dev_branch}"); do
+    info "[${base_branch}] Deleting '${b}' branch"
+    delete_branch "${remote_name}" "${b}"
+  done
+}
