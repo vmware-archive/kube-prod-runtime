@@ -265,7 +265,7 @@ update_component_image() {
 
   if [[ "${pr_exists}" -eq 0 ]]; then
     info "[${base_branch}] Creating pull request with '${dev_branch}'"
-    create_pull_request "${base_branch}" "[maintenance/${base_branch}] '${app_name}' updated to '${app_version}'"
+    create_pull_request "${base_branch}" "[maintenance/${base_branch}] '${app_name}' updated '${branch_app_version}' -> '${app_version}'"
   fi
 
   # clean up old branches
