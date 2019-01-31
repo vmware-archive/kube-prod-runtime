@@ -46,11 +46,16 @@ import (
 
 func (conf *Config) getAwsSession() *session.Session {
 	if conf.session == nil {
-		// Configure an explicit time-out of 30 seconds
-		config := aws.NewConfig().WithHTTPClient(&http.Client{
-			Timeout: 30 * time.Second,
-		})
-		conf.session = session.Must(session.NewSession(config))
+		conf.session = session.Must(
+			session.NewSessionWithOptions(
+				session.Options{
+					// Load AWS SDK configuration parameters (including the AWS region)
+					SharedConfigState: session.SharedConfigEnable,
+					Config: *aws.NewConfig().WithHTTPClient(&http.Client{
+						// Configure an explicit time-out of 30 seconds
+						Timeout: 30 * time.Second,
+					}),
+				}))
 	}
 	return conf.session
 }
@@ -386,15 +391,16 @@ func (conf *Config) setUpOAuth2Proxy() error {
 	if conf.OauthProxy.ClientID == "" || conf.OauthProxy.ClientSecret == "" {
 		log.Info("Setting up configuration for OAuth2 Proxy")
 
-		// Extract the AWS region name/ID from the Cognito user pool ID
-		conf.OauthProxy.AWSRegion = strings.Split(conf.OauthProxy.AWSUserPoolID, "_")[0]
+		session := conf.getAwsSession()
+
+		// Configure the AWS region
+		conf.OauthProxy.AWSRegion = *session.Config.Region
 		if !conf.isValidRegion() {
 			return fmt.Errorf("AWS region %s is not a valid region for the Cognito IDP service", conf.OauthProxy.AWSRegion)
 		}
 
 		// Configure client ID and client secret required for OAuth2 proxy integration with Cognito
-		svc := cognitoidentityprovider.New(conf.getAwsSession(),
-			aws.NewConfig().WithRegion(conf.OauthProxy.AWSRegion))
+		svc := cognitoidentityprovider.New(session)
 		userPoolClient, err := conf.getUserPoolClient(svc, conf.OauthProxy.AWSUserPoolID)
 		if err != nil {
 			return err
