@@ -21,7 +21,6 @@ package eks
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,6 +37,7 @@ import (
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 
 	"github.com/google/uuid"
 
@@ -410,13 +410,14 @@ func (conf *Config) setUpOAuth2Proxy() error {
 	}
 
 	if conf.OauthProxy.CookieSecret == "" {
-		// Generate a 32-byte random for securing cookies
-		key := make([]byte, 16)
-		_, err := rand.Read(key)
+		// I Quote: cookie_secret must be 16, 24, or 32 bytes
+		// to create an AES cipher when pass_access_token ==
+		// true or cookie_refresh != 0
+		secret, err := tools.Base64RandBytes(24)
 		if err != nil {
 			return err
 		}
-		conf.OauthProxy.CookieSecret = fmt.Sprintf("%x", key)
+		conf.OauthProxy.CookieSecret = secret
 	}
 
 	return nil
