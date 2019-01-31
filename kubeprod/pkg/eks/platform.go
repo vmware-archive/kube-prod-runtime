@@ -22,7 +22,6 @@ package eks
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -433,9 +432,6 @@ func (conf *Config) Generate(ctx context.Context) error {
 			return err
 		}
 		conf.ContactEmail = email
-		if conf.ContactEmail == "" {
-			return errors.New("no contact e-mail configured (perhaps use the --email command-line argument)")
-		}
 	}
 
 	if conf.DNSZone == "" {
