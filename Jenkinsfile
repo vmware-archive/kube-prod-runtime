@@ -256,7 +256,7 @@ spec:
     // See:
     //  az aks get-versions -l centralus
     //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-    def aksKversions = ["1.10.12", "1.11.6"]
+    def aksKversions = ["1.10", "1.11"]
     for (x in aksKversions) {
         def kversion = x  // local bind required because closures
         def platform = "aks-" + kversion
@@ -274,6 +274,8 @@ spec:
                                 def dnsZone = "${dnsPrefix}.${parentZone}"
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def location = "eastus"
+                                def availableK8sVersions = ""
+                                def kversion_full = ""
 
                                 try {
                                     runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
@@ -282,7 +284,14 @@ spec:
 az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
 az account set -s $AZURE_SUBSCRIPTION_ID
 '''
+                                            availableK8sVersions = sh(returnStdout: true, script: "az aks get-versions --location ${location} --query \"orchestrators[?contains(orchestratorVersion,'${kversion}')].orchestratorVersion\" -o tsv")
+                                        }
 
+                                        // sort utility from the `az` container does not support the `-V` flag
+                                        // therefore we're running this command outside the az container
+                                        kversion_full = sh(returnStdout: true, script: "echo \"${availableK8sVersions}\" | sort -Vr | head -n1 | tr -d '\n'")
+
+                                        container('az') {
                                             // Usually, `az aks create` creates a new service
                                             // principal, which is not removed by `az aks
                                             // delete`. We reuse an existing principal here to
@@ -298,7 +307,7 @@ az aks create                      \
  --node-count 3                    \
  --node-vm-size Standard_DS2_v2    \
  --location ${location}            \
- --kubernetes-version ${kversion}  \
+ --kubernetes-version ${kversion_full} \
  --generate-ssh-keys               \
  --service-principal \$AZURE_CLIENT_ID \
  --client-secret \$AZURE_CLIENT_SECRET \
