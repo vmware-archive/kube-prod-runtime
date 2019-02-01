@@ -254,6 +254,112 @@ spec:
     def platforms = [:]
 
     // See:
+    //  gcloud container get-server-config
+    def gkeKversions = ["1.10", "1.11"]
+    for (x in gkeKversions) {
+        def kversion = x  // local bind required because closures
+        def platform = "gke-" + kversion
+        platforms[platform] = {
+            stage(platform) {
+                node(label) {
+                    withCredentials([
+                        file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
+                        usernamePassword(credentialsId: 'gke-oauthproxy-client', usernameVariable: 'OAUTH_CLIENT_ID', passwordVariable: 'OAUTH_CLIENT_SECRET'),
+                    ]) {
+                        withEnv(["CLOUDSDK_CORE_DISABLE_PROMPTS=1"]) {
+                            withGo() {
+                                dir('src/github.com/bitnami/kube-prod-runtime') {
+                                    def project = 'bkprtesting'
+                                    def zone = 'us-east1-d'
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
+                                    def dnsPrefix = "${clusterName}"
+                                    def adminEmail = "${clusterName}@${parentZone}"
+                                    def dnsZone = "${dnsPrefix}.${parentZone}"
+
+                                    try {
+                                        runIntegrationTest(platform, "gke --config=${clusterName}-autogen.json --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
+                                            container('gcloud') {
+                                                sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
+                                                sh """
+gcloud container clusters create ${clusterName} \
+ --cluster-version ${kversion} \
+ --project ${project} \
+ --machine-type n1-standard-2 \
+ --num-nodes 3 \
+ --zone ${zone} \
+ --preemptible \
+ --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
+"""
+
+                                                sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
+
+                                                sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
+
+                                                waitForRollout("kube-system", 30)
+                                            }
+
+                                            // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
+                                            def saCreds = JsonOutput.toJson(readFile(env.GOOGLE_APPLICATION_CREDENTIALS))
+
+                                            // NB: writeJSON doesn't work without approvals(?)
+                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+                                            writeFile([file: "${clusterName}-autogen.json", text: """
+{
+  "dnsZone": "${dnsZone}",
+  "externalDns": {
+    "credentials": ${saCreds}
+  },
+  "oauthProxy": {
+    "client_id": "${OAUTH_CLIENT_ID}",
+    "client_secret": "${OAUTH_CLIENT_SECRET}"
+  }
+}
+"""
+                                            ])
+
+                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
+(import "manifests/platforms/gke.jsonnet") {
+  config:: import "${clusterName}-autogen.json",
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
+}
+"""
+                                            ])
+                                        }{
+                                            // update glue records in parent zone
+                                            container('gcloud') {
+                                                withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                                                    def nameServers = []
+                                                    def output = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
+                                                    for (ns in readJSON(text: output)) {
+                                                        nameServers << ns
+                                                    }
+                                                    insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                                }
+                                            }
+                                        }
+                                    }
+                                    finally {
+                                        container('gcloud') {
+                                            def disksFilter = "${clusterName}".take(18).replaceAll(/-$/, '')
+                                            sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
+                                            sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --quiet || :"
+                                            sh "gcloud compute disks delete \$(gcloud compute disks list --project ${project} --filter name:${disksFilter} --format='value(name)') --project ${project} --zone ${zone} --quiet || :"
+                                            sh "gcloud dns record-sets import /dev/null --zone=\$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --delete-all-existing"
+                                            sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
+                                        }
+                                        deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // See:
     //  az aks get-versions -l centralus
     //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
     def aksKversions = ["1.10", "1.11"]
@@ -373,112 +479,6 @@ az aks create                      \
                                         sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
                                     }
                                     deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // See:
-    //  gcloud container get-server-config
-    def gkeKversions = ["1.10", "1.11"]
-    for (x in gkeKversions) {
-        def kversion = x  // local bind required because closures
-        def platform = "gke-" + kversion
-        platforms[platform] = {
-            stage(platform) {
-                node(label) {
-                    withCredentials([
-                        file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
-                        usernamePassword(credentialsId: 'gke-oauthproxy-client', usernameVariable: 'OAUTH_CLIENT_ID', passwordVariable: 'OAUTH_CLIENT_SECRET'),
-                    ]) {
-                        withEnv(["CLOUDSDK_CORE_DISABLE_PROMPTS=1"]) {
-                            withGo() {
-                                dir('src/github.com/bitnami/kube-prod-runtime') {
-                                    def project = 'bkprtesting'
-                                    def zone = 'us-east1-d'
-                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
-                                    def dnsPrefix = "${clusterName}"
-                                    def adminEmail = "${clusterName}@${parentZone}"
-                                    def dnsZone = "${dnsPrefix}.${parentZone}"
-
-                                    try {
-                                        runIntegrationTest(platform, "gke --config=${clusterName}-autogen.json --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}") {
-                                            container('gcloud') {
-                                                sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
-                                                sh """
-gcloud container clusters create ${clusterName} \
- --cluster-version ${kversion} \
- --project ${project} \
- --machine-type n1-standard-2 \
- --num-nodes 3 \
- --zone ${zone} \
- --preemptible \
- --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
-"""
-
-                                                sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
-
-                                                sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
-
-                                                waitForRollout("kube-system", 30)
-                                            }
-
-                                            // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                            def saCreds = JsonOutput.toJson(readFile(env.GOOGLE_APPLICATION_CREDENTIALS))
-
-                                            // NB: writeJSON doesn't work without approvals(?)
-                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-                                            writeFile([file: "${clusterName}-autogen.json", text: """
-{
-  "dnsZone": "${dnsZone}",
-  "externalDns": {
-    "credentials": ${saCreds}
-  },
-  "oauthProxy": {
-    "client_id": "${OAUTH_CLIENT_ID}",
-    "client_secret": "${OAUTH_CLIENT_SECRET}"
-  }
-}
-"""
-                                            ])
-
-                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-(import "manifests/platforms/gke.jsonnet") {
-  config:: import "${clusterName}-autogen.json",
-  letsencrypt_environment: "staging",
-  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
-}
-"""
-                                            ])
-                                        }{
-                                            // update glue records in parent zone
-                                            container('gcloud') {
-                                                withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                                                    def nameServers = []
-                                                    def output = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
-                                                    for (ns in readJSON(text: output)) {
-                                                        nameServers << ns
-                                                    }
-                                                    insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
-                                                }
-                                            }
-                                        }
-                                    }
-                                    finally {
-                                        container('gcloud') {
-                                            def disksFilter = "${clusterName}".take(18).replaceAll(/-$/, '')
-                                            sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
-                                            sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --quiet || :"
-                                            sh "gcloud compute disks delete \$(gcloud compute disks list --project ${project} --filter name:${disksFilter} --format='value(name)') --project ${project} --zone ${zone} --quiet || :"
-                                            sh "gcloud dns record-sets import /dev/null --zone=\$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --delete-all-existing"
-                                            sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
-                                        }
-                                        deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
-                                    }
                                 }
                             }
                         }
