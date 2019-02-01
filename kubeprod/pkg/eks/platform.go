@@ -30,10 +30,13 @@ import (
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/cognitoidentityprovider"
 	"github.com/aws/aws-sdk-go/service/iam"
 	"github.com/aws/aws-sdk-go/service/route53"
 	"github.com/aws/aws-sdk-go/service/sts"
+	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 
 	"github.com/google/uuid"
 
@@ -42,11 +45,16 @@ import (
 
 func (conf *Config) getAwsSession() *session.Session {
 	if conf.session == nil {
-		// Configure an explicit time-out of 30 seconds
-		config := aws.NewConfig().WithHTTPClient(&http.Client{
-			Timeout: 30 * time.Second,
-		})
-		conf.session = session.Must(session.NewSession(config))
+		conf.session = session.Must(
+			session.NewSessionWithOptions(
+				session.Options{
+					// Load AWS SDK configuration parameters (including the AWS region)
+					SharedConfigState: session.SharedConfigEnable,
+					Config: *aws.NewConfig().WithHTTPClient(&http.Client{
+						// Configure an explicit time-out of 30 seconds
+						Timeout: 30 * time.Second,
+					}),
+				}))
 	}
 	return conf.session
 }
@@ -295,6 +303,125 @@ func (conf *Config) setUpExternalDNS() error {
 	return nil
 }
 
+// Retrieves information from an existing client application in AWS Cognito
+func (conf *Config) describeUserPoolClient(svc *cognitoidentityprovider.CognitoIdentityProvider, clientID, userPoolID string) (*cognitoidentityprovider.UserPoolClientType, error) {
+	result, err := svc.DescribeUserPoolClient(&cognitoidentityprovider.DescribeUserPoolClientInput{
+		ClientId:   aws.String(clientID),
+		UserPoolId: aws.String(userPoolID),
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Error getting information from client application %s: %v", clientID, err)
+	}
+	return result.UserPoolClient, nil
+}
+
+// Creates a new client application (or reuses the existing one) in Cognito
+// for integration between OAuth2 Proxy and the AWS Cognito User Pool. The
+// client application is amed like "bbkpr-${dnsZone}" and will be enabled to
+// be used for OpenID Connect.
+func (conf *Config) getUserPoolClient(svc *cognitoidentityprovider.CognitoIdentityProvider, userPoolID string) (*cognitoidentityprovider.UserPoolClientType, error) {
+	input := &cognitoidentityprovider.ListUserPoolClientsInput{
+		MaxResults: aws.Int64(60),
+		UserPoolId: aws.String(userPoolID),
+	}
+
+	// Find whether a client application named like "bkpr-${dnsZone}" already exists
+	// in the user pool...
+	clientName := fmt.Sprintf("bkpr-%s", conf.DNSZone)
+	for {
+		result, err := svc.ListUserPoolClients(input)
+		if err != nil {
+			return nil, fmt.Errorf("Error retrieving client applications for user pool ID %s: %v", userPoolID, err)
+		}
+		for _, element := range result.UserPoolClients {
+			if *element.ClientName == clientName {
+				userPoolClient, err := conf.describeUserPoolClient(svc, *element.ClientId, userPoolID)
+				if err != nil {
+					return nil, err
+				}
+				log.Warningf("Re-using existing client in user pool '%s' for OAuth2 proxy integration: %s", userPoolID, *userPoolClient.ClientId)
+				return userPoolClient, nil
+			}
+		}
+		if result.NextToken == nil {
+			break
+		}
+		input.NextToken = result.NextToken
+	}
+
+	// No client application named like "bkpr-${dnsZone)" was found, so try to
+	// create a new one
+	result, err := svc.CreateUserPoolClient(&cognitoidentityprovider.CreateUserPoolClientInput{
+		ClientName:                      aws.String(clientName),
+		AllowedOAuthFlowsUserPoolClient: aws.Bool(true),
+		GenerateSecret:                  aws.Bool(true),
+		UserPoolId:                      aws.String(userPoolID),
+		AllowedOAuthFlows:               []*string{aws.String("code")},
+		AllowedOAuthScopes: []*string{
+			aws.String("email"),
+			aws.String("openid"),
+			aws.String("profile"),
+		},
+		CallbackURLs: []*string{
+			aws.String(fmt.Sprintf("https://grafana.%s/oauth2/callback", conf.DNSZone)),
+			aws.String(fmt.Sprintf("https://kibana.%s/oauth2/callback", conf.DNSZone)),
+			aws.String(fmt.Sprintf("https://prometheus.%s/oauth2/callback", conf.DNSZone)),
+		},
+		SupportedIdentityProviders: []*string{
+			aws.String("COGNITO"),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("Error creating client: %v", err)
+	}
+	log.Infof("Created new client in user pool '%s' for OAuth2 proxy integration: %s", userPoolID, *result.UserPoolClient.ClientId)
+	return result.UserPoolClient, nil
+}
+
+// Returns whether the AWS region is a valid region for the Cognito IDP service
+func (conf *Config) isValidRegion() bool {
+	rs := endpoints.AwsPartition().Services()[endpoints.CognitoIdpServiceID].Regions()
+	_, ok := rs[conf.OauthProxy.AWSRegion]
+	return ok
+}
+
+// Configuration for integration between OAuth2 Proxy and AWS Cognito.
+func (conf *Config) setUpOAuth2Proxy() error {
+	if conf.OauthProxy.ClientID == "" || conf.OauthProxy.ClientSecret == "" {
+		log.Info("Setting up configuration for OAuth2 Proxy")
+
+		session := conf.getAwsSession()
+
+		// Configure the AWS region
+		conf.OauthProxy.AWSRegion = *session.Config.Region
+		if !conf.isValidRegion() {
+			return fmt.Errorf("AWS region %s is not a valid region for the Cognito IDP service", conf.OauthProxy.AWSRegion)
+		}
+
+		// Configure client ID and client secret required for OAuth2 proxy integration with Cognito
+		svc := cognitoidentityprovider.New(session)
+		userPoolClient, err := conf.getUserPoolClient(svc, conf.OauthProxy.AWSUserPoolID)
+		if err != nil {
+			return err
+		}
+		conf.OauthProxy.ClientID = *userPoolClient.ClientId
+		conf.OauthProxy.ClientSecret = *userPoolClient.ClientSecret
+	}
+
+	if conf.OauthProxy.CookieSecret == "" {
+		// I Quote: cookie_secret must be 16, 24, or 32 bytes
+		// to create an AES cipher when pass_access_token ==
+		// true or cookie_refresh != 0
+		secret, err := tools.Base64RandBytes(24)
+		if err != nil {
+			return err
+		}
+		conf.OauthProxy.CookieSecret = secret
+	}
+
+	return nil
+}
+
 // Generate platform configuration
 func (conf *Config) Generate(ctx context.Context) error {
 	flags := conf.flags
@@ -325,11 +452,22 @@ func (conf *Config) Generate(ctx context.Context) error {
 		}
 	}
 
+	if conf.OauthProxy.AWSUserPoolID == "" {
+		userPoolID, err := flags.GetString(flagAWSUserPoolID)
+		if err != nil {
+			return err
+		}
+		conf.OauthProxy.AWSUserPoolID = userPoolID
+	}
+
 	//
 	// oauth2-proxy setup
 	//
-	if conf.OauthProxy.ClientID == "" || conf.OauthProxy.ClientSecret == "" {
-		// TODO
+	if conf.OauthProxy.AWSUserPoolID != "" {
+		err := conf.setUpOAuth2Proxy()
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil

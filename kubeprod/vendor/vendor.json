@@ -339,6 +339,18 @@
 			"revisionTime": "2019-01-18T21:48:02Z"
 		},
 		{
+			"checksumSHA1": "tXRIRarT7qepHconxydtO7mXod4=",
+			"path": "github.com/aws/aws-sdk-go/private/protocol/json/jsonutil",
+			"revision": "d6cb382cd727ad4e3beb77e2c1935d85314ace0a",
+			"revisionTime": "2019-01-18T21:48:02Z"
+		},
+		{
+			"checksumSHA1": "v2c4B7IgTyjl7ShytqbTOqhCIoM=",
+			"path": "github.com/aws/aws-sdk-go/private/protocol/jsonrpc",
+			"revision": "d6cb382cd727ad4e3beb77e2c1935d85314ace0a",
+			"revisionTime": "2019-01-18T21:48:02Z"
+		},
+		{
 			"checksumSHA1": "lj56XJFI2OSp+hEOrFZ+eiEi/yM=",
 			"path": "github.com/aws/aws-sdk-go/private/protocol/query",
 			"revision": "d6cb382cd727ad4e3beb77e2c1935d85314ace0a",
@@ -365,6 +377,12 @@
 		{
 			"checksumSHA1": "B8unEuOlpQfnig4cMyZtXLZVVOs=",
 			"path": "github.com/aws/aws-sdk-go/private/protocol/xml/xmlutil",
+			"revision": "d6cb382cd727ad4e3beb77e2c1935d85314ace0a",
+			"revisionTime": "2019-01-18T21:48:02Z"
+		},
+		{
+			"checksumSHA1": "ktPxJmysTCpG4+Xyi+omVxECQhI=",
+			"path": "github.com/aws/aws-sdk-go/service/cognitoidentityprovider",
 			"revision": "d6cb382cd727ad4e3beb77e2c1935d85314ace0a",
 			"revisionTime": "2019-01-18T21:48:02Z"
 		},
