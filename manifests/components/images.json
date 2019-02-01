@@ -2,7 +2,7 @@
     "alertmanager": "bitnami/alertmanager:0.15.3-r43",
     "cert-manager": "bitnami/cert-manager:0.5.2-r37",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
-    "elasticsearch": "bitnami/elasticsearch:6.6.0-r0",
+    "elasticsearch": "bitnami/elasticsearch:6.6.0-r1",
     "external-dns": "bitnami/external-dns:0.5.10-r2",
     "fluentd": "bitnami/fluentd:1.3.3-r23",
     "grafana": "bitnami/grafana:5.4.3-r18",
