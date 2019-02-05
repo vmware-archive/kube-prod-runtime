@@ -128,55 +128,58 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 }
 
 
-podTemplate(
-    cloud: 'kubernetes-cluster',
-    label: label,
-    idleMinutes: 1,  // Allow some best-effort reuse between successive stages
-    containers: [
-        containerTemplate(
-            name: 'go',
-            image: 'golang:1.10.1-stretch',
-            ttyEnabled: true,
-            command: 'cat',
-            // Rely on burst CPU, but actually need RAM to avoid OOM killer
-            resourceLmitCpu: '2000m',
-            resourceLimitMemory: '2Gi',
-            resourceRequestCpu: '10m',
-            resourceRequestMemory: '1Gi',
-        ),
-        // Note nested podTemplate doesn't work, so use "fat slaves" for now :(
-        // -> https://issues.jenkins-ci.org/browse/JENKINS-42184
-        containerTemplate(
-            name: 'gcloud',
-            image: 'google/cloud-sdk:218.0.0',
-            ttyEnabled: true,
-            command: 'cat',
-            resourceRequestCpu: '1m',
-            resourceRequestMemory: '100Mi',
-            resourceLimitCpu: '100m',
-            resourceLimitMemory: '500Mi',
-        ),
-        containerTemplate(
-            name: 'az',
-            image: 'microsoft/azure-cli:2.0.45',
-            ttyEnabled: true,
-            command: 'cat',
-            resourceRequestCpu: '1m',
-            resourceRequestMemory: '100Mi',
-            resourceLimitCpu: '100m',
-            resourceLimitMemory: '500Mi',
-        ),
-    ],
-    yaml: """
+podTemplate(cloud: 'kubernetes-cluster', label: label, idleMinutes: 1,  yaml: """
 apiVersion: v1
 kind: Pod
 spec:
+  containers:
+  - name: 'go'
+    image: 'golang:1.10.1-stretch'
+    tty: true
+    command:
+    - 'cat'
+    resources:
+      limits:
+        cpu: '2000m'
+        memory: '2Gi'
+      requests:
+        cpu: '10m'
+        memory: '1Gi'
+  - name: 'gcloud'
+    image: 'google/cloud-sdk:218.0.0'
+    tty: true
+    command:
+    - 'cat'
+  - name: 'az'
+    image: 'microsoft/azure-cli:2.0.45'
+    tty: true
+    command:
+    - 'cat'
+  - name: 'kaniko'
+    image: 'gcr.io/kaniko-project/executor:debug-v0.8.0'
+    tty: true
+    command:
+    - '/busybox/cat'
+    volumeMounts:
+    - name: docker-config
+      mountPath: /root
+    securityContext:
+      runAsUser: 0
+      fsGroup: 0
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
+  volumes:
+  - name: docker-config
+    projected:
+      sources:
+      - secret:
+          name: dockerhub-bitnamibot
+          items:
+            - key: text
+              path: .docker/config.json
 """
 ) {
-
     env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
     // Teach jenkins about the 'go' container env vars
     env.PATH = '/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
@@ -512,6 +515,14 @@ az aks create                      \
                                 ]
                             ]) {
                                 sh "make publish VERSION=${TAG_NAME}"
+                            }
+
+                            container(name: 'kaniko', shell: '/busybox/sh') {
+                                withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
+                                    sh """#!/busybox/sh
+                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
+                                    """
+                                }
                             }
                         }
                     }
