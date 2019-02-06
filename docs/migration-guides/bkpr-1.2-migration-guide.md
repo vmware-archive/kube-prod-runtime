@@ -11,6 +11,7 @@ This document is for users who want to upgrade their Kubernetes clusters to BKPR
 Making the move to BKPR v1.2 is a simple process that involves the following steps:
 
 1. Migrate Kibana index to 6.0
+1. Add new OAuth2 redirect URI to cloud identity provider
 1. Upgrade to BKPR v1.2
 
 ## Migrate Kibana index to 6.0
@@ -28,6 +29,34 @@ The [official Kibana 6 index migration guide](https://www.elastic.co/guide/en/ki
 Access the Kibana console editor by visiting `https://kibana.my-domain.com/app/kibana#/dev_tools/console`* and execute the steps listed in the [Kibana index migration guide](https://www.elastic.co/guide/en/kibana/6.0/migrating-6.0-index.html#migrating-6.0-index).
 
 _*Replace `my-domain.com` in the above URL with the DNS suffix specified while installing BKPR_
+
+## Add new OAuth2 redirect URI to cloud identity provider
+
+BKPR v1.2 simplifies the OAuth2 setup, replacing multiple
+service-specific OAuth2 redirect URIs with a single URL.  Before
+upgrading to BKPR v1.2, the new redirect URI will need to be added to
+the existing list configured in your cloud settings.
+
+### For GKE:
+
+1. Go to <https://console.developers.google.com/apis/credentials>.
+1. Select the project from the drop down menu.
+1. Select the existing OAuth 2.0 client ID used for BKPR.
+1. Add the following authorised redirect URI to the existing list and
+   press __Save__ .
+      + https://auth.${BKPR_DNS_ZONE}/oauth2/callback
+
+  > Replace `${BKPR_DNS_ZONE}` with the DNS zone used for your BKPR cluster
+
+### For AKS:
+
+1. ```bash
+   az ad app update \
+     --id https://oauth.${BKPR_DNS_ZONE}/oauth2 \
+     --reply-urls https://auth.${BKPR_DNS_ZONE}/oauth2/callback
+   ```
+
+  > Replace `${BKPR_DNS_ZONE}` with the DNS zone used for your BKPR cluster
 
 ## Upgrade to BKPR v1.2
 

@@ -319,10 +319,8 @@ func (conf *AKSConfig) Generate(ctx context.Context) error {
 			return err
 		}
 
-		oauthHosts := []string{"prometheus", "kibana", "grafana"}
-		replyUrls := make([]string, len(oauthHosts))
-		for i, h := range oauthHosts {
-			replyUrls[i] = fmt.Sprintf("https://%s.%s/oauth2/callback", h, conf.DnsZone)
+		replyUrls := []string{
+			fmt.Sprintf("https://auth.%s/oauth2/callback", conf.DnsZone),
 		}
 
 		// az ad app create ...

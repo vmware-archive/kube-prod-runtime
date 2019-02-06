@@ -164,8 +164,8 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
               securityContext: {
                 runAsUser: 1001,
                 capabilities: {
-                  drop: ['ALL'],
-                  add: ['NET_BIND_SERVICE'],
+                  drop: ["ALL"],
+                  add: ["NET_BIND_SERVICE"],
                 },
               },
               env_+: {
@@ -175,7 +175,8 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
               args_+: {
                 local fqname(o) = "%s/%s" % [o.metadata.namespace, o.metadata.name],
                 configmap: fqname($.config),
-                // publish-service requires Service.Status.LoadBalancer.Ingress
+                // NB: publish-service requires Service.Status.LoadBalancer.Ingress
+                // to be set correctly.
                 "publish-service": fqname($.svc),
                 "tcp-services-configmap": fqname($.tcpconf),
                 "udp-services-configmap": fqname($.udpconf),

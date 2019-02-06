@@ -513,6 +513,12 @@
 			"revisionTime": "2018-03-12T05:41:25Z"
 		},
 		{
+			"checksumSHA1": "rG9Pp6KrdR37TyROnXx+r1CUKs4=",
+			"path": "github.com/pusher/oauth2_proxy/cookie",
+			"revision": "c83335324e551e4d16f3838c0b570fc76416adf3",
+			"revisionTime": "2019-02-17T11:56:05Z"
+		},
+		{
 			"checksumSHA1": "KnNrKeXkIcdOkWXlK57sn4Jn8SE=",
 			"path": "github.com/spf13/pflag",
 			"revision": "1ce0cc6db4029d97571db82f85092fccedb572ce",

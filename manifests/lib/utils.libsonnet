@@ -39,9 +39,10 @@ local kube = import "kube.libsonnet";
     else std.toString(x)
   ),
 
-  subdomain(fqdn):: (
+  parentDomain(fqdn):: (
     local parts = std.split(fqdn, ".");
     local tail = [parts[i] for i in std.range(1, std.length(parts)-1)];
+    assert std.length(tail) >= 1 : "Tried to use parent of top-level DNS domain %s" % fqdn;
     std.join(".", tail)
   ),
 
@@ -64,33 +65,14 @@ local kube = import "kube.libsonnet";
   AuthIngress(name):: $.TlsIngress(name) {
     local this = self,
     host:: error "host is required",
+    authHost:: "auth." + $.parentDomain(this.host),
     metadata+: {
       annotations+: {
         // NB: Our nginx-ingress no-auth-locations includes "/oauth2"
-        "nginx.ingress.kubernetes.io/auth-signin": "https://%s/oauth2/start" % this.host,
-        "nginx.ingress.kubernetes.io/auth-url": "https://%s/oauth2/auth" % this.host,
+        "nginx.ingress.kubernetes.io/auth-signin": "https://%s/oauth2/start?rd=%%2F$server_name$escaped_request_uri" % this.authHost,
+        "nginx.ingress.kubernetes.io/auth-url": "https://%s/oauth2/auth" % this.authHost,
         "nginx.ingress.kubernetes.io/auth-response-headers": "X-Auth-Request-User, X-Auth-Request-Email",
       },
-    },
-
-    spec+: {
-      rules+: [{
-        // This is required until the oauth2-proxy domain whitelist
-        // feature (or similar) is released.  Until then, oauth2-proxy
-        // *only supports* redirects to the same hostname (because we
-        // don't want to allow "open redirects" to just anywhere).
-        host: this.host,
-        http: {
-          paths: [{
-            path: "/oauth2",
-            backend: {
-              // TODO: parameterise this based on oauth2 deployment
-              serviceName: "oauth2-proxy",
-              servicePort: 4180,
-            },
-          }],
-        },
-      }],
     },
   },
 }

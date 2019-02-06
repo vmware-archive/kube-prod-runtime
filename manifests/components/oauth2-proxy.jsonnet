@@ -17,7 +17,9 @@
  * limitations under the License.
  */
 
+local kubecfg = import "kubecfg.libsonnet";
 local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
 local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
 
@@ -47,6 +49,38 @@ local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
     spec+: {maxReplicas: 10},
   },
 
+  ingress: utils.TlsIngress($.p + "oauth2-ingress") + $.metadata {
+    local this = self,
+    host:: error "host is required",
+
+    metadata+: {
+      annotations+: {
+        // Restrict/extend this to match known+trusted sites within your oauth2-authenticated control.
+        // NB: It is tempting to make this ".*" and just make it work for anything, but don't do this!
+        // This will result in an open redirect vulnerability: https://www.owasp.org/index.php/Open_redirect
+        allowedRedirectors:: "[^/]+\\." + kubecfg.escapeStringRegex(utils.parentDomain(this.host)),
+        "nginx.ingress.kubernetes.io/configuration-snippet": |||
+          location "~^/(?<target_host>%s)(?<remaining_uri>.*)$" {
+            rewrite ^ $scheme://$target_host$remaining_uri;
+          }
+        ||| % self.allowedRedirectors,
+      },
+    },
+
+    spec+: {
+      rules+: [{
+        host: this.host,
+        http: {
+          paths: [
+            { path: "/oauth2/", backend: $.svc.name_port },
+            // The "/" block is only used for the location regex rewrite
+            { path: "/", backend: $.svc.name_port },
+          ],
+        },
+      }],
+    },
+  },
+
   deploy: kube.Deployment($.p + "oauth2-proxy") + $.metadata {
     spec+: {
       template+: {
@@ -62,6 +96,8 @@ local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
                 "set-xauthrequest": true,
                 "tls-cert": "",
                 "upstream": "file:///dev/null",
+                "redirect-url": "https://%s/oauth2/callback" % $.ingress.host,
+                "cookie-domain": utils.parentDomain($.ingress.host),
               },
               env_+: {
                 OAUTH2_PROXY_CLIENT_ID: kube.SecretKeyRef($.secret, "client_id"),

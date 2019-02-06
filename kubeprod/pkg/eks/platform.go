@@ -137,7 +137,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 	b, err := json.Marshal(&PolicyDocument{
 		Version: "2012-10-17",
 		Statement: []StatementEntry{
-			StatementEntry{
+			{
 				Effect: "Allow",
 				Action: []string{
 					"route53:GetHostedZone",
@@ -148,7 +148,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 				},
 				Resource: "*",
 			},
-			StatementEntry{
+			{
 				Effect: "Allow",
 				// Allows for DeleteItem, GetItem, PutItem, Scan, and UpdateItem
 				Action: []string{
@@ -363,9 +363,7 @@ func (conf *Config) getUserPoolClient(svc *cognitoidentityprovider.CognitoIdenti
 			aws.String("profile"),
 		},
 		CallbackURLs: []*string{
-			aws.String(fmt.Sprintf("https://grafana.%s/oauth2/callback", conf.DNSZone)),
-			aws.String(fmt.Sprintf("https://kibana.%s/oauth2/callback", conf.DNSZone)),
-			aws.String(fmt.Sprintf("https://prometheus.%s/oauth2/callback", conf.DNSZone)),
+			aws.String(fmt.Sprintf("https://auth.%s/oauth2/callback", conf.DNSZone)),
 		},
 		SupportedIdentityProviders: []*string{
 			aws.String("COGNITO"),
