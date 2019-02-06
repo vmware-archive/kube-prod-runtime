@@ -2,7 +2,7 @@
  * Bitnami Kubernetes Production Runtime - A collection of services that makes it
  * easy to run production workloads in Kubernetes.
  *
- * Copyright 2018 Bitnami
+ * Copyright 2018-2019 Bitnami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -34,6 +34,9 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
       namespace: "kubeprod",
     },
   },
+
+  // Amount of persistent storage required by Alertmanager
+  storage:: "1Gi",
 
   prometheus:: error "No Prometheus service",
 
@@ -150,7 +153,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
       },
       volumeClaimTemplates_+: {
         datadir: {
-          storage: "1Gi",
+          storage: $.storage,
         },
       },
     },

@@ -2,7 +2,7 @@
  * Bitnami Kubernetes Production Runtime - A collection of services that makes it
  * easy to run production workloads in Kubernetes.
  *
- * Copyright 2018 Bitnami
+ * Copyright 2018-2019 Bitnami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -515,7 +515,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               resizer: kube.Container("addon-resizer") {
-                image: "gcr.io/google_containers/addon-resizer:1.0",
+                image: "k8s.gcr.io/addon-resizer:1.8.4",
                 command: ["/pod_nanny"],
                 args_+: {
                   container: spec.containers[0].name,

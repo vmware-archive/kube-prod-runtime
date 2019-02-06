@@ -1,5 +1,16 @@
 # Quickstart: BKPR on Google Kubernetes Engine (GKE)
 
+## TOC
+
+- [Introduction](#introduction)
+- [Prerequisites](#prerequisites)
+- [Installation and setup](#installation-and-setup)
+- [Next steps](#next-steps)
+  + [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
+- [Upgrading](#upgrading)
+- [Teardown and cleanup](#teardown-and-cleanup)
+- [Further reading](#further-reading)
+
 ## Introduction
 
 This document walks you through setting up a Google Kubernetes Engine (GKE) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) on the cluster.
@@ -7,60 +18,26 @@ This document walks you through setting up a Google Kubernetes Engine (GKE) clus
 ## Prerequisites
 
 * [Google Cloud account](https://cloud.google.com/billing/docs/how-to/manage-billing-account)
+* [Google Cloud Platform (GCP) project](https://cloud.google.com/resource-manager/docs/creating-managing-projects)
+  + [Kubernetes Engine API](https://console.developers.google.com/apis/api/container.googleapis.com/overview) should be enabled
+  + [Google Cloud DNS API](https://console.developers.google.com/apis/api/dns.googleapis.com/overview) should be enabled
 * [Google Cloud SDK](https://cloud.google.com/sdk/)
 * [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [BKPR installer](install.md)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
 
+### DNS and G Suite requirements
+
+In addition to the requirements listed above, a domain name is also required for setting up Ingress endpoints to services running in the cluster. The specified domain name can be a top-level domain (TLD) or a subdomain. In either case you have to manually [set up the NS records](#configure-domain-registration-records) for the specified TLD or subdomain so as to delegate DNS resolution queries to a Google Cloud DNS zone created and managed by BKPR.
+
+BKPR on GKE uses domain-based authorization, specified in `GCLOUD_AUTHZ_DOMAIN`, for verifying users as they login to the Elasticsearch, Kibana and Grafana dashboards. As such you need a [G Suite](https://gsuite.google.com/) account configured set up for your authorization domain to enable users to login with their G Suite user accounts.
+
 ## Installation and setup
 
 ### Step 1: Set up the cluster
 
 In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using the `gcloud` CLI.
-
-* Configure the following environment variables:
-
-  ```bash
-  export BKPR_DNS_ZONE="my-domain.com"
-  export GCLOUD_USER="$(gcloud info --format='value(config.account)')"
-  export GCLOUD_PROJECT="my-gce-project"
-  export GCLOUD_REGION="us-east1-d"
-  export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
-  export GCLOUD_K8S_CLUSTER="my-gke-cluster"
-  export GCLOUD_K8S_VERSION="1.11"
-  ```
-
-  - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
-  - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
-  - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
-  - `GCLOUD_REGION` specifies the Google Cloud region. `gcloud compute regions list` lists the available Google Cloud regions.
-  - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain. Alternatively, you could specify the value `*`, but be __WARNED__ that this will authorize any Google account holder to authenticate with OAuth to your cluster services.
-  - `GCLOUD_K8S_CLUSTER` specifies the name of the GKE cluster.
-  - `GCLOUD_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `gcloud container get-server-config --project ${GCLOUD_PROJECT} --zone ${GCLOUD_REGION}` lists the versions available in your region.
-
-* Create an OAuth Client ID by following these steps:
-
-  1. Go to <https://console.developers.google.com/apis/credentials>.
-  2. Select the project from the drop down menu.
-  3. In the center pane, select the __OAuth consent screen__ tab.
-  4. Enter a __Application name__ .
-  5. Add the TLD of the domain specified in the `BKPR_DNS_ZONE` variable to the __Authorized domains__ and save the changes.
-  6. Choose the __Credentials__ tab and select the __Create Credentials > OAuth client ID__ .
-  7. Select the __Web application__ option and fill in a name.
-  8. Finally, add the following redirect URIs and hit __Create__ .
-      + https://prometheus.{BKPR_DNS_ZONE}/oauth2/callback.
-      + https://kibana.{BKPR_DNS_ZONE}/oauth2/callback.
-      + https://grafana.{BKPR_DNS_ZONE}/oauth2/callback.
-
-  > Replace `{BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
-
-Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY` and `GCLOUD_OAUTH_CLIENT_SECRET` environment variables, for example:
-
-  ```bash
-  export GCLOUD_OAUTH_CLIENT_KEY="xxxxxxx.apps.googleusercontent.com"
-  export GCLOUD_OAUTH_CLIENT_SECRET="xxxxxx"
-  ```
 
 * Authenticate the `gcloud` CLI with your Google Cloud account:
 
@@ -74,6 +51,49 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
   gcloud auth application-default login
   ```
 
+* Configure the following environment variables:
+
+  ```bash
+  export BKPR_DNS_ZONE="my-domain.com"
+  export GCLOUD_USER="$(gcloud info --format='value(config.account)')"
+  export GCLOUD_PROJECT="my-gce-project"
+  export GCLOUD_ZONE="us-east1-d"
+  export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
+  export GCLOUD_K8S_CLUSTER="my-gke-cluster"
+  export GCLOUD_K8S_VERSION="1.11"
+  ```
+
+  - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
+  - `GCLOUD_USER` specifies the email address used to authenticate to Google Cloud Platform.
+  - `GCLOUD_PROJECT` specifies the Google Cloud project. `gcloud projects list` lists your Google Cloud projects.
+  - `GCLOUD_ZONE` specifies the Google Cloud zone. `gcloud compute zones list` lists the Google Cloud zones.
+  - `GCLOUD_AUTHZ_DOMAIN` specifies the email domain of authorized users and needs to be a [G Suite](https://gsuite.google.com/) domain.
+  - `GCLOUD_K8S_CLUSTER` specifies the name of the GKE cluster.
+  - `GCLOUD_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `gcloud container get-server-config --project ${GCLOUD_PROJECT} --zone ${GCLOUD_ZONE}` lists the versions available in your region.
+
+* Create an OAuth Client ID by following these steps:
+
+  1. Go to <https://console.developers.google.com/apis/credentials>.
+  2. Select the project from the drop down menu.
+  3. In the center pane, select the __OAuth consent screen__ tab.
+  4. Enter a __Application name__ .
+  5. Add the TLD of the domain specified in the `BKPR_DNS_ZONE` variable to the __Authorized domains__ and __Save__ the changes.
+  6. Choose the __Credentials__ tab and select the __Create Credentials > OAuth client ID__ .
+  7. Select the __Web application__ option and fill in a name.
+  8. Finally, add the following redirect URIs and hit __Create__ .
+      + https://prometheus.${BKPR_DNS_ZONE}/oauth2/callback
+      + https://kibana.${BKPR_DNS_ZONE}/oauth2/callback
+      + https://grafana.${BKPR_DNS_ZONE}/oauth2/callback
+
+  > Replace `${BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
+
+Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY` and `GCLOUD_OAUTH_CLIENT_SECRET` environment variables, for example:
+
+  ```bash
+  export GCLOUD_OAUTH_CLIENT_KEY="xxxxxxx.apps.googleusercontent.com"
+  export GCLOUD_OAUTH_CLIENT_SECRET="xxxxxx"
+  ```
+
 * Set the default project:
 
   ```bash
@@ -83,7 +103,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
 * Set the default region:
 
   ```bash
-  gcloud config set compute/zone ${GCLOUD_REGION}
+  gcloud config set compute/zone ${GCLOUD_ZONE}
   ```
 
 * Create the GKE cluster:
@@ -93,7 +113,7 @@ Specify the displayed OAuth client id and secret in the `GCLOUD_OAUTH_CLIENT_KEY
     --project ${GCLOUD_PROJECT} \
     --num-nodes 3 \
     --machine-type n1-standard-2 \
-    --zone ${GCLOUD_REGION} \
+    --zone ${GCLOUD_ZONE} \
     --cluster-version ${GCLOUD_K8S_VERSION}
   ```
 
@@ -145,17 +165,46 @@ Query the name servers of the zone with the following command and configure the 
     --format=json | jq -r .[].rrdatas
   ```
 
+The following screenshot illustrates the NS record configuration on a DNS registrar when a subdomain is used.
+
+![Google Domains NS Configuration for subdomain](images/google-domains-gke-zone-ns-config.png)
+
 Please note, it can take a while for the DNS changes to propogate.
 
 ### Step 4: Access logging and monitoring dashboards
 
-After the DNS changes have propagated, you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}` and `https://kibana.${BKPR_DNS_ZONE}` respectively.
+After the DNS changes have propagated, you should be able to access the Prometheus, Kibana and Grafana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}`, `https://kibana.${BKPR_DNS_ZONE}` and `https://grafana.${BKPR_DNS_ZONE}` respectively.
+
+> Replace `${BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 
 ## Next steps
 
 - [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
+
+## Upgrading
+
+### Step 1: Update the installer
+
+Follow the [installation guide](install.md) to update the BKPR installer binary to the latest release.
+
+### Step 2: Edit `kubeprod-manifest.jsonnet`
+
+Edit the `kubeprod-manifest.jsonnet` file that was generated by `kubeprod install` and update the version referred in the `import` statement. For example, the following snippet illustrates the changes required in the `kubeprod-manifest.jsonnet` file if you're upgrading to version `v1.1.0` from version `v1.0.0`.
+
+```diff
+ // Cluster-specific configuration
+-(import "https://releases.kubeprod.io/files/v1.0.0/manifests/platforms/gke.jsonnet") {
++(import "https://releases.kubeprod.io/files/v1.1.0/manifests/platforms/gke.jsonnet") {
+  config:: import "kubeprod-autogen.json",
+  // Place your overrides here
+ }
+```
+
+### Step 3: Perform the upgrade
+
+Re-run the `kubeprod install` command, from the [Deploy BKPR](step-2-deploy-bkpr) step, in the directory containing the existing `kubeprod-autogen.json` and updated `kubeprod-manifest.jsonnet` files.
 
 ## Teardown and cleanup
 
