@@ -207,52 +207,52 @@ spec:
         }
     }
 
-    parallel(
-        installer: {
-            stage('Build') {
-                node(label) {
-                    withGo() {
-                        dir('src/github.com/bitnami/kube-prod-runtime') {
-                            timeout(time: 30) {
-                                unstash 'src'
+    // parallel(
+    //     installer: {
+    //         stage('Build') {
+    //             node(label) {
+    //                 withGo() {
+    //                     dir('src/github.com/bitnami/kube-prod-runtime') {
+    //                         timeout(time: 30) {
+    //                             unstash 'src'
 
-                                dir('kubeprod') {
-                                    sh 'go version'
-                                    sh 'make all'
-                                    sh 'make test'
-                                    sh 'make vet'
+    //                             dir('kubeprod') {
+    //                                 sh 'go version'
+    //                                 sh 'make all'
+    //                                 sh 'make test'
+    //                                 sh 'make vet'
 
-                                    sh './bin/kubeprod --help'
-                                    stash includes: 'bin/**', name: 'binary'
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        },
+    //                                 sh './bin/kubeprod --help'
+    //                                 stash includes: 'bin/**', name: 'binary'
+    //                             }
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     },
 
-        manifests: {
-            stage('Manifests') {
-                node(label) {
-                    withGo() {
-                        dir('src/github.com/bitnami/kube-prod-runtime') {
-                            timeout(time: 30) {
-                                unstash 'src'
+    //     manifests: {
+    //         stage('Manifests') {
+    //             node(label) {
+    //                 withGo() {
+    //                     dir('src/github.com/bitnami/kube-prod-runtime') {
+    //                         timeout(time: 30) {
+    //                             unstash 'src'
 
-                                // TODO: use tool, once the next release is made
-                                sh 'go get github.com/ksonnet/kubecfg'
+    //                             // TODO: use tool, once the next release is made
+    //                             sh 'go get github.com/ksonnet/kubecfg'
 
-                                dir('manifests') {
-                                    sh 'make validate KUBECFG="kubecfg -v"'
-                                }
-                                stash includes: 'manifests/**', excludes: 'manifests/Makefile', name: 'manifests'
-                            }
-                        }
-                    }
-                }
-            }
-        }, failFast: true)
+    //                             dir('manifests') {
+    //                                 sh 'make validate KUBECFG="kubecfg -v"'
+    //                             }
+    //                             stash includes: 'manifests/**', excludes: 'manifests/Makefile', name: 'manifests'
+    //                         }
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     }, failFast: true)
 
     def platforms = [:]
 
@@ -491,8 +491,24 @@ az aks create                      \
         }
     }
 
-    platforms.failFast = true
-    parallel platforms
+    // platforms.failFast = true
+    // parallel platforms
+
+    stage('Docker') {
+        node(label) {
+            dir('src/github.com/bitnami/kube-prod-runtime') {
+                unstash 'src'
+                container(name: 'kaniko', shell: '/busybox/sh') {
+                    withEnv(['PATH+EXTRA=/busybox:/kaniko']) {
+                        sh """#!/busybox/sh
+                        /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=v1.1.0 --context `pwd` --destination kubeprod/kubeprod:v1.1.0
+                        """
+                    }
+                }
+            }
+        }
+    }
+
 
     stage('Release') {
         node(label) {
