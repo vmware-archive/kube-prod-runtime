@@ -497,10 +497,10 @@ az aks create                      \
     stage('Release') {
         node(label) {
             if (env.TAG_NAME) {
-                withGo() {
+                timeout(time: 30) {
                     dir('src/github.com/bitnami/kube-prod-runtime') {
-                        timeout(time: 30) {
-                            unstash 'src'
+                        unstash 'src'
+                        withGo() {
                             unstash 'release-notes'
 
                             sh "make dist VERSION=${TAG_NAME}"
@@ -516,13 +516,13 @@ az aks create                      \
                             ]) {
                                 sh "make publish VERSION=${TAG_NAME}"
                             }
+                        }
 
-                            container(name: 'kaniko', shell: '/busybox/sh') {
-                                withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
-                                    sh """#!/busybox/sh
-                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
-                                    """
-                                }
+                        container(name: 'kaniko', shell: '/busybox/sh') {
+                            withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
+                                sh """#!/busybox/sh
+                                /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
+                                """
                             }
                         }
                     }
