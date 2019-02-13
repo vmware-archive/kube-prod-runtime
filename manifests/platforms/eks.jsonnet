@@ -72,7 +72,7 @@ local grafana = import "../components/grafana.jsonnet";
               edns+: {
                 env_+: {
                   AWS_ACCESS_KEY_ID: kube.SecretKeyRef(this.secret, "aws_access_key_id"),
-                  AWS_SECRET_ACCESS_KEY: kube.SecretKeyRef(this.secret, "aws_access_key_secret"),
+                  AWS_SECRET_ACCESS_KEY: kube.SecretKeyRef(this.secret, "aws_secret_access_key"),
                 },
                 args_+: {
                   provider: "aws",
