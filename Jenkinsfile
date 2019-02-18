@@ -128,55 +128,58 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 }
 
 
-podTemplate(
-    cloud: 'kubernetes-cluster',
-    label: label,
-    idleMinutes: 1,  // Allow some best-effort reuse between successive stages
-    containers: [
-        containerTemplate(
-            name: 'go',
-            image: 'golang:1.10.1-stretch',
-            ttyEnabled: true,
-            command: 'cat',
-            // Rely on burst CPU, but actually need RAM to avoid OOM killer
-            resourceLmitCpu: '2000m',
-            resourceLimitMemory: '2Gi',
-            resourceRequestCpu: '10m',
-            resourceRequestMemory: '1Gi',
-        ),
-        // Note nested podTemplate doesn't work, so use "fat slaves" for now :(
-        // -> https://issues.jenkins-ci.org/browse/JENKINS-42184
-        containerTemplate(
-            name: 'gcloud',
-            image: 'google/cloud-sdk:218.0.0',
-            ttyEnabled: true,
-            command: 'cat',
-            resourceRequestCpu: '1m',
-            resourceRequestMemory: '100Mi',
-            resourceLimitCpu: '100m',
-            resourceLimitMemory: '500Mi',
-        ),
-        containerTemplate(
-            name: 'az',
-            image: 'microsoft/azure-cli:2.0.45',
-            ttyEnabled: true,
-            command: 'cat',
-            resourceRequestCpu: '1m',
-            resourceRequestMemory: '100Mi',
-            resourceLimitCpu: '100m',
-            resourceLimitMemory: '500Mi',
-        ),
-    ],
-    yaml: """
+podTemplate(cloud: 'kubernetes-cluster', label: label, idleMinutes: 1,  yaml: """
 apiVersion: v1
 kind: Pod
 spec:
+  containers:
+  - name: 'go'
+    image: 'golang:1.10.1-stretch'
+    tty: true
+    command:
+    - 'cat'
+    resources:
+      limits:
+        cpu: '2000m'
+        memory: '2Gi'
+      requests:
+        cpu: '10m'
+        memory: '1Gi'
+  - name: 'gcloud'
+    image: 'google/cloud-sdk:218.0.0'
+    tty: true
+    command:
+    - 'cat'
+  - name: 'az'
+    image: 'microsoft/azure-cli:2.0.45'
+    tty: true
+    command:
+    - 'cat'
+  - name: 'kaniko'
+    image: 'gcr.io/kaniko-project/executor:debug-v0.8.0'
+    tty: true
+    command:
+    - '/busybox/cat'
+    volumeMounts:
+    - name: docker-config
+      mountPath: /root
+    securityContext:
+      runAsUser: 0
+      fsGroup: 0
   securityContext:
     runAsUser: 1000
     fsGroup: 1000
+  volumes:
+  - name: docker-config
+    projected:
+      sources:
+      - secret:
+          name: dockerhub-bitnamibot
+          items:
+            - key: text
+              path: .docker/config.json
 """
 ) {
-
     env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
     // Teach jenkins about the 'go' container env vars
     env.PATH = '/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
@@ -252,126 +255,6 @@ spec:
         }, failFast: true)
 
     def platforms = [:]
-
-    // See:
-    //  az aks get-versions -l centralus
-    //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-    def aksKversions = ["1.10.12", "1.11.6"]
-    for (x in aksKversions) {
-        def kversion = x  // local bind required because closures
-        def platform = "aks-" + kversion
-        platforms[platform] = {
-            stage(platform) {
-                node(label) {
-                    withGo() {
-                        dir('src/github.com/bitnami/kube-prod-runtime') {
-                            // NB: `kubeprod` also uses az cli credentials and
-                            // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                            withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
-                                def resourceGroup = 'jenkins-bkpr-rg'
-                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
-                                def dnsPrefix = "${clusterName}"
-                                def dnsZone = "${dnsPrefix}.${parentZone}"
-                                def adminEmail = "${clusterName}@${parentZone}"
-                                def location = "eastus"
-
-                                try {
-                                    runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
-                                        container('az') {
-                                            sh '''
-az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
-az account set -s $AZURE_SUBSCRIPTION_ID
-'''
-
-                                            // Usually, `az aks create` creates a new service
-                                            // principal, which is not removed by `az aks
-                                            // delete`. We reuse an existing principal here to
-                                            // a) avoid this leak b) avoid having to give the
-                                            // "outer" principal (above) the power to create
-                                            // new service principals.
-                                            withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
-                                                sh """
-az aks create                      \
- --verbose                         \
- --resource-group ${resourceGroup} \
- --name ${clusterName}             \
- --node-count 3                    \
- --node-vm-size Standard_DS2_v2    \
- --location ${location}            \
- --kubernetes-version ${kversion}  \
- --generate-ssh-keys               \
- --service-principal \$AZURE_CLIENT_ID \
- --client-secret \$AZURE_CLIENT_SECRET \
- --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
-"""
-                                            }
-
-                                            sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
-
-                                            waitForRollout("kube-system", 30)
-                                        }
-
-                                        // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                        withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
-                                            // NB: writeJSON doesn't work without approvals(?)
-                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-                                            writeFile([file: "${clusterName}-autogen.json", text: """
-{
-  "dnsZone": "${dnsZone}",
-  "contactEmail": "${adminEmail}",
-  "externalDns": {
-    "tenantId": "${AZURE_TENANT_ID}",
-    "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
-    "aadClientId": "${AZURE_CLIENT_ID}",
-    "aadClientSecret": "${AZURE_CLIENT_SECRET}",
-    "resourceGroup": "${resourceGroup}"
-  },
-  "oauthProxy": {
-    "client_id": "${AZURE_CLIENT_ID}",
-    "client_secret": "${AZURE_CLIENT_SECRET}",
-    "azure_tenant": "${AZURE_TENANT_ID}"
-  }
-}
-"""
-                                            ])
-
-                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-(import "manifests/platforms/aks.jsonnet") {
-  config:: import "${clusterName}-autogen.json",
-  letsencrypt_environment: "staging",
-  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
-}
-"""
-                                            ])
-                                        }
-                                    }{
-                                        // update glue records in parent zone
-                                        container('az') {
-                                            def nameServers = []
-                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
-                                            for (ns in readJSON(text: output)) {
-                                                nameServers << ns
-                                            }
-                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
-                                        }
-                                    }
-                                }
-                                finally {
-                                    container('az') {
-                                        sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
-                                        sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
-                                        sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
-                                        sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
-                                    }
-                                    deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     // See:
     //  gcloud container get-server-config
@@ -479,16 +362,145 @@ gcloud container clusters create ${clusterName} \
         }
     }
 
+    // See:
+    //  az aks get-versions -l centralus
+    //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
+    def aksKversions = ["1.10", "1.11"]
+    for (x in aksKversions) {
+        def kversion = x  // local bind required because closures
+        def platform = "aks-" + kversion
+        platforms[platform] = {
+            stage(platform) {
+                node(label) {
+                    withGo() {
+                        dir('src/github.com/bitnami/kube-prod-runtime') {
+                            // NB: `kubeprod` also uses az cli credentials and
+                            // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
+                            withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                                def resourceGroup = 'jenkins-bkpr-rg'
+                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
+                                def dnsPrefix = "${clusterName}"
+                                def dnsZone = "${dnsPrefix}.${parentZone}"
+                                def adminEmail = "${clusterName}@${parentZone}"
+                                def location = "eastus"
+                                def availableK8sVersions = ""
+                                def kversion_full = ""
+
+                                try {
+                                    runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}") {
+                                        container('az') {
+                                            sh '''
+az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
+az account set -s $AZURE_SUBSCRIPTION_ID
+'''
+                                            availableK8sVersions = sh(returnStdout: true, script: "az aks get-versions --location ${location} --query \"orchestrators[?contains(orchestratorVersion,'${kversion}')].orchestratorVersion\" -o tsv")
+                                        }
+
+                                        // sort utility from the `az` container does not support the `-V` flag
+                                        // therefore we're running this command outside the az container
+                                        kversion_full = sh(returnStdout: true, script: "echo \"${availableK8sVersions}\" | sort -Vr | head -n1 | tr -d '\n'")
+
+                                        container('az') {
+                                            // Usually, `az aks create` creates a new service
+                                            // principal, which is not removed by `az aks
+                                            // delete`. We reuse an existing principal here to
+                                            // a) avoid this leak b) avoid having to give the
+                                            // "outer" principal (above) the power to create
+                                            // new service principals.
+                                            withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                sh """
+az aks create                      \
+ --verbose                         \
+ --resource-group ${resourceGroup} \
+ --name ${clusterName}             \
+ --node-count 3                    \
+ --node-vm-size Standard_DS2_v2    \
+ --location ${location}            \
+ --kubernetes-version ${kversion_full} \
+ --generate-ssh-keys               \
+ --service-principal \$AZURE_CLIENT_ID \
+ --client-secret \$AZURE_CLIENT_SECRET \
+ --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
+"""
+                                            }
+
+                                            sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
+
+                                            waitForRollout("kube-system", 30)
+                                        }
+
+                                        // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
+                                        withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                            // NB: writeJSON doesn't work without approvals(?)
+                                            // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+                                            writeFile([file: "${clusterName}-autogen.json", text: """
+{
+  "dnsZone": "${dnsZone}",
+  "contactEmail": "${adminEmail}",
+  "externalDns": {
+    "tenantId": "${AZURE_TENANT_ID}",
+    "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
+    "aadClientId": "${AZURE_CLIENT_ID}",
+    "aadClientSecret": "${AZURE_CLIENT_SECRET}",
+    "resourceGroup": "${resourceGroup}"
+  },
+  "oauthProxy": {
+    "client_id": "${AZURE_CLIENT_ID}",
+    "client_secret": "${AZURE_CLIENT_SECRET}",
+    "azure_tenant": "${AZURE_TENANT_ID}"
+  }
+}
+"""
+                                            ])
+
+                                            writeFile([file: 'kubeprod-manifest.jsonnet', text: """
+(import "manifests/platforms/aks.jsonnet") {
+  config:: import "${clusterName}-autogen.json",
+  letsencrypt_environment: "staging",
+  prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
+}
+"""
+                                            ])
+                                        }
+                                    }{
+                                        // update glue records in parent zone
+                                        container('az') {
+                                            def nameServers = []
+                                            def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                            for (ns in readJSON(text: output)) {
+                                                nameServers << ns
+                                            }
+                                            insertGlueRecords(dnsPrefix, nameServers, "60", parentZone, parentZoneResourceGroup)
+                                        }
+                                    }
+                                }
+                                finally {
+                                    container('az') {
+                                        sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+                                        sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
+                                        sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
+                                        sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
+                                    }
+                                    deleteGlueRecords(dnsPrefix, parentZone, parentZoneResourceGroup)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     platforms.failFast = true
     parallel platforms
 
     stage('Release') {
         node(label) {
             if (env.TAG_NAME) {
-                withGo() {
+                timeout(time: 30) {
                     dir('src/github.com/bitnami/kube-prod-runtime') {
-                        timeout(time: 30) {
-                            unstash 'src'
+                        unstash 'src'
+                        withGo() {
                             unstash 'release-notes'
 
                             sh "make dist VERSION=${TAG_NAME}"
@@ -503,6 +515,14 @@ gcloud container clusters create ${clusterName} \
                                 ]
                             ]) {
                                 sh "make publish VERSION=${TAG_NAME}"
+                            }
+                        }
+
+                        container(name: 'kaniko', shell: '/busybox/sh') {
+                            withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
+                                sh """#!/busybox/sh
+                                /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
+                                """
                             }
                         }
                     }

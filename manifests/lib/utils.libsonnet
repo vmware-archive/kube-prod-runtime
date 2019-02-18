@@ -48,7 +48,10 @@ local kube = import "kube.libsonnet";
   TlsIngress(name):: kube.Ingress(name) {
     local this = self,
     metadata+: {
-      annotations+: {"kubernetes.io/tls-acme": "true"},
+      annotations+: {
+        "kubernetes.io/tls-acme": "true",
+        "kubernetes.io/ingress.class": "nginx",
+      },
     },
     spec+: {
       tls+: [{
@@ -63,7 +66,6 @@ local kube = import "kube.libsonnet";
     host:: error "host is required",
     metadata+: {
       annotations+: {
-        "kubernetes.io/ingress.class": "nginx",
         // NB: Our nginx-ingress no-auth-locations includes "/oauth2"
         "nginx.ingress.kubernetes.io/auth-signin": "https://%s/oauth2/start" % this.host,
         "nginx.ingress.kubernetes.io/auth-url": "https://%s/oauth2/auth" % this.host,
