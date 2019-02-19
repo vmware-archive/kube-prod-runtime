@@ -179,7 +179,6 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
                 "publish-service": fqname($.svc),
                 "tcp-services-configmap": fqname($.tcpconf),
                 "udp-services-configmap": fqname($.udpconf),
-                "sort-backends": true,
                 "ingress-class": "nginx",
               },
               ports_: {
