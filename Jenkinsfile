@@ -258,7 +258,6 @@ spec:
 
     // See:
     //  gcloud container get-server-config
-    // NOTE: GKE 1.10 is currently broken
     def gkeKversions = ["1.10", "1.11"]
     for (x in gkeKversions) {
         def kversion = x  // local bind required because closures
