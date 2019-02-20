@@ -273,7 +273,7 @@ spec:
                             withGo() {
                                 dir('src/github.com/bitnami/kube-prod-runtime') {
                                     def project = 'bkprtesting'
-                                    def zone = 'us-east1-d'
+                                    def zone = 'us-east1-b'
                                     def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                     def dnsPrefix = "${clusterName}"
                                     def adminEmail = "${clusterName}@${parentZone}"
