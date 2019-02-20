@@ -259,7 +259,7 @@ spec:
     // See:
     //  gcloud container get-server-config
     // NOTE: GKE 1.10 is currently broken
-    def gkeKversions = ["1.11"]
+    def gkeKversions = ["1.10", "1.11"]
     for (x in gkeKversions) {
         def kversion = x  // local bind required because closures
         def platform = "gke-" + kversion
@@ -274,7 +274,7 @@ spec:
                             withGo() {
                                 dir('src/github.com/bitnami/kube-prod-runtime') {
                                     def project = 'bkprtesting'
-                                    def zone = 'us-east1-d'
+                                    def zone = 'us-east1-b'
                                     def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                     def dnsPrefix = "${clusterName}"
                                     def adminEmail = "${clusterName}@${parentZone}"
