@@ -128,7 +128,7 @@ var _ = Describe("Exporters", func() {
 		Entry("alertmanager", `alertmanager_peer_position`, Not(BeEmpty())),
 		Entry("kube-state-metrics", `kube_deployment_status_replicas{kubernetes_namespace="kubeprod",deployment="nginx-ingress-controller"}`, Not(BeEmpty())),
 		Entry("node-exporter", `node_cpu_seconds_total`, Not(BeEmpty())),
-		Entry("cert-manager", `process_start_time_seconds{kubernetes_namespace="kubeprod",name="cert-manager"}`, Not(BeEmpty())),
+		Entry("cert-manager", `certmanager_http_acme_client_request_count`, Not(BeEmpty())),
 		Entry("elasticsearch", `elasticsearch_cluster_health_number_of_nodes{cluster="elasticsearch-cluster"}`, And(
 			ContainElement(HaveKeyWithValue("kubernetes_pod_name", "elasticsearch-logging-0")),
 			ContainElement(HaveKeyWithValue("kubernetes_pod_name", "elasticsearch-logging-1")),
