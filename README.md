@@ -80,17 +80,17 @@ The following matrix shows which versions of each component are used and support
 
 |   Component   |          BKPR 1.0  |          BKPR 1.1  |
 |:-------------:|-------------------:|-------------------:|
-|   Prometheus  |            `2.3.2` |            `2.6.0` |
-|     Kibana    |           `5.6.12` |           `5.6.14` |
-| Elasticsearch |           `5.6.12` |           `5.6.14` |
-|  cert-manager |            `0.5.2` |            `0.5.2` |
-|  Alertmanager |           `0.15.2` |           `0.15.3` |
-|  ExternalDNS  |            `0.5.4` |            `0.5.9` |
-| nginx-ingress |           `0.19.0` |           `0.21.0` |
-|  oauth2_proxy | `0.20180625.74543` | `0.20180625.74543` |
-|    Heapster   |            `1.5.2` |              `N/A` |
-|    Fluentd    |            `1.2.2` |            `1.3.2` |
+|   Prometheus  |            `2.3.x` |            `2.6.x` |
+|     Kibana    |            `5.6.x` |            `5.6.x` |
+| Elasticsearch |            `5.6.x` |            `5.6.x` |
+|  cert-manager |            `0.5.x` |            `0.5.x` |
+|  Alertmanager |           `0.15.x` |           `0.15.x` |
+|  ExternalDNS  |            `0.5.x` |            `0.5.x` |
+| nginx-ingress |           `0.19.x` |           `0.21.x` |
+|  oauth2_proxy |     `0.20180625.x` |            `3.0.x` |
+|    Heapster   |            `1.5.x` |              `N/A` |
+|    Fluentd    |            `1.2.x` |            `1.3.x` |
 
-## Contribute code
+## Contributing
 
 If you would like to become an active contributor to this project please follow the instructions provided in [contribution guidelines](CONTRIBUTING.md).
