@@ -281,7 +281,7 @@ var _ = Describe("Ingress", func() {
 			Eventually(func() (*http.Response, error) {
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "20m", "5s").
+			}, "30m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
