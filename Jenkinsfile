@@ -1,11 +1,9 @@
 #!groovy
 
 // Assumed jenkins plugins:
-// - ansicolor
 // - custom-tools-plugin
 // - pipeline-utility-steps (readJSON)
 // - kubernetes
-// - jobcacher
 // - azure-credentials
 // - aws-credentials
 
@@ -31,49 +29,41 @@ def withGo(Closure body) {
 }
 
 def waitForRollout(String namespace, int minutes) {
-    withEnv(["PATH+KTOOL=${tool 'kubectl'}"]) {
-        try {
-            timeout(time: minutes, unit: 'MINUTES') {
+    timeout(time: minutes, unit: 'MINUTES') {
+        container('kubectl') {
+            try {
                 sh """
-set +x
-for deploy in \$(kubectl --namespace ${namespace} get deploy,sts --output name)
-do
-  echo -n "\nWaiting for rollout of \${deploy} in ${namespace} namespace"
-  while ! \$(kubectl --namespace ${namespace} rollout status \${deploy} --watch=false | grep -q -E 'successfully rolled out|rollout status is only available for|rolling update complete|partitioned roll out complete')
-  do
-    echo -n "."
-    sleep 3
-  done
-done
-"""
+                set +x
+                for deploy in \$(kubectl --namespace ${namespace} get deploy,sts --output name)
+                do
+                  echo -n "\nWaiting for rollout of '\${deploy}' in '${namespace}' namespace"
+                  while ! \$(kubectl --namespace ${namespace} rollout status \${deploy} --watch=false | grep -q -E 'successfully rolled out|rollout status is only available for|rolling update complete|partitioned roll out complete')
+                  do
+                    echo -n "."
+                    sleep 3
+                  done
+                done
+                """
+            } catch (error) {
+                sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
+                throw error
             }
-        } catch (error) {
-            sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
-            throw error
         }
     }
 }
 
 def insertGlueRecords(String name, java.util.List nameServers, String ttl, String zone, String resourceGroup) {
-    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
-        container('az') {
-            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
-            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
-            for (ns in nameServers) {
-                sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${zone} --record-set-name ${name} --nsdname ${ns}"
-            }
-            sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} --set ttl=${ttl}"
+    container('az') {
+        for (ns in nameServers) {
+            sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${zone} --record-set-name ${name} --nsdname ${ns}"
         }
+        sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} --set ttl=${ttl}"
     }
 }
 
 def deleteGlueRecords(String name, String zone, String resourceGroup) {
-    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
-        container('az') {
-            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
-            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
-            sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} || :"
-        }
+    container('az') {
+        sh "az network dns record-set ns delete --yes --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} || true"
     }
 }
 
@@ -85,88 +75,81 @@ String gcpLabel(String s) {
     s.replaceAll(/[^a-zA-Z0-9_-]+/, '-').toLowerCase().take(62)
 }
 
-def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, Closure clusterSetup, Closure dnsSetup, Closure dnsDestroy, Closure bkprDestroy, Closure clusterDestroy) {
-    timeout(120) {
-        dir('src/github.com/bitnami/kube-prod-runtime') {
-            // Regex of tests that are temporarily skipped.  Empty-string
-            // to run everything.  Include pointers to tracking issues.
-            def skip = ''
+def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, boolean pauseForDebugging, Closure clusterSetup, Closure clusterDestroy, Closure dnsSetup, Closure dnsDestroy) {
+    // Regex of tests that are temporarily skipped.  Empty-string
+    // to run everything.  Include pointers to tracking issues.
+    def skip = ''
 
-            withEnv([
-                "KUBECONFIG=${env.WORKSPACE}/.kubeconf",
-                "PATH+KTOOL=${tool 'kubectl'}",
-                "PATH+KUBECFG=${tool 'kubecfg'}",
-            ]) {
-                try {
-                    clusterSetup()
+    try {
+        clusterSetup()
 
-                    sh "kubectl version; kubectl cluster-info"
+        waitForRollout("kube-system", 30)
 
-                    waitForRollout("kube-system", 30)
+        container('kubectl') {
+            sh "kubectl version"
+            sh "kubectl cluster-info"
+        }
 
-                    unstash 'binary'
-                    unstash 'manifests'
-                    unstash 'tests'
+        try {
+            sh "kubeprod install ${kubeprodArgs} --manifests=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests"
+            try {
+                // DNS set up must run after `kubeprod` install because `kubeprod`
+                // creates the DNS hosted zone in the underlying cloud platform
+                dnsSetup()
 
-                    sh "kubectl --namespace kube-system get po,deploy,svc,ing"
+                waitForRollout("kubeprod", 30)
 
-                    // HACK: wait for k8s api to stabilize
-                    retry(3) {
+                withGo() {
+                    dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests") {
+                        sh 'go get github.com/onsi/ginkgo/ginkgo'
                         try {
-                            sh "kubectl api-versions"
-                        } catch(error) {
-                            sleep 60
-                            throw error
-                        }
-                    }
-
-                    try {
-                        sh "./bin/kubeprod -v=1 install ${kubeprodArgs} --manifests=manifests"
-                        try {
-                            // DNS set up must run after `kubeprod` install because in some platforms,
-                            // like EKS, it's `kubeprod` which creates the DNS hosted zone in the
-                            // underlying cloud platform, and dnsSetup() closure needs to wait until
-                            // the DNS hosted zone has been created.
-                            dnsSetup()
-
-                            waitForRollout("kubeprod", 30)
-
-                            sh 'go get github.com/onsi/ginkgo/ginkgo'
-                            dir('tests') {
-                                try {
-                                    ansiColor('xterm') {
-                                        sh "ginkgo -v --tags integration -r --randomizeAllSpecs --randomizeSuites --failOnPending --trace --progress --slowSpecThreshold=300 --compilers=2 --nodes=8 --skip '${skip}' -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}"
-                                    }
-                                } catch (error) {
-                                    sh "kubectl --namespace kubeprod get po,deploy,svc,ing"
-                                    input 'Paused for manual debugging'
-                                    throw error
-                                } finally {
-                                    junit 'junit/*.xml'
-                                }
+                            sh """
+                            ginkgo -v \
+                                --tags integration -r       \
+                                --randomizeAllSpecs         \
+                                --randomizeSuites           \
+                                --failOnPending             \
+                                --trace                     \
+                                --progress                  \
+                                --slowSpecThreshold=300     \
+                                --compilers=2               \
+                                --nodes=8                   \
+                                --skip '${skip}'            \
+                                -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}
+                            """
+                        } catch (error) {
+                            if(pauseForDebugging) {
+                                input 'Paused for manual debugging'
                             }
+                            throw error
                         } finally {
-                            dnsDestroy()
+                            junit 'junit/*.xml'
                         }
-                    } finally {
-                        bkprDestroy()
                     }
-                } finally {
-                    clusterDestroy()
                 }
+            } finally {
+                dnsDestroy()
+            }
+        } finally {
+            withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
+                sh "kubecfg delete kubeprod-manifest.jsonnet || true"
+            }
+            container('kubectl') {
+                sh "kubectl wait --for=delete ns/kubeprod --timeout=600s || true"
             }
         }
+    } finally {
+        clusterDestroy()
     }
 }
 
-
-podTemplate(cloud: 'kubernetes-cluster', label: label, idleMinutes: 1,  yaml: """
+podTemplate(cloud: 'kubernetes-cluster', label: label, yaml: """
 apiVersion: v1
 kind: Pod
 spec:
   containers:
   - name: 'go'
-    image: 'golang:1.10.1-stretch'
+    image: 'golang:1.11.5-stretch'
     tty: true
     command:
     - 'cat'
@@ -178,12 +161,15 @@ spec:
         cpu: '10m'
         memory: '1Gi'
   - name: 'gcloud'
-    image: 'google/cloud-sdk:218.0.0'
+    image: 'google/cloud-sdk:236.0.0'
     tty: true
     command:
     - 'cat'
+    env:
+    - name: 'CLOUDSDK_CORE_DISABLE_PROMPTS'
+      value: '1'
   - name: 'az'
-    image: 'microsoft/azure-cli:2.0.45'
+    image: 'microsoft/azure-cli:2.0.59'
     tty: true
     command:
     - 'cat'
@@ -194,6 +180,11 @@ spec:
     - 'cat'
   - name: 'aws'
     image: 'mesosphere/aws-cli:1.14.5'
+    tty: true
+    command:
+    - 'cat'
+  - name: 'kubectl'
+    image: 'lachlanevenson/k8s-kubectl:v1.13.3'
     tty: true
     command:
     - 'cat'
@@ -223,453 +214,423 @@ spec:
 """
 ) {
     env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
-    // Teach jenkins about the 'go' container env vars
-    env.PATH = '/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
-    env.GOPATH = '/go'
+    env.PATH = "/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+    env.GOPATH = "/go"
 
-    stage('Checkout') {
-        node(label) {
-            checkout scm
-
-            // Ideally this should be done in the Release stage, but it seems to be quite a task to get
-            // git metadata stash and unstashed properly (see: https://issues.jenkins-ci.org/browse/JENKINS-33126)
-            if (env.TAG_NAME) {
-                withGo() {
-                    withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                        withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
-                            sh "make release-notes VERSION=${TAG_NAME}"
+    node(label) {
+        timeout(time: 120) {
+            withEnv([
+                "HOME=${env.WORKSPACE}",
+                "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",
+            ]) {
+                stage('Bootstrap') {
+                    withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                        container('gcloud') {
+                            sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
                         }
-                        stash includes: 'Release_Notes.md', name: 'release-notes'
+                    }
+
+                    withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                        container('az') {
+                            sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
+                            sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
+                        }
                     }
                 }
-            }
 
-            stash includes: '**', excludes: 'tests/**', name: 'src'
-            stash includes: 'tests/**', name: 'tests'
-        }
-    }
+                stage('Checkout') {
+                    dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
+                        checkout scm
+                    }
+                }
 
-    parallel(
-        installer: {
-            stage('Build') {
-                node(label) {
-                    withGo() {
-                        dir('src/github.com/bitnami/kube-prod-runtime') {
-                            timeout(time: 30) {
-                                unstash 'src'
-
-                                dir('kubeprod') {
+                parallel(
+                    installer: {
+                        stage('Build') {
+                            withGo() {
+                                dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod") {
                                     sh 'go version'
-                                    sh 'make all'
-                                    sh 'make test'
-                                    sh 'make vet'
+                                    sh "make all"
+                                    sh "make test"
+                                    sh "make vet"
 
-                                    sh './bin/kubeprod --help'
-                                    stash includes: 'bin/**', name: 'binary'
+                                    sh "kubeprod --help"
                                 }
                             }
                         }
-                    }
-                }
-            }
-        },
-
-        manifests: {
-            stage('Manifests') {
-                node(label) {
-                    withGo() {
-                        dir('src/github.com/bitnami/kube-prod-runtime') {
-                            timeout(time: 30) {
-                                unstash 'src'
-                                dir('manifests') {
+                    },
+                    manifests: {
+                        stage('Manifests') {
+                            withGo() {
+                                dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests") {
                                     withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
                                         sh 'make validate KUBECFG="kubecfg -v"'
                                     }
                                 }
-                                stash includes: 'manifests/**', excludes: 'manifests/Makefile', name: 'manifests'
                             }
                         }
-                    }
-                }
-            }
-        }, failFast: true)
+                    }, failFast: true
+                )
 
-    def platforms = [:]
+                def maxRetries = 3
+                def platforms = [:]
 
-    // See:
-    //  gcloud container get-server-config
-    def gkeKversions = ["1.11"]
-    for (x in gkeKversions) {
-        def kversion = x  // local bind required because closures
-        def platform = "gke-" + kversion
-        platforms[platform] = {
-            stage(platform) {
-                node(label) {
-                    withCredentials([
-                        file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS'),
-                        usernamePassword(credentialsId: 'gke-oauthproxy-client', usernameVariable: 'OAUTH_CLIENT_ID', passwordVariable: 'OAUTH_CLIENT_SECRET'),
-                    ]) {
-                        withEnv(["CLOUDSDK_CORE_DISABLE_PROMPTS=1"]) {
-                            withGo() {
-                                def project = 'bkprtesting'
-                                def zone = 'us-east1-b'
+                // See:
+                //  gcloud container get-server-config
+                def gkeKversions = ["1.11"]
+                for (kversion in gkeKversions) {
+                    def project = 'bkprtesting'
+                    def zone = 'us-east1-b'
+                    def platform = "gke-" + kversion
+
+                    platforms[platform] = {
+                        stage(platform) {
+                            def retryNum = 0
+                            retry(maxRetries) {
                                 def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
 
-                                runIntegrationTest(platform, "gke --config=${clusterName}-autogen.json --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}")
-                                // Cluster setup
-                                {
-                                    container('gcloud') {
-                                        sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
-                                        sh "gcloud container clusters create ${clusterName} --cluster-version ${kversion} --project ${project} --machine-type n1-standard-2 --num-nodes 3 --zone ${zone} --preemptible --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'"
-                                        sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
-                                        sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
-                                    }
+                                retryNum++
+                                dir("${env.WORKSPACE}/${clusterName}") {
+                                    withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
+                                        // kubeprod requires `GOOGLE_APPLICATION_CREDENTIALS`
+                                        withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                                            runIntegrationTest(platform, "gke --config=${clusterName}-autogen.json --project=${project} --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\"", "--dns-suffix ${dnsZone}", (retryNum == maxRetries))
+                                            // clusterSetup
+                                            {
+                                                container('gcloud') {
+                                                    sh """
+                                                    gcloud container clusters create ${clusterName} \
+                                                        --cluster-version ${kversion}               \
+                                                        --project ${project}                        \
+                                                        --machine-type n1-standard-2                \
+                                                        --num-nodes 3                               \
+                                                        --zone ${zone}                              \
+                                                        --preemptible                               \
+                                                        --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
+                                                    """
+                                                    sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
+                                                    sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
+                                                }
 
-                                    // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                    def saCreds = JsonOutput.toJson(readFile(env.GOOGLE_APPLICATION_CREDENTIALS))
+                                                withCredentials([usernamePassword(credentialsId: 'gke-oauthproxy-client', usernameVariable: 'OAUTH_CLIENT_ID', passwordVariable: 'OAUTH_CLIENT_SECRET')]) {
+                                                    def saCreds = JsonOutput.toJson(readFile(env.GOOGLE_APPLICATION_CREDENTIALS))
+                                                    writeFile([file: "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json", text: """
+                                                        {
+                                                            "dnsZone": "${dnsZone}",
+                                                            "externalDns": { "credentials": ${saCreds} },
+                                                            "oauthProxy": { "client_id": "${OAUTH_CLIENT_ID}", "client_secret": "${OAUTH_CLIENT_SECRET}" }
+                                                        }
+                                                        """]
+                                                    )
+                                                }
 
-                                    writeFile([file: "${clusterName}-autogen.json", text: """
-                                        {
-                                        "dnsZone": "${dnsZone}",
-                                        "externalDns": {
-                                            "credentials": ${saCreds}
-                                        },
-                                        "oauthProxy": {
-                                            "client_id": "${OAUTH_CLIENT_ID}",
-                                            "client_secret": "${OAUTH_CLIENT_SECRET}"
-                                        }
-                                        }
-                                        """])
-
-                                    writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-                                        (import "manifests/platforms/gke.jsonnet") {
-                                        config:: import "${clusterName}-autogen.json",
-                                        letsencrypt_environment: "staging",
-                                        prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
-                                        }
-                                        """])
-                                }
-                                // DNS setup
-                                {
-                                    // update glue records in parent zone
-                                    container('gcloud') {
-                                        withEnv(["PATH+JQ=${tool 'jq'}"]) {
-                                            def output = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
-                                            def nameServers = readJSON(text: output)
-                                            insertGlueRecords(clusterName, nameServers, "60", parentZone, parentZoneResourceGroup)
-                                        }
-                                    }
-                                }
-                                // DNS destroy
-                                {
-                                    deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
-                                }
-                                // BKPR destroy
-                                {
-                                }
-                                // Cluster destroy
-                                {
-                                    container('gcloud') {
-                                        def disksFilter = "${clusterName}".take(18).replaceAll(/-$/, '')
-                                        sh "gcloud auth activate-service-account --key-file ${GOOGLE_APPLICATION_CREDENTIALS}"
-                                        sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --quiet || :"
-                                        sh "gcloud compute disks delete \$(gcloud compute disks list --project ${project} --filter name:${disksFilter} --format='value(name)') --project ${project} --zone ${zone} --quiet || :"
-                                        sh "gcloud dns record-sets import /dev/null --zone=\$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --delete-all-existing"
-                                        sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || :"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // See:
-    //  az aks get-versions -l centralus
-    //    --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-    def aksKversions = ["1.10", "1.11"]
-    for (x in aksKversions) {
-        def kversion = x  // local bind required because closures
-        def platform = "aks-" + kversion
-        platforms[platform] = {
-            stage(platform) {
-                node(label) {
-                    withGo() {
-                        // NB: `kubeprod` also uses az cli credentials and
-                        // $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                        withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
-                            def resourceGroup = 'jenkins-bkpr-rg'
-                            def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
-                            def dnsZone = "${clusterName}.${parentZone}"
-                            def adminEmail = "${clusterName}@${parentZone}"
-                            def location = "eastus"
-                            def availableK8sVersions = ""
-                            def kversion_full = ""
-
-                            runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}")
-                            // Cluster setup
-                            {
-                                container('az') {
-                                    sh '''
-                                        az login --service-principal -u $AZURE_CLIENT_ID -p $AZURE_CLIENT_SECRET -t $AZURE_TENANT_ID
-                                        az account set -s $AZURE_SUBSCRIPTION_ID
-                                    '''
-                                    availableK8sVersions = sh(returnStdout: true, script: "az aks get-versions --location ${location} --query \"orchestrators[?contains(orchestratorVersion,'${kversion}')].orchestratorVersion\" -o tsv")
-                                }
-
-                                // sort utility from the `az` container does not support the `-V` flag
-                                // therefore we're running this command outside the az container
-                                kversion_full = sh(returnStdout: true, script: "echo \"${availableK8sVersions}\" | sort -Vr | head -n1 | tr -d '\n'")
-
-                                container('az') {
-                                    // Usually, `az aks create` creates a new service
-                                    // principal, which is not removed by `az aks
-                                    // delete`. We reuse an existing principal here to
-                                    // a) avoid this leak b) avoid having to give the
-                                    // "outer" principal (above) the power to create
-                                    // new service principals.
-                                    withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
-                                        sh "az aks create --verbose --resource-group ${resourceGroup} --name ${clusterName} --node-count 3 --node-vm-size Standard_DS2_v2 --location ${location} --kubernetes-version ${kversion_full} --generate-ssh-keys --service-principal \$AZURE_CLIENT_ID --client-secret \$AZURE_CLIENT_SECRET --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'"
-                                    }
-                                    sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \$KUBECONFIG"
-                                }
-
-                                // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
-                                    // NB: writeJSON doesn't work without approvals(?)
-                                    // See https://issues.jenkins-ci.org/browse/JENKINS-44587
-                                    writeFile([file: "${clusterName}-autogen.json", text: """
-                                        {
-                                            "dnsZone": "${dnsZone}",
-                                            "contactEmail": "${adminEmail}",
-                                            "externalDns": {
-                                            "tenantId": "${AZURE_TENANT_ID}",
-                                            "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
-                                            "aadClientId": "${AZURE_CLIENT_ID}",
-                                            "aadClientSecret": "${AZURE_CLIENT_SECRET}",
-                                            "resourceGroup": "${resourceGroup}"
-                                        },
-                                        "oauthProxy": {
-                                            "client_id": "${AZURE_CLIENT_ID}",
-                                            "client_secret": "${AZURE_CLIENT_SECRET}",
-                                            "azure_tenant": "${AZURE_TENANT_ID}"
+                                                writeFile([file: "${env.WORKSPACE}/${clusterName}/kubeprod-manifest.jsonnet", text: """
+                                                    (import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/gke.jsonnet") {
+                                                        config:: import "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json",
+                                                        letsencrypt_environment: "staging",
+                                                        prometheus+: import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests/testdata/prometheus-crashloop-alerts.jsonnet",
+                                                    }
+                                                    """]
+                                                )
+                                            }
+                                            // clusterDestroy
+                                            {
+                                                container('gcloud') {
+                                                    sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --async --quiet || true"
+                                                    sh "gcloud dns record-sets import /dev/null --zone=\$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --delete-all-existing || true"
+                                                    sh "gcloud dns managed-zones delete \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} || true"
+                                                }
+                                            }
+                                            // dnsSetup
+                                            {
+                                                container('gcloud') {
+                                                    withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                                                        def output = sh(returnStdout: true, script: "gcloud dns managed-zones describe \$(gcloud dns managed-zones list --filter dnsName:${dnsZone} --format='value(name)' --project ${project}) --project ${project} --format=json | jq -r .nameServers")
+                                                        insertGlueRecords(clusterName, readJSON(text: output), "60", parentZone, parentZoneResourceGroup)
+                                                    }
+                                                }
+                                            }
+                                            // dnsDestroy
+                                            {
+                                                deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
                                             }
                                         }
-                                        """])
-
-                                    writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-                                        (import "manifests/platforms/aks.jsonnet") {
-                                            config:: import "${clusterName}-autogen.json",
-                                            letsencrypt_environment: "staging",
-                                            prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
-                                        }
-                                        """])
-                                }
-                            }
-                            // DNS setup
-                            {
-                                // update glue records in parent zone
-                                container('az') {
-                                    def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
-                                    def nameServers = readJSON(text: output)
-                                    insertGlueRecords(clusterName, nameServers, "60", parentZone, parentZoneResourceGroup)
-                                }
-                            }
-                            // DNS destroy
-                            {
-                                deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
-                            }
-                            // BKPR destroy
-                            {
-                            }
-                            // Cluster destroy
-                            {
-                                container('az') {
-                                    sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
-                                    sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
-                                    sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || :"
-                                    sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || :"
+                                    }
                                 }
                             }
                         }
                     }
                 }
-            }
-        }
-    }
 
-    def eksVersions = ["1.10", "1.11"]
-    for (x in eksVersions) {
-        def kversion = x // local bind required because closures
-        def platform = "eks-${kversion}"
-        def awsRegion = "us-east-1"
-        def awsZones = ["us-east-1b", "us-east-1f"]
-        platforms[platform] = {
-            stage(platform) {
-                node(label) {
-                    withCredentials([[
-                        $class: 'AmazonWebServicesCredentialsBinding',
-                        credentialsId: 'aws-eks-kubeprod-jenkins',
-                        accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                        secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
-                    ]]) {
-                        withGo() {
-                            withEnv([
-                                "AWS_DEFAULT_REGION=${awsRegion}",
-                                // https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html
-                                "PATH+AWSIAMAUTHENTICATOR=${tool 'aws-iam-authenticator'}"
-                            ]) {
-                                def awsUserPoolId = "${awsRegion}_zkRzdsjxA"
-                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9]+/, '-').toLowerCase()
+                // See:
+                //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
+                def aksKversions = ["1.10", "1.11"]
+                for (kversion in aksKversions) {
+                    def resourceGroup = 'jenkins-bkpr-rg'
+                    def location = "eastus"
+                    def platform = "aks-" + kversion
+
+                    platforms[platform] = {
+                        stage(platform) {
+                            def retryNum = 0
+                            retry(maxRetries) {
+                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
 
-                                runIntegrationTest(platform, "eks --user-pool-id=${awsUserPoolId} --config=${clusterName}-autogen.json --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}")
-                                // Cluster setup
-                                {
-                                    // Create EKS cluster: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment
-                                    // variables to reference a user in AWS with the correct privileges to create an EKS
-                                    // cluster: https://github.com/weaveworks/eksctl/issues/204#issuecomment-450280786
-                                    container('eksctl') {
-                                        sh "eksctl create cluster --name ${clusterName} --region ${awsRegion} --zones ${awsZones.join(',')} --version ${kversion} --node-type m5.large --nodes 3 --kubeconfig \$KUBECONFIG --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL}'"
-                                    }
+                                retryNum++
+                                dir("${env.WORKSPACE}/${clusterName}") {
+                                    withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
+                                        // NB: `kubeprod` also uses az cli credentials and $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
+                                        withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                                            runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}", (retryNum == maxRetries))
+                                            // clusterSetup
+                                            {
+                                                def availableK8sVersions = ""
+                                                def kversion_full = ""
 
-                                    writeFile([file: 'kubeprod-manifest.jsonnet', text: """
-                                        (import "manifests/platforms/eks.jsonnet") {
-                                            config:: import "${clusterName}-autogen.json",
-                                            letsencrypt_environment: "staging",
-                                            prometheus+: import "tests/testdata/prometheus-crashloop-alerts.jsonnet",
+                                                container('az') {
+                                                    availableK8sVersions = sh(returnStdout: true, script: "az aks get-versions --location ${location} --query \"orchestrators[?contains(orchestratorVersion,'${kversion}')].orchestratorVersion\" -o tsv")
+                                                }
+
+                                                // sort utility from the `az` container does not support the `-V` flag therefore we're running this command outside the az container
+                                                kversion_full = sh(returnStdout: true, script: "echo \"${availableK8sVersions}\" | sort -Vr | head -n1 | tr -d '\n'")
+
+                                                container('az') {
+                                                    // Usually, `az aks create` creates a new service // principal, which is not removed by `az aks
+                                                    // delete`. We reuse an existing principal here to
+                                                    //      a) avoid this leak
+                                                    //      b) avoid having to give the "outer" principal (above) the power to create new service principals.
+                                                    withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                        sh """
+                                                        az aks create                               \
+                                                            --verbose                               \
+                                                            --resource-group ${resourceGroup}       \
+                                                            --name ${clusterName}                   \
+                                                            --node-count 3                          \
+                                                            --node-vm-size Standard_DS2_v2          \
+                                                            --location ${location}                  \
+                                                            --kubernetes-version ${kversion_full}   \
+                                                            --generate-ssh-keys                     \
+                                                            --service-principal \$AZURE_CLIENT_ID   \
+                                                            --client-secret \$AZURE_CLIENT_SECRET   \
+                                                            --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
+                                                        """
+                                                    }
+                                                    sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \${KUBECONFIG}"
+                                                }
+
+                                                // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
+                                                withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                    // NB: writeJSON doesn't work without approvals(?)
+                                                    // See https://issues.jenkins-ci.org/browse/JENKINS-44587
+                                                    writeFile([file: "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json", text: """
+                                                        {
+                                                          "dnsZone": "${dnsZone}",
+                                                          "contactEmail": "${adminEmail}",
+                                                          "externalDns": {
+                                                            "tenantId": "${AZURE_TENANT_ID}",
+                                                            "subscriptionId": "${AZURE_SUBSCRIPTION_ID}",
+                                                            "aadClientId": "${AZURE_CLIENT_ID}",
+                                                            "aadClientSecret": "${AZURE_CLIENT_SECRET}",
+                                                            "resourceGroup": "${resourceGroup}"
+                                                          },
+                                                          "oauthProxy": {
+                                                            "client_id": "${AZURE_CLIENT_ID}",
+                                                            "client_secret": "${AZURE_CLIENT_SECRET}",
+                                                            "azure_tenant": "${AZURE_TENANT_ID}"
+                                                          }
+                                                        }
+                                                        """]
+                                                    )
+
+                                                    writeFile([file: "${env.WORKSPACE}/${clusterName}/kubeprod-manifest.jsonnet", text: """
+                                                        (import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/aks.jsonnet") {
+                                                            config:: import "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json",
+                                                            letsencrypt_environment: "staging",
+                                                            prometheus+: import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests/testdata/prometheus-crashloop-alerts.jsonnet",
+                                                        }
+                                                        """]
+                                                    )
+                                                }
+                                            }
+                                            // clusterDestroy
+                                            {
+                                                container('az') {
+                                                    sh "az network dns zone delete --yes --name ${dnsZone} --resource-group ${resourceGroup} || true"
+                                                    sh "az aks delete --yes --name ${clusterName} --resource-group ${resourceGroup} --no-wait || true"
+                                                }
+                                            }
+                                            // dnsSetup
+                                            {
+                                                container('az') {
+                                                    def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
+                                                    insertGlueRecords(clusterName, readJSON(text: output), "60", parentZone, parentZoneResourceGroup)
+                                                }
+                                            }
+                                            // dnsDestroy
+                                            {
+                                                deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
+                                            }
                                         }
-                                        """])
-                                }
-                                // DNS setup
-                                {
-                                    // update glue records in parent zone
-                                    def nameServers = []
-                                    container('aws') {
-                                        def output = sh(returnStdout: true, script: """
-                                            id=\$(aws route53 list-hosted-zones-by-name --dns-name "${dnsZone}" --max-items 1 --query 'HostedZones[0].Id' --output text)
-                                            aws route53 get-hosted-zone --id "\$id" --query DelegationSet.NameServers
-                                        """)
-                                        nameServers = readJSON(text: output)
                                     }
-                                    insertGlueRecords(clusterName, nameServers, "60", parentZone, parentZoneResourceGroup)
                                 }
-                                // DNS destroy
-                                {
-                                    deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
+                            }
+                        }
+                    }
+                }
+
+                def eksKversions = ["1.10", "1.11"]
+                for (kversion in eksKversions) {
+                    def awsRegion = "us-east-1"
+                    def awsUserPoolId = "${awsRegion}_zkRzdsjxA"
+                    def awsZones = ["us-east-1b", "us-east-1f"]
+                    def platform = "eks-" + kversion
+
+                    platforms[platform] = {
+                        stage(platform) {
+                            def retryNum = 0
+                            retry(maxRetries) {
+                                def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
+                                def adminEmail = "${clusterName}@${parentZone}"
+                                def dnsZone = "${clusterName}.${parentZone}"
+
+                                retryNum++
+                                dir("${env.WORKSPACE}/${clusterName}") {
+                                    withEnv([
+                                        "KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}",
+                                        "AWS_DEFAULT_REGION=${awsRegion}",
+                                        "PATH+AWSIAMAUTHENTICATOR=${tool 'aws-iam-authenticator'}",
+                                    ]) {
+                                        // kubeprod requires `GOOGLE_APPLICATION_CREDENTIALS`
+                                        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
+                                            runIntegrationTest(platform, "eks --user-pool-id=${awsUserPoolId} --config=${clusterName}-autogen.json --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}", (retryNum == maxRetries))
+                                            // clusterSetup
+                                            {
+                                                // Create EKS cluster: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment
+                                                // variables to reference a user in AWS with the correct privileges to create an EKS
+                                                // cluster: https://github.com/weaveworks/eksctl/issues/204#issuecomment-450280786
+                                                container('eksctl') {
+                                                    sh """
+                                                    eksctl create cluster \
+                                                        --name ${clusterName} \
+                                                        --region ${awsRegion} \
+                                                        --zones ${awsZones.join(',')} \
+                                                        --version ${kversion} \
+                                                        --node-type m5.large \
+                                                        --nodes 3 \
+                                                        --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL}'
+                                                    """
+                                                }
+
+                                                writeFile([file: "${env.WORKSPACE}/${clusterName}/kubeprod-manifest.jsonnet", text: """
+                                                    (import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/eks.jsonnet") {
+                                                        config:: import "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json",
+                                                        letsencrypt_environment: "staging",
+                                                        prometheus+: import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests/testdata/prometheus-crashloop-alerts.jsonnet",
+                                                    }
+                                                    """]
+                                                )
+                                            }
+                                            // clusterDestroy
+                                            {
+                                                // Destroy AWS objects
+                                                container('aws') {
+                                                    withEnv(["PATH+JQ=${tool 'jq'}"]) {
+                                                        sh """
+                                                        set +e
+                                                        CONFIG="${clusterName}-autogen.json"
+
+                                                        ACCOUNT=\$(aws sts get-caller-identity --query Account --output text)
+                                                        aws iam detach-user-policy --user-name "bkpr-${dnsZone}" --policy-arn "arn:aws:iam::\${ACCOUNT}:policy/bkpr-${dnsZone}"
+                                                        aws iam delete-policy --policy-arn "arn:aws:iam::\${ACCOUNT}:policy/bkpr-${dnsZone}"
+
+                                                        ACCESS_KEY_ID=\$(cat \${CONFIG} | jq -r .externalDns.aws_access_key_id)
+                                                        aws iam delete-access-key --user-name "bkpr-${dnsZone}" --access-key-id "\${ACCESS_KEY_ID}"
+                                                        aws iam delete-user --user-name "bkpr-${dnsZone}"
+
+                                                        CLIENT_ID=\$(cat \${CONFIG} | jq -r .oauthProxy.client_id)
+                                                        aws cognito-idp delete-user-pool-client --user-pool-id "${awsUserPoolId}" --client-id "\${CLIENT_ID}"
+
+                                                        DNS_ZONE_ID=\$(aws route53 list-hosted-zones-by-name --dns-name "${dnsZone}" --max-items 1 --query 'HostedZones[0].Id' --output text)
+                                                        aws route53 list-resource-record-sets \
+                                                                    --hosted-zone-id \${DNS_ZONE_ID} \
+                                                                    --query '{ChangeBatch:{Changes:ResourceRecordSets[?Type != `NS` && Type != `SOA`].{Action:`DELETE`,ResourceRecordSet:@}}}' \
+                                                                    --output json > changes
+
+                                                        aws route53 change-resource-record-sets         \
+                                                                    --cli-input-json file://changes     \
+                                                                    --hosted-zone-id \${DNS_ZONE_ID}    \
+                                                                    --query 'ChangeInfo.Id'             \
+                                                                    --output text
+
+                                                        aws route53 delete-hosted-zone      \
+                                                                    --id \${DNS_ZONE_ID}    \
+                                                                    --query 'ChangeInfo.Id' \
+                                                                    --output text
+                                                        :
+                                                        """
+                                                    }
+                                                }
+                                                container('eksctl') {
+                                                    sh "eksctl delete cluster --name ${clusterName}"
+                                                }
+                                            }
+                                            // dnsSetup
+                                            {
+                                                container('aws') {
+                                                    def output = sh(returnStdout: true, script: "aws route53 get-hosted-zone --id \"\$(aws route53 list-hosted-zones-by-name --dns-name \"${dnsZone}\" --max-items 1 --query 'HostedZones[0].Id' --output text)\" --query DelegationSet.NameServers")
+                                                    insertGlueRecords(clusterName, readJSON(text: output), "60", parentZone, parentZoneResourceGroup)
+                                                }
+                                            }
+                                            // dnsDestroy
+                                            {
+                                                deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
+                                            }
+                                        }
+                                    }
                                 }
-                                // BKPR destroy
-                                {
-                                    // Uninstall BKPR
-                                    // This is required for AWS in order to release/destroy ELB network interfaces.
-                                    sh """
-                                        set +e
-                                        kubecfg -v delete --kubeconfig \$KUBECONFIG kubeprod-manifest.jsonnet
-                                        kubectl wait --for=delete ns/kubeprod --timeout=600s
-                                        :
+                            }
+                        }
+                    }
+                }
+
+                parallel platforms
+
+                stage('Release') {
+                    if (env.TAG_NAME) {
+                        dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
+                            withGo() {
+                                withCredentials([
+                                    usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: 'GITHUB_USER'),
+                                    [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'jenkins-bkpr-releases', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
+                                ]) {
+                                    withEnv([
+                                        "PATH+ARC=${tool 'arc'}",
+                                        "PATH+JQ=${tool 'jq'}",
+                                        "PATH+GITHUB_RELEASE=${tool 'github-release'}",
+                                        "PATH+AWLESS=${tool 'awless'}",
+                                    ]) {
+                                        sh "make dist VERSION=${TAG_NAME}"
+                                        sh "make publish VERSION=${TAG_NAME}"
+                                    }
+                                }
+                            }
+
+                            container(name: 'kaniko', shell: '/busybox/sh') {
+                                withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
+                                    sh """#!/busybox/sh
+                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination experimental/kubeprod:${TAG_NAME}
                                     """
-
-                                    // Destroy AWS objects
-                                    container('aws') {
-                                        withEnv([
-                                            "PATH+JQ=${tool 'jq'}",
-                                            "HOME=${env.WORKSPACE}",
-                                        ]) {
-                                            sh """
-                                                set +e
-                                                CONFIG="${clusterName}-autogen.json"
-
-                                                ACCOUNT=\$(aws sts get-caller-identity --query Account --output text)
-                                                aws iam detach-user-policy --user-name "bkpr-${dnsZone}" --policy-arn "arn:aws:iam::\${ACCOUNT}:policy/bkpr-${dnsZone}"
-                                                aws iam delete-policy --policy-arn "arn:aws:iam::\${ACCOUNT}:policy/bkpr-${dnsZone}"
-
-                                                ACCESS_KEY_ID=\$(cat \${CONFIG} | jq -r .externalDns.aws_access_key_id)
-                                                aws iam delete-access-key --user-name "bkpr-${dnsZone}" --access-key-id "\${ACCESS_KEY_ID}"
-                                                aws iam delete-user --user-name "bkpr-${dnsZone}"
-
-                                                CLIENT_ID=\$(cat \${CONFIG} | jq -r .oauthProxy.client_id)
-                                                aws cognito-idp delete-user-pool-client --user-pool-id "${awsUserPoolId}" --client-id "\${CLIENT_ID}"
-
-                                                DNS_ZONE_ID=\$(aws route53 list-hosted-zones-by-name --dns-name "${dnsZone}" --max-items 1 --query 'HostedZones[0].Id' --output text)
-                                                aws route53 list-resource-record-sets \
-                                                            --hosted-zone-id \${DNS_ZONE_ID} \
-                                                            --query '{ChangeBatch:{Changes:ResourceRecordSets[?Type != `NS` && Type != `SOA`].{Action:`DELETE`,ResourceRecordSet:@}}}' \
-                                                            --output json > changes
-
-                                                aws route53 change-resource-record-sets \
-                                                            --cli-input-json file://changes \
-                                                            --hosted-zone-id \${DNS_ZONE_ID} \
-                                                            --query 'ChangeInfo.Id' \
-                                                            --output text
-
-                                                aws route53 delete-hosted-zone \
-                                                            --id \${DNS_ZONE_ID} \
-                                                            --query 'ChangeInfo.Id' \
-                                                            --output text
-
-                                                :
-                                            """
-                                        }
-                                    }
-                                }
-                                // Cluster destroy
-                                {
-                                    // Delete the EKS cluster
-                                    container('eksctl') {
-                                        sh "eksctl delete cluster --name ${clusterName}"
-                                    }
                                 }
                             }
                         }
+                    } else {
+                        Utils.markStageSkippedForConditional(STAGE_NAME)
                     }
                 }
-            }
-        }
-    }
-
-    parallel platforms
-
-    stage('Release') {
-        node(label) {
-            if (env.TAG_NAME) {
-                timeout(time: 30) {
-                    dir('src/github.com/bitnami/kube-prod-runtime') {
-                        unstash 'src'
-                        withGo() {
-                            unstash 'release-notes'
-
-                            sh "make dist VERSION=${TAG_NAME}"
-
-                            withCredentials([
-                                usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: ''),
-                                // AWS credentials used to publish Docker images to an AWS S3 bucket
-                                [
-                                $class: 'AmazonWebServicesCredentialsBinding',
-                                credentialsId: 'jenkins-bkpr-releases',
-                                accessKeyVariable: 'AWS_ACCESS_KEY_ID',
-                                secretKeyVariable: 'AWS_SECRET_ACCESS_KEY',
-                                ]
-                            ]) {
-                                sh "make publish VERSION=${TAG_NAME}"
-                            }
-                        }
-
-                        container(name: 'kaniko', shell: '/busybox/sh') {
-                            withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
-                                sh """#!/busybox/sh
-                                /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
-                                """
-                            }
-                        }
-                    }
-                }
-            } else {
-                Utils.markStageSkippedForConditional(STAGE_NAME)
             }
         }
     }
