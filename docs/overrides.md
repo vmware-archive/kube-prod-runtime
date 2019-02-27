@@ -2,11 +2,11 @@
 
 BKPR uses [jsonnet](https://jsonnet.org/) to describe Kubernetes manifests. Jsonnet is a simple programming language that generates JSON. If you are new to jsonnet and want to extend BKPR to suit your particular use case, we recommend to go through the [jsonnet basic tutorial](https://jsonnet.org/learning/tutorial.html) first, in order to get familiar with the syntax.
 
-When deploying BKPR with `kubeprod install` two files get generated in your local folder::`kubeprod-autogen.json`, with your cloud seetings, and `kubeprod-manifest.jsonnet` with the root manifest for the Kubernetes objectsts.
+When deploying BKPR with `kubeprod install` two files are generated in your current directory: `kubeprod-autogen.json` with your cloud settings, and `kubeprod-manifest.jsonnet` with the root manifest for the Kubernetes objects.
 
 To modify the default configuration you will need to edit the `kubeprod-manifest.jsonnet` manifest and add a set of jsonnet "overrides". In most cases, we will be using the jsonnet `+` operator, which will merge the JSON after that `+` operator into the parent object.
 
-When BKPR is first deployed in a GKE cluster the following `kubeprod-manifest.jsonnet` gets generated:
+When BKPR is first deployed in a GKE cluster the following `kubeprod-manifest.jsonnet` is generated:
 
 ```
 // Cluster-specific configuration
@@ -16,7 +16,7 @@ When BKPR is first deployed in a GKE cluster the following `kubeprod-manifest.js
 }
 ```
 
-This snip basically imports the default root manifest for your platform (in this example, GKE) and applies the generated cloud specific configuration.
+This snippet basically imports the default root manifest for your platform (in this example, GKE) and applies the generated cloud specific configuration.
 
 If you want to check what manifests this default configuration would produce, you can use [`kubecfg`](https://github.com/ksonnet/kubecfg) a tool to manage Kubernetes resources as code and that understands `jsonnet` (actually, `kubeprod` uses `kubecfg` libraries internally):
 
@@ -56,12 +56,12 @@ hpa: kube.HorizontalPodAutoscaler($.p + "oauth2-proxy") + $.metadata {
 },
 ```
 
-`hpa` is a variable name used in `oauth2-proxy.jsonnet`, and you can see that `oauth2-proxy.jsonnet` itself is imported in a variable name called `oauth2-proxy` in the main platform manifest (https://github.com/bitnami/kube-prod-runtime/blob/master/manifests/platforms/gke.jsonnet#L28).
+`hpa` is a variable name used in `oauth2-proxy.jsonnet`, and you can see that `oauth2-proxy.jsonnet` itself is imported in a variable name called `oauth2_proxy` in the [main platform manifest](https://github.com/bitnami/kube-prod-runtime/blob/master/manifests/platforms/gke.jsonnet#L28).
 
 Let's imagine we want to limit the number of replicas of `oauth2-proxy` to 5 replicas. In order to do that, we would need to edit the `kubeprod-manifest.jsonnet` file to the following:
 
 ```
-# Cluster-specific configuration
+// Cluster-specific configuration
 (import "https://releases.kubeprod.io/files/v1.1.1/manifests/platforms/gke.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -71,13 +71,13 @@ Let's imagine we want to limit the number of replicas of `oauth2-proxy` to 5 rep
                 maxReplicas: 5
             },
         },
-    }   ,
+    },
 }
 ```
 
 We are using the `+` operator to merge back to the object we are specifying. We are saying to merge `maxReplicas: 5` into the `spec` object, into the object `hpa` (the variable we used for the HorizontalPodAutoscaler) and up to the `oauth2_proxy` object (the one with the imported `oauth2-proxy.jsonnet`).
 
-If we generate now the YAML manifests for our `kubeprod-manifest.jsonnet` we will get the following description for the `oauth2-proxy` HorizontalPodAutoscaler:
+If we regenerate the YAML manifests for our `kubeprod-manifest.jsonnet` (`kubecfg show kubeprod-manifest.jsonnet`) we will now get the following description for the `oauth2-proxy` HorizontalPodAutoscaler:
 
 ```
 apiVersion: autoscaling/v1
@@ -96,9 +96,9 @@ spec:
     name: oauth2-proxy
 ```
 
-All the specification is equal, except the value of `maxReplicas` which is now 5. That is the only change we will need to maintain ourselves, and we will be able to upgrade BKPR without having to modify the manifests.
+The specification is unchanged, except the value of `maxReplicas` is now 5. Our override is the only change we will need to maintain ourselves, and we will be able to take advantage of future BKPR upgrades to other parts of the manifests without further work.
 
-To apply these changes, run `kubeprod install` again from the folder where the `kubeprod-manifest.jsonnet` and `kubeprod-autogen.json` are located.
+To apply these changes, run `kubeprod install` again from the folder where the modified `kubeprod-manifest.jsonnet` and original `kubeprod-autogen.json` are located.
 
 ## Example 2: Using the Staging Server for Let's Encrypt
 
@@ -166,7 +166,7 @@ spec:
       volumes: []
 ```
 
-That snippet comes from the [`cert-maanger.jsonnet`](https://github.com/bitnami/kube-prod-runtime/blob/master/manifests/components/cert-manager.jsonnet) file, that gets imported in the previous one. Specifically, this is the part about the different environments:
+That snippet comes from the [`cert-manager.jsonnet`](https://github.com/bitnami/kube-prod-runtime/blob/master/manifests/components/cert-manager.jsonnet) file, which is imported by the main platform file (eg `gke.jsonnet`). Specifically, this section of the file describes the pre-configured Let's Encrypt environments:
 
 ```
   // Letsencrypt environments
@@ -175,7 +175,7 @@ That snippet comes from the [`cert-maanger.jsonnet`](https://github.com/bitnami/
     "staging": $.letsencryptStaging.metadata.name,
   },
   // Letsencrypt environment (defaults to the production one)
-letsencrypt_environment:: "prod",
+  letsencrypt_environment:: "prod",
 ```
 
 There is a variable called `letsencrypt_environment` that has the value set to `prod` by default. That variable will be then be used in the argument for the container called `default-issuer-name`.
