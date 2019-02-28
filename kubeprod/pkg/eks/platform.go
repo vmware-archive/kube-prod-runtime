@@ -23,13 +23,12 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/http"
 	"strings"
-	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/arn"
 	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/credentials/stscreds"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/cognitoidentityprovider"
@@ -50,10 +49,8 @@ func (conf *Config) getAwsSession() *session.Session {
 				session.Options{
 					// Load AWS SDK configuration parameters (including the AWS region)
 					SharedConfigState: session.SharedConfigEnable,
-					Config: *aws.NewConfig().WithHTTPClient(&http.Client{
-						// Configure an explicit time-out of 30 seconds
-						Timeout: 30 * time.Second,
-					}),
+					// Prompt on stdin for MFA token if required
+					AssumeRoleTokenProvider: stscreds.StdinTokenProvider,
 				}))
 	}
 	return conf.session
@@ -61,9 +58,9 @@ func (conf *Config) getAwsSession() *session.Session {
 
 // Retrieves the identity of the caller. Among other details retrieves
 // the AWS account number.
-func (conf *Config) getCallerIdentity() (*sts.GetCallerIdentityOutput, error) {
+func (conf *Config) getCallerIdentity(ctx context.Context) (*sts.GetCallerIdentityOutput, error) {
 	svc := sts.New(conf.getAwsSession())
-	result, err := svc.GetCallerIdentity(&sts.GetCallerIdentityInput{})
+	result, err := svc.GetCallerIdentityWithContext(ctx, &sts.GetCallerIdentityInput{})
 	if err != nil {
 		return nil, fmt.Errorf("Error retrieving caller identity\n%v", err)
 	}
@@ -73,14 +70,14 @@ func (conf *Config) getCallerIdentity() (*sts.GetCallerIdentityOutput, error) {
 // Creates a new hosted zone in Route 53 if required, or reuses an existing
 // one that matches the fully-qualified name for the DNS zone to be used by
 // BKPR.
-func (conf *Config) createHostedZone() (*string, error) {
+func (conf *Config) createHostedZone(ctx context.Context) (*string, error) {
 	dnsZone := conf.DNSZone
 	if !strings.HasSuffix(dnsZone, ".") {
 		dnsZone = dnsZone + "."
 	}
 
 	svc := route53.New(conf.getAwsSession())
-	listResult, err := svc.ListHostedZonesByName(&route53.ListHostedZonesByNameInput{
+	listResult, err := svc.ListHostedZonesByNameWithContext(ctx, &route53.ListHostedZonesByNameInput{
 		DNSName:  aws.String(dnsZone),
 		MaxItems: aws.String("1"),
 	})
@@ -97,7 +94,7 @@ func (conf *Config) createHostedZone() (*string, error) {
 	}
 
 	// Create the hosted zone in Route 53
-	createResult, err := svc.CreateHostedZone(&route53.CreateHostedZoneInput{
+	createResult, err := svc.CreateHostedZoneWithContext(ctx, &route53.CreateHostedZoneInput{
 		CallerReference: aws.String(strings.ToUpper(uuid.New().String())),
 		Name:            aws.String(dnsZone),
 		HostedZoneConfig: &route53.HostedZoneConfig{
@@ -115,7 +112,7 @@ func (conf *Config) createHostedZone() (*string, error) {
 // Creates a new user policy (or reuses the existing one) in AWS to allow
 // for integration between External DNS and the corresponding hosted zone
 // in Route 53 zone. The user policy is named like "bbkpr-${dnsZone}".
-func (conf *Config) getUserPolicy() (*string, error) {
+func (conf *Config) getUserPolicy(ctx context.Context) (*string, error) {
 	type StatementEntry struct {
 		Effect   string
 		Action   []string
@@ -129,7 +126,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 
 	// Creates (or reuses) the hosted zone in Route 53 to be used for
 	// integration with External DNS
-	hostedZoneID, err := conf.createHostedZone()
+	hostedZoneID, err := conf.createHostedZone(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -137,7 +134,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 	b, err := json.Marshal(&PolicyDocument{
 		Version: "2012-10-17",
 		Statement: []StatementEntry{
-			StatementEntry{
+			{
 				Effect: "Allow",
 				Action: []string{
 					"route53:GetHostedZone",
@@ -148,7 +145,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 				},
 				Resource: "*",
 			},
-			StatementEntry{
+			{
 				Effect: "Allow",
 				// Allows for DeleteItem, GetItem, PutItem, Scan, and UpdateItem
 				Action: []string{
@@ -168,7 +165,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 
 	svc := iam.New(conf.getAwsSession())
 	policyName := aws.String(fmt.Sprintf("bkpr-%s", conf.DNSZone))
-	result, err := svc.CreatePolicy(&iam.CreatePolicyInput{
+	result, err := svc.CreatePolicyWithContext(ctx, &iam.CreatePolicyInput{
 		PolicyDocument: aws.String(string(b)),
 		PolicyName:     policyName,
 	})
@@ -183,7 +180,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 	if aerr, ok := err.(awserr.Error); ok {
 		if aerr.Code() == iam.ErrCodeEntityAlreadyExistsException {
 			log.Warning("Re-using existing IAM policy for External DNS integration: ", *policyName)
-			callerIdentity, err := conf.getCallerIdentity()
+			callerIdentity, err := conf.getCallerIdentity(ctx)
 			if err != nil {
 				return nil, err
 			}
@@ -193,7 +190,7 @@ func (conf *Config) getUserPolicy() (*string, error) {
 				AccountID: *callerIdentity.Account,
 				Resource:  fmt.Sprintf("policy/%s", *policyName),
 			}.String()
-			result, err := svc.GetPolicy(&iam.GetPolicyInput{
+			result, err := svc.GetPolicyWithContext(ctx, &iam.GetPolicyInput{
 				PolicyArn: aws.String(arn),
 			})
 			if err != nil {
@@ -210,10 +207,10 @@ func (conf *Config) getUserPolicy() (*string, error) {
 
 // Attaches the correct IAM policy to the user used for integration with
 // External DNS.
-func (conf *Config) attachUserPolicy() error {
+func (conf *Config) attachUserPolicy(ctx context.Context) error {
 	// Retrieve the ARN for the policy that limits the privileges for
 	// the user to be used for External DNS integration
-	policyArn, err := conf.getUserPolicy()
+	policyArn, err := conf.getUserPolicy(ctx)
 	if err != nil {
 		return err
 	}
@@ -221,7 +218,7 @@ func (conf *Config) attachUserPolicy() error {
 	log.Debugf("Policy ARN: %s", *policyArn)
 
 	svc := iam.New(conf.getAwsSession())
-	_, err = svc.AttachUserPolicy(&iam.AttachUserPolicyInput{
+	_, err = svc.AttachUserPolicyWithContext(ctx, &iam.AttachUserPolicyInput{
 		PolicyArn: policyArn,
 		UserName:  aws.String(userName),
 	})
@@ -238,12 +235,12 @@ func (conf *Config) attachUserPolicy() error {
 // policy attached to it which limits R/W to the hosted Route53 zone
 // to be used by BKPR and R/O for any other zones. The IAM policy
 // will be created if necessary.
-func (conf *Config) createAwsUser() (*string, *string, error) {
+func (conf *Config) createAwsUser(ctx context.Context) (*string, *string, error) {
 	userName := fmt.Sprintf("bkpr-%s", conf.DNSZone)
 
 	// Create an AWS user
 	svc := iam.New(conf.getAwsSession())
-	_, err := svc.CreateUser(&iam.CreateUserInput{
+	_, err := svc.CreateUserWithContext(ctx, &iam.CreateUserInput{
 		UserName: aws.String(userName),
 		Tags: []*iam.Tag{
 			{
@@ -258,10 +255,10 @@ func (conf *Config) createAwsUser() (*string, *string, error) {
 		log.Infof("Created AKS user: %s", userName)
 	}
 
-	conf.attachUserPolicy()
+	conf.attachUserPolicy(ctx)
 
 	// Create/Add an Access Key
-	ak, err := svc.CreateAccessKey(&iam.CreateAccessKeyInput{
+	ak, err := svc.CreateAccessKeyWithContext(ctx, &iam.CreateAccessKeyInput{
 		UserName: aws.String(userName),
 	})
 	if err != nil {
@@ -271,7 +268,7 @@ func (conf *Config) createAwsUser() (*string, *string, error) {
 }
 
 // Configuration for integration between External DNS and AWS.
-func (conf *Config) setUpExternalDNS() error {
+func (conf *Config) setUpExternalDNS(ctx context.Context) error {
 	log.Info("Setting up configuration for External DNS")
 	flags := conf.flags
 
@@ -293,7 +290,7 @@ func (conf *Config) setUpExternalDNS() error {
 	// At this point, if the AWS secret is still empty, try to create an AWS
 	// access key for a user named "bkpr.${dnsZone}"
 	if conf.ExternalDNS.AWSAccessKeyID == "" || conf.ExternalDNS.AWSSecretAccessKey == "" {
-		awsAccessKeyID, awsSecretAccessKey, err := conf.createAwsUser()
+		awsAccessKeyID, awsSecretAccessKey, err := conf.createAwsUser(ctx)
 		if err != nil {
 			return err
 		}
@@ -304,8 +301,8 @@ func (conf *Config) setUpExternalDNS() error {
 }
 
 // Retrieves information from an existing client application in AWS Cognito
-func (conf *Config) describeUserPoolClient(svc *cognitoidentityprovider.CognitoIdentityProvider, clientID, userPoolID string) (*cognitoidentityprovider.UserPoolClientType, error) {
-	result, err := svc.DescribeUserPoolClient(&cognitoidentityprovider.DescribeUserPoolClientInput{
+func (conf *Config) describeUserPoolClient(ctx context.Context, svc *cognitoidentityprovider.CognitoIdentityProvider, clientID, userPoolID string) (*cognitoidentityprovider.UserPoolClientType, error) {
+	result, err := svc.DescribeUserPoolClientWithContext(ctx, &cognitoidentityprovider.DescribeUserPoolClientInput{
 		ClientId:   aws.String(clientID),
 		UserPoolId: aws.String(userPoolID),
 	})
@@ -319,7 +316,7 @@ func (conf *Config) describeUserPoolClient(svc *cognitoidentityprovider.CognitoI
 // for integration between OAuth2 Proxy and the AWS Cognito User Pool. The
 // client application is amed like "bbkpr-${dnsZone}" and will be enabled to
 // be used for OpenID Connect.
-func (conf *Config) getUserPoolClient(svc *cognitoidentityprovider.CognitoIdentityProvider, userPoolID string) (*cognitoidentityprovider.UserPoolClientType, error) {
+func (conf *Config) getUserPoolClient(ctx context.Context, svc *cognitoidentityprovider.CognitoIdentityProvider, userPoolID string) (*cognitoidentityprovider.UserPoolClientType, error) {
 	input := &cognitoidentityprovider.ListUserPoolClientsInput{
 		MaxResults: aws.Int64(60),
 		UserPoolId: aws.String(userPoolID),
@@ -329,13 +326,13 @@ func (conf *Config) getUserPoolClient(svc *cognitoidentityprovider.CognitoIdenti
 	// in the user pool...
 	clientName := fmt.Sprintf("bkpr-%s", conf.DNSZone)
 	for {
-		result, err := svc.ListUserPoolClients(input)
+		result, err := svc.ListUserPoolClientsWithContext(ctx, input)
 		if err != nil {
 			return nil, fmt.Errorf("Error retrieving client applications for user pool ID %s: %v", userPoolID, err)
 		}
 		for _, element := range result.UserPoolClients {
 			if *element.ClientName == clientName {
-				userPoolClient, err := conf.describeUserPoolClient(svc, *element.ClientId, userPoolID)
+				userPoolClient, err := conf.describeUserPoolClient(ctx, svc, *element.ClientId, userPoolID)
 				if err != nil {
 					return nil, err
 				}
@@ -351,7 +348,7 @@ func (conf *Config) getUserPoolClient(svc *cognitoidentityprovider.CognitoIdenti
 
 	// No client application named like "bkpr-${dnsZone)" was found, so try to
 	// create a new one
-	result, err := svc.CreateUserPoolClient(&cognitoidentityprovider.CreateUserPoolClientInput{
+	result, err := svc.CreateUserPoolClientWithContext(ctx, &cognitoidentityprovider.CreateUserPoolClientInput{
 		ClientName:                      aws.String(clientName),
 		AllowedOAuthFlowsUserPoolClient: aws.Bool(true),
 		GenerateSecret:                  aws.Bool(true),
@@ -379,14 +376,14 @@ func (conf *Config) getUserPoolClient(svc *cognitoidentityprovider.CognitoIdenti
 }
 
 // Returns whether the AWS region is a valid region for the Cognito IDP service
-func (conf *Config) isValidRegion() bool {
+func (conf *Config) isValidRegion(region string) bool {
 	rs := endpoints.AwsPartition().Services()[endpoints.CognitoIdpServiceID].Regions()
-	_, ok := rs[conf.OauthProxy.AWSRegion]
+	_, ok := rs[region]
 	return ok
 }
 
 // Configuration for integration between OAuth2 Proxy and AWS Cognito.
-func (conf *Config) setUpOAuth2Proxy() error {
+func (conf *Config) setUpOAuth2Proxy(ctx context.Context) error {
 	if conf.OauthProxy.ClientID == "" || conf.OauthProxy.ClientSecret == "" {
 		log.Info("Setting up configuration for OAuth2 Proxy")
 
@@ -394,13 +391,13 @@ func (conf *Config) setUpOAuth2Proxy() error {
 
 		// Configure the AWS region
 		conf.OauthProxy.AWSRegion = *session.Config.Region
-		if !conf.isValidRegion() {
+		if !conf.isValidRegion(conf.OauthProxy.AWSRegion) {
 			return fmt.Errorf("AWS region %s is not a valid region for the Cognito IDP service", conf.OauthProxy.AWSRegion)
 		}
 
 		// Configure client ID and client secret required for OAuth2 proxy integration with Cognito
 		svc := cognitoidentityprovider.New(session)
-		userPoolClient, err := conf.getUserPoolClient(svc, conf.OauthProxy.AWSUserPoolID)
+		userPoolClient, err := conf.getUserPoolClient(ctx, svc, conf.OauthProxy.AWSUserPoolID)
 		if err != nil {
 			return err
 		}
@@ -446,7 +443,7 @@ func (conf *Config) Generate(ctx context.Context) error {
 		//
 		// External DNS setup
 		//
-		err := conf.setUpExternalDNS()
+		err := conf.setUpExternalDNS(ctx)
 		if err != nil {
 			return err
 		}
@@ -464,7 +461,7 @@ func (conf *Config) Generate(ctx context.Context) error {
 	// oauth2-proxy setup
 	//
 	if conf.OauthProxy.AWSUserPoolID != "" {
-		err := conf.setUpOAuth2Proxy()
+		err := conf.setUpOAuth2Proxy(ctx)
 		if err != nil {
 			return err
 		}
