@@ -36,7 +36,7 @@ Other features implemented by BKPR are not in the service path, like Elasticsear
 A: Yes. `kubeprod` supports several Kubernetes platforms, like AKS and GKE. The first time `kubeprod` is run to install BKPR on any of these platforms, a JSON configuration file is generated which contains these platform-specific parameters, like the DNS domain/suffix used for automatic DNS management of Ingress resources, identifiers and secrets. This JSON configuration file is stored locally, in the current working directory as a file named `kubeprod-autogen.json`, and is required for subsequent runs of `kubeprod`.
 
 #### Q: How do I upgrade BKPR?
-A: Please refer to the BKPR upgrades and support document.
+A: Please refer to the [BKPR upgrade section, in the workflow document](workflow.md#upgrading).
 
 #### Q: What is the expected SLA for critical updates, like security issues, etc.?
 A: Please refer to the BKPR upgrades and support document.
