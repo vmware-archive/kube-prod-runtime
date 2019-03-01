@@ -20,6 +20,7 @@
 // Top-level file for Azure AKS
 
 local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
@@ -51,7 +52,7 @@ local grafana = import "../components/grafana.jsonnet";
   },
 
   edns: edns {
-    azconf: kube.Secret(edns.p + "external-dns-azure-conf") {
+    azconf: utils.HashedSecret(edns.p + "external-dns-azure-conf") {
       metadata+: { namespace: "kubeprod" },
       data_+: {
         azure:: $.config.externalDns,

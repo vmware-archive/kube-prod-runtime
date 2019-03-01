@@ -93,4 +93,16 @@ local kube = import "kube.libsonnet";
       },
     },
   },
+
+  local hashed = {
+    local this = self,
+    metadata+: {
+      local hash = std.substr(std.md5(std.toString(this.data)), 0, 7),
+      local orig_name = super.name,
+      name: orig_name + "-" + hash,
+      labels+: {name: orig_name},
+    },
+  },
+  HashedConfigMap(name):: kube.ConfigMap(name) + hashed,
+  HashedSecret(name):: kube.Secret(name) + hashed,
 }

@@ -368,8 +368,10 @@ var _ = Describe("Ingress", func() {
 				client, err := httpClient(&map[string]string{})
 				Expect(err).NotTo(HaveOccurred())
 
-				secret, err := c.CoreV1().Secrets("kubeprod").Get("oauth2-proxy", metav1.GetOptions{})
+				secrets, err := c.CoreV1().Secrets("kubeprod").List(metav1.ListOptions{LabelSelector: "name=oauth2-proxy"})
 				Expect(err).NotTo(HaveOccurred())
+				Expect(secrets.Items).To(HaveLen(1))
+				secret := secrets.Items[0]
 
 				// Inject an auth cookie
 				now := time.Now()
