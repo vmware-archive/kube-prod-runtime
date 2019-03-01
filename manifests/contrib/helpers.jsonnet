@@ -1,5 +1,7 @@
 // Set of contributed helper functions
 // NOTE that these are not end-to-end tested by BKPR CI/CD
+//
+// See contrib/helpers_usage_test.jsonnet for example usage
 {
   trace:: false,
   // Identity function, will run thru std.trace if $.trace is set to true
@@ -24,18 +26,3 @@
     $._T('mergeAtPath()', std.mergePatch(obj, $.setAtPath(path, value)))
   ),
 }
-
-// Example usage
-/*
-local helpers = (import 'contrib/helpers.jsonnet');
-
-// Create a (configured) kubeprod stock object
-local kubeprod = (import "manifests/platforms/gke.jsonnet") {
-    config: (import "kubeprod-autogen.jsonnet"),
-};
-
-kubeprod
-+ helpers.setAtPath("prometheus.prometheus.deploy.metadata.annotations", [{ foo: "bar" }])
-+ helpers.setAtPath("prometheus.prometheus.deploy.spec.template.spec.containers_.default.resources.requests.memory", "4200Mi")
-
-*/
