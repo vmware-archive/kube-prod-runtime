@@ -1,4 +1,4 @@
-# BPR K8s Resource Policy
+# BKPR K8s Resource Policy
 
 Version: 0.1
 

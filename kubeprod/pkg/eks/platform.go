@@ -389,10 +389,12 @@ func (conf *Config) setUpOAuth2Proxy(ctx context.Context) error {
 
 		session := conf.getAwsSession()
 
-		// Configure the AWS region
-		conf.OauthProxy.AWSRegion = *session.Config.Region
-		if !conf.isValidRegion(conf.OauthProxy.AWSRegion) {
-			return fmt.Errorf("AWS region %s is not a valid region for the Cognito IDP service", conf.OauthProxy.AWSRegion)
+		if conf.OauthProxy.AWSRegion == "" {
+			// Configure the AWS region
+			conf.OauthProxy.AWSRegion = *session.Config.Region
+			if !conf.isValidRegion(conf.OauthProxy.AWSRegion) {
+				return fmt.Errorf("AWS region '%s' is not a valid region for the Cognito IDP service", conf.OauthProxy.AWSRegion)
+			}
 		}
 
 		// Configure client ID and client secret required for OAuth2 proxy integration with Cognito
