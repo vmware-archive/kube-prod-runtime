@@ -45,6 +45,24 @@ local kube = import "kube.libsonnet";
     std.join(".", tail)
   ),
 
+  // affinity=weakNodeDiversity to Try to spread across separate
+  // nodes/zones (for fault-tolerance)
+  weakNodeDiversity(selector):: {
+    podAntiAffinity+: {
+      preferredDuringSchedulingIgnoredDuringExecution+: [{
+        weight: 70,
+        podAffinityTerm: {
+          labelSelector: selector,
+          topologyKey: k,
+        },
+      } for k in [
+        "kubernetes.io/hostname",
+        "failure-domain.beta.kubernetes.io/zone",
+        "failure-domain.beta.kubernetes.io/region",
+      ]],
+    },
+  },
+
   TlsIngress(name):: kube.Ingress(name) {
     local this = self,
     metadata+: {
