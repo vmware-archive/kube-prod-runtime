@@ -91,7 +91,30 @@ local grafana = import "../components/grafana.jsonnet";
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
-  nginx_ingress: nginx_ingress,
+  nginx_ingress: nginx_ingress {
+    config+: {
+      data+: {
+        // Allow anything that can actually reach the nginx port to make
+        // PROXY requests, and so arbitrarily specify the user ip.  (ie:
+        // leave perimeter security up to k8s).
+        // (Otherwise, this needs to be set to the ELB inside subnet)
+        "proxy-real-ip-cidr": "0.0.0.0/0",
+        "use-proxy-protocol": "true",
+      },
+    },
+
+    svc+: {
+      local this = self,
+      metadata+: {
+        annotations+: {
+          "service.beta.kubernetes.io/aws-load-balancer-connection-draining-enabled": "true",
+          "service.beta.kubernetes.io/aws-load-balancer-connection-draining-timeout": std.toString(this.target_pod.spec.terminationGracePeriodSeconds),
+          // Use PROXY protocol (nginx supports this too)
+          "service.beta.kubernetes.io/aws-load-balancer-proxy-protocol": "*",
+        },
+      },
+    },
+  },
 
   oauth2_proxy: oauth2_proxy {
     secret+: {
