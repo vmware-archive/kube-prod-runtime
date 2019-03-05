@@ -29,7 +29,7 @@ local formatKube(k, obj) = (
 // Build main tree: jsonnet key -> formatted Kubernetes object
 local show_tree(obj) = (
   local tree(key, x) = (
-    if std.objectHas(x, 'metadata') then
+    if std.objectHas(x, 'apiVersion') && std.objectHas(x, 'kind') then
       formatKube(key, x)
     else
       [tree(key + '.' + k, x[k]) for k in std.objectFields(x)]
