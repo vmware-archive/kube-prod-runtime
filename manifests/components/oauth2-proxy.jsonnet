@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
 local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
 
@@ -44,13 +45,26 @@ local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
 
   hpa: kube.HorizontalPodAutoscaler($.p + "oauth2-proxy") + $.metadata {
     target: $.deploy,
-    spec+: {maxReplicas: 10},
+    spec+: {
+      // Put a cap on growth due to (eg) DoS attacks.
+      // Large sites will want to increase this to cover legitimate demand.
+      maxReplicas: 10,
+    },
+  },
+
+  pdb: kube.PodDisruptionBudget($.p + "oauth2-proxy") + $.metadata {
+    target_pod: $.deploy.spec.template,
+    spec+: {minAvailable: $.deploy.spec.replicas - 1},
   },
 
   deploy: kube.Deployment($.p + "oauth2-proxy") + $.metadata {
+    local this = self,
     spec+: {
+      // Ensure at least n+1.  NB: HPA will increase replicas dynamically.
+      replicas: 2,
       template+: {
         spec+: {
+          affinity+: utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
             proxy: kube.Container("oauth2-proxy") {
               image: OAUTH2_PROXY_IMAGE,

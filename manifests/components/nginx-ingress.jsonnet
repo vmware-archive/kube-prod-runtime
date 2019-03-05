@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
 local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
 
@@ -141,11 +142,23 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
 
   hpa: kube.HorizontalPodAutoscaler($.p + "nginx-ingress-controller") + $.metadata {
     target: $.controller,
-    spec+: {maxReplicas: 10},
+    spec+: {
+      // Put a cap on growth due to (eg) DoS attacks.
+      // Large sites will want to increase this to cover legitimate demand.
+      maxReplicas: 10,
+    },
+  },
+
+  pdb: kube.PodDisruptionBudget($.p + "nginx-ingress-controller") + $.metadata {
+    target_pod: $.controller.spec.template,
+    spec+: {minAvailable: $.controller.spec.replicas - 1},
   },
 
   controller: kube.Deployment($.p + "nginx-ingress-controller") + $.metadata {
+    local this = self,
     spec+: {
+      // Ensure at least n+1.  NB: HPA will increase replicas dynamically.
+      replicas: 2,
       template+: {
         metadata+: {
           annotations+: {
@@ -158,6 +171,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
           serviceAccountName: $.serviceAccount.metadata.name,
           //hostNetwork: true, // access real source IPs, IPv6, etc
           terminationGracePeriodSeconds: 60,
+          affinity+: utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
             default: kube.Container("nginx") {
               image: NGNIX_INGRESS_IMAGE,
