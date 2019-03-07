@@ -121,6 +121,10 @@ local grafana = import "../components/grafana.jsonnet";
       data_+: $.config.oauthProxy,
     },
 
+    ingress+: {
+      host: "auth." + $.external_dns_zone_name,
+    },
+
     deploy+: {
       spec+: {
         template+: {

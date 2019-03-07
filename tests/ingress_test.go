@@ -23,14 +23,19 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net"
 	"net/http"
+	"net/http/cookiejar"
+	"net/url"
 	"regexp"
 	"time"
 
+	"github.com/pusher/oauth2_proxy/cookie"
 	appsv1beta1 "k8s.io/api/apps/v1beta1"
 	"k8s.io/api/core/v1"
 	xv1beta1 "k8s.io/api/extensions/v1beta1"
@@ -63,6 +68,11 @@ func httpClient(hosts *map[string]string) (*http.Client, error) {
 		return nil, fmt.Errorf("No certs appended")
 	}
 
+	jar, err := cookiejar.New(&cookiejar.Options{})
+	if err != nil {
+		return nil, err
+	}
+
 	dialer := &net.Dialer{
 		Timeout:   30 * time.Second,
 		KeepAlive: 30 * time.Second,
@@ -88,7 +98,11 @@ func httpClient(hosts *map[string]string) (*http.Client, error) {
 		DialContext:     dialContext,
 		TLSClientConfig: config,
 	}
-	return &http.Client{Transport: transport}, nil
+	return &http.Client{
+		Transport:     transport,
+		Jar:           jar,
+		CheckRedirect: PrintRedirects(GinkgoWriter, DefaultCheckRedirect),
+	}, nil
 }
 
 func statusCode(resp *http.Response) int {
@@ -300,5 +314,198 @@ var _ = Describe("Ingress", func() {
 			// Will probably need to revisit for minikube :(
 			Expect(string(realIP)).NotTo(WithTransform(isPrivateIP, BeTrue()))
 		})
+
+		Context("with OAuth2", func() {
+			BeforeEach(func() {
+				pfx := fmt.Sprintf("https://auth.%s/oauth2", *dnsSuffix)
+				metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "nginx.ingress.kubernetes.io/auth-signin", pfx+"/start?rd=%2F$server_name$escaped_request_uri")
+				metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "nginx.ingress.kubernetes.io/auth-url", pfx+"/auth")
+				metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "nginx.ingress.kubernetes.io/auth-response-headers", "X-Auth-Request-User, X-Auth-Request-Email")
+			})
+
+			It("Should redirect to oauth2 server", func() {
+				testUrl := fmt.Sprintf("https://%s/some/path", ing.Spec.Rules[0].Host)
+				var resp *http.Response
+
+				client, err := httpClient(&map[string]string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				// NB: Google will return status 400, because our test cluster's redirect_uri has not been configured.
+				// See also https://issuetracker.google.com/issues/116182848
+				Eventually(func() (*http.Response, error) {
+					// NB: will follow redirects
+					resp, err = getURL(client, testUrl)
+					return resp, err
+				}, "20m", "5s").
+					Should(WithTransform(statusCode, Or(Equal(200), Equal(400))))
+
+				fmt.Fprintf(GinkgoWriter, "Response:\n%#v", resp)
+
+				// Verify it redirected to a plausibly-correct login URL.
+				// Expand as necessary
+				Expect(resp.Request.URL.Host).To(Or(
+					Equal("accounts.google.com"),
+					Equal("login.microsoftonline.com"),
+					Equal("cognito-idp.us-east-1.amazonaws.com"),
+				))
+			})
+
+			It("Authenticated requests should reach server", func() {
+				// Ideally we would test using real
+				// upstream credentials (offline auth
+				// token), but that needs test
+				// accounts, etc configured
+				// beforehand.  Instead, this test
+				// cheats and abuses access to the
+				// oauth2_proxy cookie secret to
+				// contrive a cookie that oauth2_proxy
+				// just assumes is valid.
+
+				testUrl := fmt.Sprintf("https://%s/some/path", ing.Spec.Rules[0].Host)
+
+				var resp *http.Response
+
+				client, err := httpClient(&map[string]string{})
+				Expect(err).NotTo(HaveOccurred())
+
+				secret, err := c.CoreV1().Secrets("kubeprod").Get("oauth2-proxy", metav1.GetOptions{})
+				Expect(err).NotTo(HaveOccurred())
+
+				// Inject an auth cookie
+				now := time.Now()
+				cookieSecret := string(secret.Data["cookie_secret"])
+				emailDom := string(secret.Data["authz_domain"])
+				if emailDom == "*" {
+					emailDom = "example.com"
+				}
+				email := "testuser@" + emailDom
+
+				session := SessionState{
+					AccessToken:  "fakeaccesstoken",
+					IDToken:      "fakeidtoken",
+					ExpiresOn:    now.Add(12 * time.Hour),
+					RefreshToken: "fakerefreshtoken",
+					Email:        email,
+					User:         "testuser",
+				}
+				cookies, err := oauth2ProxyCookie(cookieSecret, session, now)
+				Expect(err).NotTo(HaveOccurred())
+				u, err := url.Parse(testUrl)
+				Expect(err).NotTo(HaveOccurred())
+				client.Jar.SetCookies(u, cookies)
+
+				Eventually(func() (*http.Response, error) {
+					// NB: will follow redirects
+					resp, err = getURL(client, testUrl)
+					return resp, err
+				}, "20m", "5s").
+					Should(WithTransform(statusCode, Equal(200)))
+
+				fmt.Fprintf(GinkgoWriter, "Response:\n%#v", resp)
+
+				defer resp.Body.Close()
+				body, err := ioutil.ReadAll(resp.Body)
+				Expect(err).NotTo(HaveOccurred())
+
+				b := string(body)
+				fmt.Fprintf(GinkgoWriter, "Body:\n%s", b)
+
+				Expect(b).To(ContainSubstring("real path=/some/path"))
+				Expect(b).To(ContainSubstring("x-auth-request-user=testuser"))
+				Expect(b).To(ContainSubstring("x-auth-request-email=" + email))
+				Expect(b).NotTo(ContainSubstring("authentication"))
+			})
+		})
 	})
 })
+
+// See github.com/pusher/oauth2_proxy/providers/session_state.go
+type SessionState struct {
+	AccessToken  string
+	IDToken      string
+	ExpiresOn    time.Time
+	RefreshToken string
+	Email        string
+	User         string
+}
+
+func (s *SessionState) accountInfo() string {
+	return fmt.Sprintf("email:%s user:%s", s.Email, s.User)
+}
+
+func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
+	var err error
+	a := s.AccessToken
+	if a != "" {
+		if a, err = c.Encrypt(a); err != nil {
+			return "", err
+		}
+	}
+	i := s.IDToken
+	if i != "" {
+		if i, err = c.Encrypt(i); err != nil {
+			return "", err
+		}
+	}
+	r := s.RefreshToken
+	if r != "" {
+		if r, err = c.Encrypt(r); err != nil {
+			return "", err
+		}
+	}
+	return fmt.Sprintf("%s|%s|%s|%d|%s", s.accountInfo(), a, i, s.ExpiresOn.Unix(), r), nil
+}
+
+func oauth2ProxyCookie(cookieSecret string, session SessionState, now time.Time) ([]*http.Cookie, error) {
+	const cookieName = "_oauth2_proxy"
+
+	cipher, err := cookie.NewCipher([]byte(cookieSecret))
+	if err != nil {
+		return nil, err
+	}
+
+	s, err := session.EncryptedString(cipher)
+	if err != nil {
+		return nil, err
+	}
+
+	value := cookie.SignedValue(cookieSecret, cookieName, s, now)
+	// Cookie value+name must be <4kiB
+	Expect(len(value)).To(BeNumerically("<", 4096-len(cookieName)))
+
+	return []*http.Cookie{
+		{
+			Name:     cookieName, // --cookie-name
+			Secure:   true,       // --cookie-secure
+			Domain:   *dnsSuffix, // --cookie-domain
+			HttpOnly: true,       // --cookie-httponly
+			Path:     "/",
+			Expires:  now.Add(1 * time.Hour),
+			Value:    value,
+		},
+	}, nil
+}
+
+// net/http CheckRedirect type alias.  Just to make the below
+// prototype more readable ...
+type redirectPolicy = func(req *http.Request, via []*http.Request) error
+
+// PrintRedirects wraps a redirect policy callback in print statements
+func PrintRedirects(w io.Writer, f redirectPolicy) redirectPolicy {
+	return func(req *http.Request, via []*http.Request) error {
+		fmt.Fprintf(w, "Redirect: -> %s\n", req.URL)
+		err := f(req, via)
+		if err != nil {
+			fmt.Fprintf(w, "Redirect: (%v)\n", err)
+		}
+		return err
+	}
+}
+
+// DefaultCheckRedirect is a duplicate of (private) http.defaultCheckRedirect
+func DefaultCheckRedirect(req *http.Request, via []*http.Request) error {
+	if len(via) >= 10 {
+		return errors.New("stopped after 10 redirects")
+	}
+	return nil
+}

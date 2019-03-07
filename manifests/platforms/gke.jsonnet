@@ -99,6 +99,10 @@ local grafana = import "../components/grafana.jsonnet";
       data_+: $.config.oauthProxy,
     },
 
+    ingress+: {
+      host: "auth." + $.external_dns_zone_name,
+    },
+
     gcreds: kube.Secret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
       data_+: {
         "credentials.json": $.config.oauthProxy.google_service_account_json,

@@ -360,9 +360,7 @@ func (conf *Config) getUserPoolClient(ctx context.Context, svc *cognitoidentityp
 			aws.String("profile"),
 		},
 		CallbackURLs: []*string{
-			aws.String(fmt.Sprintf("https://grafana.%s/oauth2/callback", conf.DNSZone)),
-			aws.String(fmt.Sprintf("https://kibana.%s/oauth2/callback", conf.DNSZone)),
-			aws.String(fmt.Sprintf("https://prometheus.%s/oauth2/callback", conf.DNSZone)),
+			aws.String(fmt.Sprintf("https://auth.%s/oauth2/callback", conf.DNSZone)),
 		},
 		SupportedIdentityProviders: []*string{
 			aws.String("COGNITO"),

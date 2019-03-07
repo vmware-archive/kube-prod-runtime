@@ -84,6 +84,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
       + https://prometheus.${BKPR_DNS_ZONE}/oauth2/callback
       + https://kibana.${BKPR_DNS_ZONE}/oauth2/callback
       + https://grafana.${BKPR_DNS_ZONE}/oauth2/callback
+      + https://auth.${BKPR_DNS_ZONE}/oauth2/callback
 
   > Replace `${BKPR_DNS_ZONE}` with the value of the `BKPR_DNS_ZONE` environment variable*
 
