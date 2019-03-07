@@ -44,11 +44,102 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
   },
 
   certCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Certificate") {
-    spec+: { names+: { shortNames+: ["cert", "certs"] } },
-
+    spec+: {
+      additionalPrinterColumns+: [
+        {
+          JSONPath: ".status.conditions[?(@.type==\"Ready\")].status",
+          name: "Ready",
+          type: "string",
+        },
+        {
+          JSONPath: ".spec.secretName",
+          name: "Secret",
+          type: "string",
+        },
+        {
+          JSONPath: ".spec.issuerRef.name",
+          name: "Issuer",
+          priority: 1,
+          type: "string",
+        },
+        {
+          JSONPath: ".status.conditions[?(@.type==\"Ready\")].message",
+          name: "Status",
+          priority: 1,
+          type: "string",
+        },
+        {
+          description: "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.",
+          JSONPath: ".metadata.creationTimestamp",
+          name: "Age",
+          type: "date",
+        },
+      ],
+      names+: {
+        shortNames+: ["cert", "certs"],
+      },
+    },
   },
 
   issuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Issuer"),
+
+  orderCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Order") {
+    spec+: {
+      additionalPrinterColumns+: [
+        {
+          JSONPath: ".status.state",
+          name: "State",
+          type: "string",
+        },
+        {
+          JSONPath: ".spec.issuerRef.name",
+          name: "Issuer",
+          priority: 1,
+          type: "string",
+        },
+        {
+          JSONPath: ".status.reason",
+          name: "Reason",
+          priority: 1,
+          type: "string",
+        },
+        {
+          description: "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.",
+          JSONPath: ".metadata.creationTimestamp",
+          name: "Age",
+          type: "date",
+        },
+      ],
+    },
+  },
+
+  challengeCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Challenge") {
+    spec+: {
+      additionalPrinterColumns+: [
+        {
+          JSONPath: ".status.state",
+          name: "State",
+          type: "string",
+        },
+        {
+          JSONPath: ".spec.dnsName",
+          name: "Domain",
+          type: "string",
+        },
+        {
+          JSONPath: ".status.reason",
+          name: "Reason",
+          type: "string",
+        },
+        {
+          description: "CreationTimestamp is a timestamp representing the server time when this object was created. It is not guaranteed to be set in happens-before order across separate operations. Clients may not set this value. It is represented in RFC3339 form and is in UTC.",
+          JSONPath: ".metadata.creationTimestamp",
+          name: "Age",
+          type: "date",
+        },
+      ],
+    }
+  },
 
   clusterissuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "ClusterIssuer") {
     spec+: {
@@ -63,7 +154,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
     rules: [
       {
         apiGroups: ["certmanager.k8s.io"],
-        resources: ["certificates", "issuers", "clusterissuers"],
+        resources: ["certificates", "certificates/finalizers", "issuers", "clusterissuers", "orders", "orders/finalizers", "challenges"],
         // FIXME: audit - the helm chart just has "*"
         verbs: ["get", "list", "watch", "create", "patch", "update", "delete"],
       },
