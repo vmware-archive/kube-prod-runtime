@@ -66,11 +66,7 @@ local strip_trailing_slash(s) = (
               },
               env_+: {
                 KIBANA_ELASTICSEARCH_URL: $.es.svc.host,
-
-                local route = $.ingress.spec.rules[0].http.paths[0],
-                // Make sure we got the correct route
-                assert route.backend == $.svc.name_port,
-                SERVER_BASEPATH: strip_trailing_slash(route.path),
+                SERVER_BASEPATH: strip_trailing_slash($.ingress.kibanaPath),
                 KIBANA_HOST: "0.0.0.0",
                 XPACK_MONITORING_ENABLED: "false",
                 XPACK_SECURITY_ENABLED: "false",
@@ -92,13 +88,14 @@ local strip_trailing_slash(s) = (
   ingress: utils.AuthIngress($.p + "kibana-logging") + $.metadata {
     local this = self,
     host:: error "host is required",
+    kibanaPath:: "/",
     spec+: {
       rules+: [
         {
           host: this.host,
           http: {
             paths: [
-              { path: "/", backend: $.svc.name_port },
+              { path: this.kibanaPath, backend: $.svc.name_port },
             ],
           },
         },
