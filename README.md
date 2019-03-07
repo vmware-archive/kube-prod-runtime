@@ -8,7 +8,7 @@ Think of Bitnami Kubernetes Production Runtime as a curated collection of the se
 
 ![BKPR](images/BKPR.png)
 
-BKPR is available for [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine) and [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-in/services/kubernetes-service/) clusters.
+BKPR is available for [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine), [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-in/services/kubernetes-service/) and [Amazon Elastic Container Service for Kubernetes (Amazon EKS)](https://aws.amazon.com/eks/) clusters.
 
 ## License
 
@@ -22,11 +22,12 @@ BKPR has been tested to work on a bare-minimum Kubernetes cluster with three kub
 
 The following matrix shows which Kubernetes versions and platforms are supported:
 
-| BKPR release | Kubernetes versions | AKS | GKE |
-|:------------:|:-------------------:|:---:|:---:|
-|     `0.3`    |   `1.8`-`1.9`       | Yes | No  |
-|     `1.0`    |   `1.9`-`1.10`      | Yes | Yes |
-|     `1.1`    |   `1.10`-`1.11`     | Yes | Yes |
+| BKPR release | AKS versions  | GKE versions | EKS versions |
+|:------------:|:-------------:|:------------:|:-------------:
+|     `0.3`    | `1.8`-`1.9`   |      N/A     |      N/A     |
+|     `1.1`    | `1.9`-`1.10`  | `1.9`-`1.10` |      N/A     |
+|     `1.1`    | `1.10`-`1.11` | `1.11`       |      N/A     |
+|     `1.2`    | `1.10`-`1.11` | `1.11`       | `1.10`-`1.11`|
 
 ## Quickstart
 

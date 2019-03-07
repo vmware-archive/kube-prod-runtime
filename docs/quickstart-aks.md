@@ -13,7 +13,7 @@
 
 ## Introduction
 
-This document walks you through setting up an Azure Kubernetes Service (AKS) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) on the cluster.
+This document walks you through setting up an Azure Kubernetes Service (AKS) cluster and installing the Bitnami Kubernetes Production Runtime (BKPR) on it.
 
 ## Prerequisites
 
