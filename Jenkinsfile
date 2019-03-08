@@ -122,7 +122,9 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                             }
                             throw error
                         } finally {
-                            junit 'junit/*.xml'
+                            if(pauseForDebugging) {
+                                junit 'junit/*.xml'
+                            }
                         }
                     }
                 }
@@ -478,7 +480,7 @@ spec:
                         dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
                             withGo() {
                                 withCredentials([
-                                    usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: 'GITHUB_USER'),
+                                    usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: ''),
                                     [$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'jenkins-bkpr-releases', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']
                                 ]) {
                                     withEnv([
@@ -486,6 +488,7 @@ spec:
                                         "PATH+JQ=${tool 'jq'}",
                                         "PATH+GITHUB_RELEASE=${tool 'github-release'}",
                                         "PATH+AWLESS=${tool 'awless'}",
+                                        "GITHUB_USER=bitnami",
                                     ]) {
                                         sh "make dist VERSION=${TAG_NAME}"
                                         sh "make publish VERSION=${TAG_NAME}"
