@@ -4,7 +4,7 @@
 A: The Bitnami Kubernetes Production Runtime ([BKPR](https://kubeprod.io)) is a collection of services that make it easy to run production workloads in Kubernetes. The services are ready-to-run, and pre-integrated with each other so they work out of the box. They are based on best-of-breed popular projects such as Prometheus and Kibana, and cover logging, monitoring, DNS, certificate management and other common infrastructure needs.
 
 #### Q: What Kubernetes platforms does BKPR support?
-A: At the time of writing, BKPR supports [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/) and [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine/). Other Kubernetes platforms will be supported in future.
+A: At the time of writing, BKPR supports [Azure Kubernetes Service (AKS)](https://azure.microsoft.com/en-us/services/kubernetes-service/), [Google Kubernetes Engine (GKE)](https://cloud.google.com/kubernetes-engine/) and [Amazon Elastic Container Service for Kubernetes (EKS)](https://aws.amazon.com/eks/). Other Kubernetes platforms will be supported in future.
 
 #### Q: When will XYZ be supported?
 A: See the [roadmap document](roadmap.md). Generally work is prioritised based on perceived demand and effort, so open a GitHub issue or propose a PR directly if you want to influence this.
@@ -16,7 +16,7 @@ A: BKPR consists of a collection of Kubernetes manifests written in *jsonnet* pl
 A: Yes. BKPR only adds functionality to an existing Kubernetes cluster while keeping compatibility with other frameworks like Helm.
 
 #### Q: How does BKPR differ from me deploying the needed components via e.g. Helm, where I can choose which components and configurations to use?
-A: BKPR is an out-of-the-box, fully-tested, maintained, and integrated framework from Bitnami. All components, and their configurations, have been tested exhaustively to work on several Kubernetes platforms, such as Azure Kubernetes Service and Google Kubernetes Engine. Bitnami also follows these upstream components closely to deliver in-time security and bug fixes, freeing you from this burden.
+A: BKPR is an out-of-the-box, fully-tested, maintained, and integrated framework from Bitnami. All components, and their configurations, have been tested exhaustively to work on several Kubernetes platforms, such as Azure Kubernetes Service, Google Kubernetes Engine and Amazon Elastic Container Service for Kubernetes. Bitnami also follows these upstream components closely to deliver in-time security and bug fixes, freeing you from this burden.
 
 #### Q: What is the community behind BKPR?
 A: BKPR is an open-source project, which also means that all contributions are welcome, either via code, documentation or by filing issues.
