@@ -21,6 +21,7 @@ This document walks you through setting up an Amazon Elastic Container Service f
 * [Amazon CLI](https://aws.amazon.com/cli/)
 * [`eksctl`](https://aws.amazon.com/blogs/opensource/eksctl-eks-cluster-one-command/)
 * [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
+* [`aws-iam-authenticator`](https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html)
 * [BKPR installer](install.md)
 * [kubecfg](https://github.com/ksonnet/kubecfg/releases)
 * [jq](https://stedolan.github.io/jq/)
@@ -90,33 +91,25 @@ Else, If you are new to using BKPR on EKS, or if you want to create a new User P
 
 1. Browse to the [Cognito](https://console.aws.amazon.com/cognito/) module in the AWS Console
 2. Navigate to **Manage User Pools > Create a user pool**
-3. Enter a valid **Pool name**, like `eks-test`, then on the **Step through settings** button
-4. In the **Attributes** section leave all the checkboxes unticked as shown below and go to the **Next step**
+3. Enter a valid **Pool name**, like `eks-test`, then on the **Review defaults** button:
 
-<p align="center"><img src="eks/1-Attributes.png" width=840/></p>
+<p align="center"><img src="eks/1-new-user-pool.png" width=840/></p>
 
-5. In the **Policies** section leave all the checkboxes unticked and select **Only allow administrators to create users** as shown below and go to the **Next step**
+4. Go the the **Policies** section and select what password strength do you want to require. Also, select **Only allow administrators to create users**, as shown below, otherwise potentially anyone can create a new user and log in:
 
-<p align="center"><img src="eks/2-Policies.png" width=840/></p>
+<p align="center"><img src="eks/2-policies.png" width=840/></p>
 
-6. In the **MFA and verifications** section select **No verification** as shown below and go to the **Next step**
+5. Feel free to customize other sections, like **Tags**, to your liking. Then, go back to the **Review** section:
 
-<p align="center"><img src="eks/3-MFA.png" width=840/></p>
+<p align="center"><img src="eks/3-review.png" width=840/></p>
 
-7. In the **Message customizations** section do not change anything and click on the **Next step** button
-8. In the **Tags** section you can add additional tags for your EKS cluster, if needed, then go to the **Next step**
-9. In the **Devices** section do not change anything and click on the **Next step** button
-10. In the **App clients** section do not change anything and click on the **Next step** button
-11. In the **Triggers** section do not change anything and click on the **Next step** button
-12. In the **Review** section you will see a quick summary of the user pool that will be created, like the onw shown below, and click on the **Create pool** button to create the user pool
+6. Click on the **Create pool** button.
 
-<p align="center"><img src="eks/4-Review.png" width=840/></p>
+7. Go to **App integration -> Domain name** setting and configure Amazon Cognito domain, which has to be unique to all users in an AWS Region and click on the **Save changes** button:
 
-13. The user pool will be created and the **General settings** page will be displayed, where you can find the User Pool ID and ARN:
+<p align="center"><img src="eks/4-domain.png" width=840/></p>
 
-<p align="center"><img src="eks/5-User-Pool.png" width=840/></p>
-
-Take note of the **Pool Id** and export its value:
+8. Click on the **General settings** and take note of the **Pool Id** and export its value:
 
   ```bash
   export AWS_COGNITO_USER_POOL_ID=eu-central-1_sHSdWT6VL
@@ -130,7 +123,7 @@ In order to access protected resources which require authentication like Prometh
 1. Navigate to **Manage User Pools > YOUR_USER_POOL > Users and Groups > Create user**
 1. Fill in the input fields as shown below:
 
-<p align="center"><img src="eks/6-User.png" width="400"></p>
+<p align="center"><img src="eks/4-new-user.png" width="400"></p>
 
 Any time you are presented with an Amazon AWS authentication form, you can use this user to authenticate against protected resources in BKPR.
 
@@ -253,7 +246,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-3-deploy-bkp
 ### Step 5: Delete the EKS cluster
 
   ```bash
-  eksctl delete cluster --name ${AZURE_AKS_CLUSTER}
+  eksctl delete cluster --name ${AWS_EKS_CLUSTER}
   ```
 
 ## Further reading
