@@ -31,7 +31,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
     },
   },
 
-  secret: kube.Secret($.p + "oauth2-proxy") + $.metadata {
+  secret: utils.HashedSecret($.p + "oauth2-proxy") + $.metadata {
     data_+: {
       client_id: error "client_id is required",
       client_secret: error "client_secret is required",

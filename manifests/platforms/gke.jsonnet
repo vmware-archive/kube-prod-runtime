@@ -20,6 +20,7 @@
 // Top-level file for Google GKE
 
 local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
@@ -51,7 +52,7 @@ local grafana = import "../components/grafana.jsonnet";
   },
 
   edns: edns {
-    gcreds: kube.Secret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
+    gcreds: utils.HashedSecret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
       data_+: {
         "credentials.json": $.config.externalDns.credentials,
       },
@@ -103,7 +104,7 @@ local grafana = import "../components/grafana.jsonnet";
       host: "auth." + $.external_dns_zone_name,
     },
 
-    gcreds: kube.Secret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
+    gcreds: utils.HashedSecret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
       data_+: {
         "credentials.json": $.config.oauthProxy.google_service_account_json,
       },

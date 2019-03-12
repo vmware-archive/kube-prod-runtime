@@ -20,6 +20,7 @@
 // Top-level file for AWS EKS
 
 local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
@@ -56,7 +57,7 @@ local grafana = import "../components/grafana.jsonnet";
     // NOTE: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
     // for additional information on how to use environment variables to configure a particular user when accessing
     // the AWS API.
-    secret: kube.Secret(this.p + "external-dns-aws-conf") {
+    secret: utils.HashedSecret(this.p + "external-dns-aws-conf") {
       metadata+: {
         namespace: "kubeprod",
       },
