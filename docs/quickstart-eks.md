@@ -59,6 +59,28 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
                         --nodes=3 \
                         --version=${AWS_EKS_K8S_VERSION}
   ```
+  > **NOTE**: At the time of this writing, EKS clusters created with `eksctl` are affected by a [bug](https://github.com/awslabs/amazon-eks-ami/issues/193) that causes Elasticsearch to get into a crashloop. A temporary workaround consists of overriding the AMI used when creating the cluster. The AMI named `amazon-eks-node-1.10-v20190211` is known to work. You will need to find its ID that corresponds to the region and zone where you are creating the cluster. For instance:
+  >
+  > | Region         |          AMI ID         |
+  > |:--------------:|:-----------------------:|
+  > | `eu-central-1` | `ami-074583f8d5a05e27b` |
+  > |   `us-east-1`  | `ami-0c5b63ec54dd3fc38` |
+  >
+  > The AWS CLI command used to retrieve the AMI ID for the corresponding image is:
+  >
+  > ```console
+  > aws ec2 describe-images --owners 602401143452 --filters "Name=name,Values=amazon-eks-node-1.10-v20190211" --output json | jq -r '.Images[].ImageId'
+  > ```
+  >
+  > Then use the `--node-ami` command-line argument to `eksctl` to override the AMI ID. For example:
+  >
+  > ```bash
+  >  eksctl create cluster --name=${AWS_EKS_CLUSTER} \
+  >                        --color=fabulous \
+  >                        --nodes=3 \
+  >                        --version=${AWS_EKS_K8S_VERSION} \
+  >                        --node-ami ami-074583f8d5a05e27b
+  >  ```
 
   Provisioning an EKS cluster can take a long time. Please be patient while the request is being processed.
 
