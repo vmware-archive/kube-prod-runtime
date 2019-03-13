@@ -1,15 +1,14 @@
 # Quickstart: BKPR on Amazon Elastic Container Service for Kubernetes (Amazon EKS)
 
-## TOC
+## Table of contents
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Installation and setup](#installation-and-setup)
 - [Next steps](#next-steps)
-  + [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
-- [Upgrading](#upgrading)
+- [Upgrading BKPR](#upgrading-bkpr)
 - [Teardown and cleanup](#teardown-and-cleanup)
-- [Further reading](#further-reading)
+- [Useful links](#useful-links)
 
 ## Introduction
 
@@ -168,7 +167,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
 - [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
 
-## Upgrading
+## Upgrading BKPR
 
 ### Step 1: Update the installer
 
