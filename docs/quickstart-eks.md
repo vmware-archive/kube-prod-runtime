@@ -1,15 +1,14 @@
 # Quickstart: BKPR on Amazon Elastic Container Service for Kubernetes (Amazon EKS)
 
-## TOC
+## Table of contents
 
 - [Introduction](#introduction)
 - [Prerequisites](#prerequisites)
 - [Installation and setup](#installation-and-setup)
 - [Next steps](#next-steps)
-  + [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
-- [Upgrading](#upgrading)
+- [Upgrading BKPR](#upgrading-bkpr)
 - [Teardown and cleanup](#teardown-and-cleanup)
-- [Further reading](#further-reading)
+- [Useful links](#useful-links)
 
 ## Introduction
 
@@ -28,7 +27,7 @@ This document walks you through setting up an Amazon Elastic Container Service f
 
 ### DNS requirements
 
-In addition to the requirements listed above, a domain name is also required for setting up Ingress endpoints to services running in the cluster. The specified domain name can be a top-level domain (TLD) or a subdomain. In either case you have to manually [set up the NS records](#step-4-configure-domain-registration-records) for the specified TLD or subdomain so as to delegate DNS resolution queries to an Amazon Route 53 hosted zone created and managed by BKPR.  This is required in order to generate valid TLS certificates.
+In addition to the requirements listed above, a domain name is also required for setting up Ingress endpoints to services running in the cluster. The specified domain name can be a top-level domain (TLD) or a subdomain. In either case, you have to manually [set up the NS records](#step-4-configure-domain-registration-records) for the specified TLD or subdomain so as to delegate DNS resolution queries to an Amazon Route 53 hosted zone created and managed by BKPR.  This is required in order to generate valid TLS certificates.
 
 ## Installation and setup
 
@@ -36,9 +35,9 @@ In addition to the requirements listed above, a domain name is also required for
 
 In this section, you will deploy an Amazon Elastic Container Service for Kubernetes (Amazon EKS) cluster using the `eksctl` tool.
 
-* Make sure you have a working Amazon CLI environment. Refer to [Configuring the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) for more information.
+* Make sure you have a working Amazon CLI environment. Refer to the [Configuring the AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-configure.html) page for more information.
 
-* Configure the following environment variables:
+* Configure the following environment variables, replacing the examples shown with valid information:
 
   ```bash
   export BKPR_DNS_ZONE=my-domain.com
@@ -49,8 +48,8 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
   - `AWS_EKS_USER` specifies the email address used in requests to Let's Encrypt.
-  - `AWS_EKS_CLUSTER` specifies the name of the AKS cluster.
-  - `AWS_EKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr) lists the base Kubernetes versions supported by BKPR.
+  - `AWS_EKS_CLUSTER` specifies the name of the EKS cluster.
+  - `AWS_EKS_K8S_VERSION` specifies the version of Kubernetes to use for the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr) lists the base Kubernetes versions supported by BKPR.
 
 * Create the EKS cluster:
 
@@ -61,7 +60,7 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
                         --version=${AWS_EKS_K8S_VERSION}
   ```
 
-  Provisioning an EKS cluster can take a long time to complete. Please be patient while the request is being processed.
+  Provisioning an EKS cluster can take a long time. Please be patient while the request is being processed.
 
 * Configure `kubectl` to use the new cluster:
 
@@ -79,37 +78,35 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
 
 In order to authenticate users for applications running atop EKS, BKPR requires a User Pool in AWS Cognito to be configured.
 
-If you already have a working User Pool in AWS Cognito that you would like to use for authenticating users, you will need to retrieve its ID in the form `${AWS_REGION}-${USER_POOL_ID}`, and export it:
+If you already have a working User Pool in AWS Cognito that you would like to use for authenticating users, you will need to retrieve its ID in the form `${AWS_REGION}-${USER_POOL_ID}`, and export it as shown below, then skip to the [Create user](#create-a-user) section.
+
 
   ```bash
   export AWS_COGNITO_USER_POOL_ID=eu-central-1_sHSdWT6VL
   ```
 
-And skip to the [Create user](#create-a-user) section below.
+If you are new to using BKPR on EKS, or if you want to create a new User Pool in AWS Cognito, follow these steps:
 
-Else, If you are new to using BKPR on EKS, or if you want to create a new User Pool in AWS Cognito, please follow these steps:
-
-1. Browse to the [Cognito](https://console.aws.amazon.com/cognito/) module in the AWS Console
-2. Navigate to **Manage User Pools > Create a user pool**
-3. Enter a valid **Pool name**, like `eks-test`, then on the **Review defaults** button:
+1. Browse to the [Cognito](https://console.aws.amazon.com/cognito/) module in the AWS Console.
+2. Navigate to **Manage User Pools > Create a user pool** page.
+3. Enter a valid **Pool name**, like `eks-test`, then click on the **Review defaults** button:
 
 <p align="center"><img src="eks/1-new-user-pool.png" width=840/></p>
 
-4. Go the the **Policies** section and select what password strength do you want to require. Also, select **Only allow administrators to create users**, as shown below, otherwise potentially anyone can create a new user and log in:
+4. Go to the **Policies** section and select a password strength. Be sure to also select the **Only allow administrators to create users** option as shown below, otherwise anyone could potentially create a new user and log in:
 
 <p align="center"><img src="eks/2-policies.png" width=840/></p>
 
-5. Feel free to customize other sections, like **Tags**, to your liking. Then, go back to the **Review** section:
+5. Feel free to customize other sections, like **Tags**, to your liking. Once done, go back to the **Review** section:
 
 <p align="center"><img src="eks/3-review.png" width=840/></p>
 
-6. Click on the **Create pool** button.
-
-7. Go to **App integration -> Domain name** setting and configure Amazon Cognito domain, which has to be unique to all users in an AWS Region and click on the **Save changes** button:
+6. Click the **Create pool** button.
+7. Go to **App integration -> Domain name** setting and configure the Amazon Cognito domain, which has to be unique to all users in an AWS Region. Once done, click the **Save changes** button:
 
 <p align="center"><img src="eks/4-domain.png" width=840/></p>
 
-8. Click on the **General settings** and take note of the **Pool Id** and export its value:
+8. Select the **General settings** option, note the **Pool Id** and export its value:
 
   ```bash
   export AWS_COGNITO_USER_POOL_ID=eu-central-1_sHSdWT6VL
@@ -117,19 +114,19 @@ Else, If you are new to using BKPR on EKS, or if you want to create a new User P
 
 #### Create a user
 
-In order to access protected resources which require authentication like Prometheus, Kibana or Grafana, you will need to configure users in the newly created user pool. The next steps highlight how to create a test user which can be used to access these protected resources:
+In order to access protected resources which require authentication, such as Prometheus, Kibana or Grafana, you will need to create users in the newly-created user pool. The next steps highlight how to create a test user which can be used to access these protected resources:
 
-1. Browse to the [Cognito](https://console.aws.amazon.com/cognito/) module in the AWS Console
-1. Navigate to **Manage User Pools > YOUR_USER_POOL > Users and Groups > Create user**
+1. Browse to the [Cognito](https://console.aws.amazon.com/cognito/) module in the AWS Console.
+1. Navigate to the **Manage User Pools > YOUR_USER_POOL > Users and Groups > Create user** page.
 1. Fill in the input fields as shown below:
 
 <p align="center"><img src="eks/4-new-user.png" width="400"></p>
 
-Any time you are presented with an Amazon AWS authentication form, you can use this user to authenticate against protected resources in BKPR.
+At any time, if you are presented with an Amazon AWS authentication form, you can use this user account to authenticate against protected resources in BKPR.
 
 ### Step 3: Deploy BKPR
 
-To bootstrap your Kubernetes cluster with BKPR:
+To bootstrap your Kubernetes cluster with BKPR, use the command below:
 
   ```bash
   kubeprod install eks \
@@ -138,7 +135,7 @@ To bootstrap your Kubernetes cluster with BKPR:
     --user-pool-id "${AWS_COGNITO_USER_POOL_ID}"
   ```
 
-Wait for all the pods in the cluster to enter `Running` state:
+Wait for all the pods in the cluster to enter the `Running` state:
 
   ```bash
   kubectl get pods -n kubeprod
@@ -158,7 +155,7 @@ Query the name servers of the zone with the following command and configure the 
   aws route53 get-hosted-zone --id ${BKPR_DNS_ZONE_ID} --query DelegationSet.NameServers
   ```
 
-Please note, it can take a while for the DNS changes to propagate.
+Please note that it can take a while for the DNS changes to propagate.
 
 ### Step 5: Access logging and monitoring dashboards
 
@@ -170,7 +167,7 @@ Congratulations! You can now deploy your applications on the Kubernetes cluster 
 
 - [Installing Kubeapps on BKPR](kubeapps-on-bkpr.md)
 
-## Upgrading
+## Upgrading BKPR
 
 ### Step 1: Update the installer
 
@@ -178,7 +175,7 @@ Follow the [installation guide](install.md) to update the BKPR installer binary 
 
 ### Step 2: Edit `kubeprod-manifest.jsonnet`
 
-Edit the `kubeprod-manifest.jsonnet` file that was generated by `kubeprod install` and update the version referred in the `import` statement. For example, the following snippet illustrates the changes required in the `kubeprod-manifest.jsonnet` file if you're upgrading to version `v1.3.0` from version `v1.2.0`.
+Edit the `kubeprod-manifest.jsonnet` file that was generated by `kubeprod install` and update the version referred to in the `import` statement. For example, the following snippet illustrates the changes required in the `kubeprod-manifest.jsonnet` file if you're upgrading to version `v1.3.0` from version `v1.2.0`.
 
 ```diff
  // Cluster-specific configuration
@@ -191,7 +188,7 @@ Edit the `kubeprod-manifest.jsonnet` file that was generated by `kubeprod instal
 
 ### Step 3: Perform the upgrade
 
-Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-3-deploy-bkpr) step, in the directory containing the existing `kubeprod-autogen.json` and updated `kubeprod-manifest.jsonnet` files.
+Re-run the `kubeprod install` command from the [Deploy BKPR](#step-3-deploy-bkpr) step in the directory containing the existing `kubeprod-autogen.json` and updated `kubeprod-manifest.jsonnet` files.
 
 ## Teardown and cleanup
 
@@ -249,7 +246,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-3-deploy-bkp
   eksctl delete cluster --name ${AWS_EKS_CLUSTER}
   ```
 
-## Further reading
+## Useful links
 
 - [BKPR FAQ](FAQ.md)
 - [Troubleshooting](troubleshooting.md)
