@@ -17,6 +17,8 @@
     + [ExternalDNS is not updating DNS zone records](#externaldns-is-not-updating-dns-zone-records)
     + [DNS glue records are not configured](#dns-glue-records-are-not-configured)
     + [DNS propagation has not completed](#dns-propagation-has-not-completed)
+- [Troubleshooting Elasticsearch](#troubleshooting-elasticsearch)
+    + [Elasticsearch crash loop under EKS](#elasticsearch-crash-loop-under-eks)
 
 ## Troubleshooting AKS cluster creation
 
@@ -448,4 +450,70 @@ Address:        192.168.0.1#53
 Non-authoritative answer:
 Name:   bitnami.com
 Address: 50.17.235.25
+```
+
+## Troubleshooting Elasticsearch
+
+### Elasticsearch crash loop under EKS
+
+When Elasticsearch enters into a never-ending crash loop under EKS, the logs can reveal the cause:
+
+```console
+$ kubectl --namespace=kubeprod logs elasticsearch-logging-0 elasticsearch-logging
+```
+
+__Troubleshooting__:
+
+If you see logged messages like this:
+
+```
+[1]: max file descriptors [8192] for elasticsearch process is too low, increase to at least [65536]
+```
+
+Then, you are affected by a [bug](https://github.com/awslabs/amazon-eks-ami/issues/193) that causes Elasticsearch 6.0 to get into a crash loop because of incorrect `ulimit` values. It affects EKS clusters which use the AMI image named `amazon-eks-node-1.10-v20190220`.
+
+In order to fix this, you will need to SSH into every node from the EKS nodegroup and remove the `ulimit` configuration of the Docker daemon:
+
+```console
+sudo sed -i '/"nofile": {/,/}/d' /etc/docker/daemon.json
+sudo systemctl restart docker
+```
+
+The above `sed` command turns:
+
+```json
+{
+  "bridge": "none",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "10"
+  },
+  "live-restore": true,
+  "max-concurrent-downloads": 10,
+  "default-ulimits": {
+    "nofile": {
+      "Name": "nofile",
+      "Soft": 2048,
+      "Hard": 8192
+    }
+  }
+}
+```
+
+to
+
+```json
+{
+  "bridge": "none",
+  "log-driver": "json-file",
+  "log-opts": {
+    "max-size": "10m",
+    "max-file": "10"
+  },
+  "live-restore": true,
+  "max-concurrent-downloads": 10,
+  "default-ulimits": {
+  }
+}
 ```
