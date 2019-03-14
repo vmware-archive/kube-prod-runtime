@@ -14,7 +14,7 @@ When `kubeprod` runs, it performs some platform-specific steps. For example, whe
 
 Kubernetes ingress objects will have a corresponding DNS entries created in the Azure DNS zone automatically. For example, given the following Kubernetes ingress objects:
 
-```bash
+```console
 $ kubectl -n kube-system get ingress
 NAME             HOSTS                                                         ADDRESS          PORTS     AGE
 kibana-logging   kibana.aks.azure.nami.run,kibana.aks.azure.nami.run           157.56.180.207   80, 443   3h

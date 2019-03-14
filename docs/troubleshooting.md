@@ -83,8 +83,8 @@ The BKPR installer creates a Google Cloud DNS zone for the domain specified in t
 
 You have installed BKPR to your Kubernetes cluster, but are unable to access any of the Ingress endpoints due to DNS resolution errors.
 
-```bash
-ping prometheus.my-domain.com
+```console
+$ ping prometheus.my-domain.com
 ping: prometheus.my-domain.com: Name or service not known
 ```
 
@@ -101,8 +101,8 @@ DNS address resolution could be a result of configuration issues. For a working 
 
 Use the following command to check the status of the `external-dns` deployment:
 
-```bash
-kubectl -n kubeprod get deployments external-dns
+```console
+$ kubectl -n kubeprod get deployments external-dns
 NAME           DESIRED   CURRENT   UP-TO-DATE   AVAILABLE   AGE
 external-dns   1         1         1            0           5m
 ```
@@ -113,8 +113,8 @@ __Troubleshooting__:
 
 A Pod goes through various [lifecycle phases](https://kubernetes.io/docs/concepts/workloads/pods/pod-lifecycle/) before it enters the `Running` phase. You can use the following command to watch the rollout status of the `external-dns` Deployment:
 
-```bash
-kubectl -n kubeprod rollout status deployments external-dns
+```console
+$ kubectl -n kubeprod rollout status deployments external-dns
 Waiting for deployment "external-dns" rollout to finish: 0 of 1 updated replicas are available...
 Waiting for deployment "external-dns" rollout to finish: 1 of 1 updated replicas are available...
 ```
@@ -125,8 +125,8 @@ If it takes an abnormally long time (>5m) for the `external-dns` Pods to enter t
 
 Check the status of the `external-dns` Pods with the command:
 
-```bash
-kubectl -n kubeprod get $(kubectl -n kubeprod get pods -l name=external-dns -o name)
+```console
+$ kubectl -n kubeprod get $(kubectl -n kubeprod get pods -l name=external-dns -o name)
 NAME                            READY   STATUS              RESTARTS   AGE
 external-dns-7bfbf596dd-55ngz   0/1     CrashLoopBackOff    3          10m
 ```
@@ -241,7 +241,7 @@ __Accessing `cert-manager` logs__:
 
 The first step for troubleshooting self-signed certificates consists of checking the logs in `cert-manager`. `cert-manager` logs can be queried directly from Kibana. Or if you are unable to access Kibana, the most recent logs from `cert-manager` can be retrieved directly from the running pod by performing the following steps:
 
-```
+```console
 $ kubectl --namespace=kubeprod get pods --selector=name=cert-manager
 NAME                            READY   STATUS    RESTARTS   AGE
 cert-manager-75668b9d76-t5659   1/1     Running   0          10m
@@ -249,7 +249,7 @@ cert-manager-75668b9d76-t5659   1/1     Running   0          10m
 
 The following command retrieves the most recent set of logs from the `cert-manager` pod named as shown above:
 
-```
+```console
 $ kubectl --namespace=kubeprod logs cert-manager-75668b9d76-t5659
 ```
 
@@ -259,15 +259,15 @@ __Troubleshooting__:
 
 A Kubernetes Ingress resource is designated as TLS-terminated at the NGINX controller when the following annotations are present:
 
-```
-Annotations:
-  kubernetes.io/ingress.class:                        nginx
-  kubernetes.io/tls-acme:                             true
+```yaml
+annotations:
+  kubernetes.io/ingress.class: nginx
+  kubernetes.io/tls-acme:      "true"
 ```
 
 Make sure the Ingress resource you are trying to reach over HTTP/S has these annotations. For example:
 
-```bash
+```console
 $ kubectl --namespace=kubeprod describe ingress grafana
 Name:             grafana
 Namespace:        kubeprod
@@ -305,7 +305,7 @@ This usually means that the DNS domain name `grafana.example.com` does not resol
 
 To troubleshoot this issue, first determine the IPv4 address that `grafana` is using:
 
-```
+```console
 $ kubectl --namespace=kubeprod get ing
 NAME                        HOSTS                                           ADDRESS          PORTS     AGE
 cm-acme-http-solver-px56z   grafana.example.com                             35.241.253.114   80        1m
@@ -318,7 +318,7 @@ prometheus                  prometheus.example.com,prometheus.example.com   35.2
 
 In this example, `grafana.example.com` should resolve to `35.241.253.114`. In this example, this is not the case:
 
-```
+```console
 $ nslookup grafana.example.com 8.8.8.8
 Server:         8.8.8.8
 Address:        8.8.8.8#53
@@ -332,7 +332,7 @@ If the DNS glue records are properly configured but still the DNS name for your 
 
 It could also mean that NGINX Ingress controller hasn't got a public IPv4 address:
 
-```bash
+```console
 $ kubectl --namespace=kubeprod get ing
 NAME             HOSTS                                           ADDRESS   PORTS     AGE
 grafana          grafana.example.com,grafana.example.com                   80, 443   49s
@@ -344,7 +344,7 @@ Please wait a few minutes and check back again. If this is still the case, there
 
 However, if the NGINX Ingress controller is able to get a public IPv4 address, `grafana.example.com` must resolve to that same IPv4 address. For example:
 
-```
+```console
 $ kubectl --namespace=kubeprod get ing grafana
 NAME      HOSTS                                     ADDRESS          PORTS     AGE
 grafana   grafana.example.com,grafana.example.com   35.241.253.114   80, 443   6m
@@ -352,7 +352,7 @@ grafana   grafana.example.com,grafana.example.com   35.241.253.114   80, 443   6
 
 The `grafana.example.com` DNS name should resolve to `35.231.253.114`. However, in this example this is not the case as seen below:
 
-```bash
+```console
 $ nslookup grafana.example.com 8.8.8.8
 Server:         8.8.8.8
 Address:        8.8.8.8#53
@@ -366,7 +366,7 @@ As the reader will notice in this example, `grafana.example.com` does not resolv
 
 As long as `grafana.example.com` does not resolve to the IPv4 address stated in the Ingress resource, Let's Encrypt will refuse to issue the certificate. Let's Encrypt uses the ACME HTTP-01 protocol and as long as the ACME protocol is running you will notice some transient Ingress resources named like `cm-acme-http-solver-*`:
 
-```bash
+```console
 $ kubectl --namespace=kubeprod get ing
 NAME                        HOSTS                                           ADDRESS          PORTS     AGE
 cm-acme-http-solver-px56z   grafana.example.com                             35.241.253.114   80        1m
@@ -379,7 +379,7 @@ prometheus                  prometheus.example.com,prometheus.example.com   35.2
 
 Once `grafana.example.com` resolves properly to the IPv4 address of the Ingress resource, the certificate will be eventually issued and installed:
 
-```bash
+```console
 $ kubectl --namespace=kubeprod describe cert grafana-tls
 Name:         grafana-tls
 Namespace:    kubeprod
@@ -393,7 +393,7 @@ Events:
   Normal   IssueCert       28m                cert-manager  Issuing certificate...
   Normal   CertObtained    28m                cert-manager  Obtained certificate from ACME server
   Normal   CertIssued      28m                cert-manager  Certificate issued successfully
-  ```
+```
 
 At this point check that you can access the Kubernetes Ingress resource correctly over HTTP/S.
 
@@ -421,7 +421,7 @@ E1218 17:06:03.204903       1 controller.go:180] certificates controller: Re-que
 
 If the e-mail address used when installing BKPR uses an invalid domain or an e-mail domain that can't be resolved properly (missing MX DNS record), Let's Encrypt will refuse to accept requests from `cert-manager`. The actual error can be inspected by looking at the ClusterIssuer object in Kubernetes:
 
-```bash
+```console
 $ kubectl --namespace=kubeprod describe clusterissuer letsencrypt-prod
 Name:         letsencrypt-prod
 Namespace:
@@ -439,7 +439,7 @@ Events:
 
 To fix the issue make sure the domain part for the e-mail address used when installing BKPR has a corresponding MX DNS record. For example:
 
-```bash
+```console
 $ nslookup -tMX bitnami.com
 *** Invalid option: tMX
 Server:         192.168.0.1

@@ -144,8 +144,8 @@ After deploying the generated manifest you will have a *rsync* container that yo
 
 Check if a new service has been created for Prometheus, as shown in the example command and output below:
 
-```bash
-~ $ kubectl get svc -n NAMESPACE
+```console
+$ kubectl get svc -n NAMESPACE
 NAME               TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)    AGE
 prometheus         ClusterIP   10.30.244.231   <none>        9090/TCP   1y
 prometheus-rsync   ClusterIP   10.30.247.115   <none>        873/TCP    9d
@@ -155,8 +155,8 @@ prometheus-rsync   ClusterIP   10.30.247.115   <none>        873/TCP    9d
 
 Now, you should be able to access the `prometheus-rsync` service. You can do a quick test from other pod:
 
-```bash
-~ $ nc -zv prometheus-rsync.NAMESPACE.svc.cluster.local 873
+```console
+$ nc -zv prometheus-rsync.NAMESPACE.svc.cluster.local 873
 prometheus-rsync.NAMESPACE.svc.cluster.local (10.130.32.5:873) open
 ```
 
@@ -211,8 +211,8 @@ kubecfg update kubeprod-manifest.jsonnet --gc-tag kube_prod_runtime
 
 After deploying them, the Prometheus pod will have 3 containers:
 
-```bash
-~ $ kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | grep prometheus |\
+```console
+$ kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | grep prometheus |\
 sort
 prometheus-0: bitnami/prometheus:2.4.3-r31, jimmidyson/configmap-reload:v0.2.2, alpine:3.8,
 ```
@@ -225,7 +225,7 @@ Now that all bits are in place, you are ready to perform the Prometheus TSDB mig
 
 By default, every two hours Prometheus will compact the TSDB and will write to disk the latest information it has in the WAL (Write-Ahead-Log) file. You can watch the compaction process through the Prometheus logs. A small sample of the relevant log lines is shown below:
 
-```bash
+```
 level=info ts=2018-12-05T07:00:08.164203448Z caller=compact.go:398 component=tsdb msg="write block" mint=1543982400000 maxt=1543989600000 ulid=01CXYJN992AVWSVVJFP6X4E8MR
 level=info ts=2018-12-05T07:00:09.142253971Z caller=head.go:446 component=tsdb msg="head GC completed" duration=183.072583ms
 
@@ -239,7 +239,7 @@ In order to do a safe migration and avoid time range overlaps in later compactio
 
 It is important to know that if you create a Prometheus snapshot skipping the WAL file, the **last hour of data** will not be present in the snapshot. For example, if the Prometheus logs show the following operations:
 
-```bash
+```
 level=info ts=2018-12-05T13:00:08.289897499Z caller=compact.go:398 component=tsdb msg="write block" mint=1543989600000 maxt=1543996800000 ulid=01CXYSH0M8RSWNJG3YM1S9YGY5
 level=info ts=2018-12-05T13:00:09.242667991Z caller=head.go:446 component=tsdb msg="head GC completed" duration=170.063092ms
 ```
@@ -248,7 +248,7 @@ A good time to create a snapshot of the TSDB  to perform the migration would be 
 
 At 15.00 UTC, you will see the following logs in Prometheus:
 
-```bash
+```
 level=info ts=2018-12-12T15:00:03.39965259Z caller=compact.go:398 component=tsdb msg="write block" mint=1544616000000 maxt=1544623200000 ulid=01CYHEX2G8AXE4A02BSQTVE0KE
 level=info ts=2018-12-12T15:00:04.532120854Z caller=head.go:446 component=tsdb msg="head GC completed" duration=193.291625ms
 level=info ts=2018-12-12T15:00:07.820116817Z caller=compact.go:352 component=tsdb msg="compact blocks" count=3 mint=1544594400000 maxt=1544616000000 ulid=01CYHEX6PKCYF09AWBTA38599H sources="[01CYGT9XGJCEER0BMX0FVTTATM 01CYH15M02S4XG09B1KME83CX2 01CYH81B7YXEDC6G70PY8QJ5TY]"
@@ -284,8 +284,8 @@ Once the snapshot is done, connect to the sidecar *rsync* container in the new P
 
 After the copy has finished, move the block directories to the main data directory of Prometheus. This is an example of the structure you will find in the data directory of the new Prometheus deployment:
 
-```bash
-/data # ls -la
+```console
+# ls -la /data
 total 96
 drwxrwsr-x   24 1001     1001          4096 Dec  5 11:00 .
 drwxr-xr-x    1 root     root          4096 Nov 30 13:02 ..
@@ -311,7 +311,7 @@ Now, delete the Prometheus pod to force a reload of all the TSDB blocks with:
 
 On the next restart, you should see something like this in the Prometheus logs:
 
-```bash
+```
 level=info ts=2018-11-30T13:02:09.537050487Z caller=main.go:238 msg="Starting Prometheus" version="(version=2.4.3, branch=HEAD, revision=167a4b4e73a8eca8df648d2d2043e21bdb9a7449)"
 level=info ts=2018-11-30T13:02:09.537122788Z caller=main.go:239 build_context="(go=go1.11.1, user=root@1e42b46043e9, date=20181004-08:42:02)"
 level=info ts=2018-11-30T13:02:09.537142375Z caller=main.go:240 host_details="(Linux 4.14.65+ #1 SMP Sun Sep 9 02:18:33 PDT 2018 x86_64 prometheus-0 (none))"
@@ -336,7 +336,7 @@ In order to ensure the migration took place correctly and the new Prometheus TSD
 
 Several hours after the migration, the Prometheus logs should keep showing healthy TSDB compactions:
 
-```bash
+```
 level=info ts=2018-12-05T09:00:09.242667991Z caller=head.go:446 component=tsdb msg="head GC completed" duration=170.063092ms
 level=info ts=2018-12-05T09:00:12.199252153Z caller=compact.go:352 component=tsdb msg="compact blocks" count=3 mint=1543968000000 maxt=1543989600000 ulid=01CXYSH4GP082JQ2XV1BFVBTQF sources="[01CXY4XTS831KC5DQGV1JGGTSW 01CXYBSJ4AWC7VBTNRS8PDS2DT 01CXYJN992AVWSVVJFP6X4E8MR]"
 level=info ts=2018-12-05T09:00:17.644297906Z caller=compact.go:352 component=tsdb msg="compact blocks" count=3 mint=1543924800000 maxt=1543989600000 ulid=01CXYSH84VSA76W9PH93DXVA8G sources="[01CXXGAS4NBKWYEQ98YN29BTAK 01CXY4XYZ0CDC5P098SXE8451B 01CXYSH4GP082JQ2XV1BFVBTQF]"
@@ -351,8 +351,8 @@ It is good practice to leave the old Prometheus database running until you are s
 Once the migration is finished, it is time to clean up the sidecar container that were added to help with the TSDB migration.
 To do so, re-push the original unmodified config file with:
 
-```bash
-~ $ kubecfg update kubeprod-manifest.jsonnet --gc-tag kube_prod_runtime
+```console
+$ kubecfg update kubeprod-manifest.jsonnet --gc-tag kube_prod_runtime
 ```
 
 The `sidecar-rsync` container is now removed from your Prometheus StatefulSet.
