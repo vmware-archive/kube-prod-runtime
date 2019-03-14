@@ -44,9 +44,9 @@ We will use `kubeprod` and `kubecfg` to manage the BKPR lifecycle. `kubeprod` is
 
 Ensure your default context in the Kubernetes `kubectl` client is the expected one:
 
-```
-$ kubectl config current-context
-$ kubectl cluster-info
+```bash
+kubectl config current-context
+kubectl cluster-info
 ```
 
 ### Prepare the cluster
@@ -55,14 +55,14 @@ This step prepares the Kubernetes cluster and the underlying platform for deploy
 
 For example:
 
-```
-$ kubeprod install gke --only-generate \
-                       --dns-zone ${dnsZone} \
-                       --email ${email} \
-                       --authz-domain ${authzDomain} \
-                       --project ${gceProject} \
-                       --oauth-client-id ${oauthClientId} \
-                       --oauth-client-secret ${oauthClientSecret}
+```bash
+kubeprod install gke --only-generate \
+                     --dns-zone ${dnsZone} \
+                     --email ${email} \
+                     --authz-domain ${authzDomain} \
+                     --project ${gceProject} \
+                     --oauth-client-id ${oauthClientId} \
+                     --oauth-client-secret ${oauthClientSecret}
 ```
 
 The `--only-generate` command-line flag tells `kubeprod` to configure the underlying platform (in this example, GKE) by creating the DNS zone if necessary, service accounts, etc. Afterwards, the root manifest and JSON configuration files are generated and `kubeprod` exits cleanly. At this point the operator can inspect the changes introduced by `kubeprod` and perform any customizations as explained next.
@@ -75,14 +75,14 @@ Please, check [the documentation about customizations](overrides.md).
 
 For example, to show the differences between the live state (what is currently running in the Kubernetes cluster) and the local configuration reflects, you can use `kubecfg diff` on the root manifest, like this:
 
-```
-$ kubecfg diff kubeprod-manifest.jsonnet
+```bash
+kubecfg diff kubeprod-manifest.jsonnet
 ```
 
 ### Deploy changes
 
-```
-$ kubecfg update --ignore-unknown=true --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
+```bash
+kubecfg update --ignore-unknown=true --gc-tag kube_prod_runtime kubeprod-manifest.jsonnet
 ```
 
 The `kube_prod_runtime` garbage collection tag specified in the `kubecfg update` command takes care of garbage collection to ensure there is no leakage of Kubernetes resources.
@@ -112,9 +112,9 @@ Change to the directory containing the existing `kubeprod-autogen.json` and upda
 
 For example,
 
-```
-$ git add kubeprod-manifest.jsonnet
-$ git commit -m "Use Let's Encrypt staging environment"
+```bash
+git add kubeprod-manifest.jsonnet
+git commit -m "Use Let's Encrypt staging environment"
 ```
 
 Note that the **`kubeprod-autogen.json` file contains sensitive information**, like OAuth2 client and cookies secrets, or credentials for accessing the underlying platform's DNS services. If this information is inadvertently exposed, **it could compromise your Kubernetes cluster or any shared infrastructure**. As a best practice, we recommend explicitly ignoring kubeprod-autogen.json file in your source repository.

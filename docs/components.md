@@ -47,9 +47,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 ##### Override pod replicas
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -97,9 +97,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 To override pod memory or CPU:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -218,9 +218,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 The following example shows how to override the retention days and storage volume size.
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -235,9 +235,9 @@ $ cat kubeprod-manifest.jsonnet
 
 The following example shows how to add additional monitoring rules. The default configuration shipped with Prometheus brings in two different groups of rules, namely `basic.rules` and `monitoring.rules`, but you can create additional groups if you need to. Next we show how to add an additional monitoring rule:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -282,9 +282,9 @@ A receiver defines the mechanism or protocol used to deliver alerts to a set of 
 
 BKPR configures Alertmanager with a receiver named `email` in order to deliver alerts over e-mail. However, BKPR's default configuration requires you to specify the list of intended e-mail recipients. Use the following override construct to specify one or multiple e-mail addresses for delivering alerts over e-mail:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -319,9 +319,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 The following example shows how to override the amount of persistent storage required by Alertmanager:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -365,9 +365,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 The following example shows how to override the amount of persistent storage required by Grafana:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -437,9 +437,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 The following example shows how to override the maximum number of replicas for NGINX Ingress Controller:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -463,7 +463,7 @@ The [`ingress-shim`](https://github.com/jetstack/cert-manager/blob/master/docs/r
 
  Example:
 
-```
+```console
 $ kubectl --namespace=kubeprod get certificates
 NAME                 AGE
 kibana-logging-tls   20d
@@ -472,7 +472,7 @@ prometheus-tls       20d
 
 and
 
-```
+```console
 $ kubectl --namespace=kubeprod describe certificates kibana-logging-tls
 Name:         kibana-logging-tls
 Namespace:    kubeprod
@@ -537,9 +537,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 The following example shows how to request the use of Let's Encrypt staging environment:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -579,9 +579,9 @@ The following deployment parameters are supported, tested, and will be honored a
 
 The following example shows how to override the maximum number of replicas for OAuth2 Proxy:
 
-```
-$ cat kubeprod-manifest.jsonnet
-# Cluster-specific configuration
+```jsonnet
+// Example kubeprod-manifest.jsonnet with override
+// Cluster-specific configuration
 (import "../../manifests/platforms/aks.jsonnet") {
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
@@ -605,7 +605,7 @@ ExternalDNS runs on top of Kubernetes and is implemented as a Kubernetes Deploym
 
 Example:
 
-```
+```console
 $ kubectl --namespace=kubeprod get ingress
 NAME             HOSTS                                               ADDRESS   PORTS     AGE
 kibana-logging   kibana.my-domain.com,kibana.my-domain.com           1.2.3.4   80, 443   1d
@@ -614,7 +614,7 @@ prometheus       prometheus.my-domain.com,prometheus.my-domain.com   1.2.3.4   8
 
 ExternalDNS will ensure that `kibana.my-domain.com` will resolve to `1.2.3.4` and that `prometheus.my-domain.com` will resolve to `1.2.3.4`:
 
-```
+```console
 $ nslookup kibana.my-domain.com
 Server:		8.8.8.8
 Address:	8.8.8.8#53
