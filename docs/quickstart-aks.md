@@ -21,8 +21,8 @@ This document walks you through setting up an Azure Kubernetes Service (AKS) clu
 * [Microsoft Azure CLI](https://docs.microsoft.com/en-us/cli/azure/install-azure-cli?view=azure-cli-latest)
 * [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [BKPR installer](install.md)
-* [kubecfg](https://github.com/ksonnet/kubecfg/releases)
-* [jq](https://stedolan.github.io/jq/)
+* [`kubecfg`](https://github.com/ksonnet/kubecfg/releases)
+* [`jq`](https://stedolan.github.io/jq/)
 
 ### DNS requirements
 
@@ -132,7 +132,7 @@ Please note, it can take a while for the DNS changes to propagate.
 
 ### Step 4: Access logging and monitoring dashboards
 
-After the DNS changes have propagated, you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}` and `https://kibana.${BKPR_DNS_ZONE}` respectively.
+After the DNS changes have propagated, you should be able to access the Prometheus, Kibana and Grafana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}`, `https://kibana.${BKPR_DNS_ZONE}` and `https://grafana.${BKPR_DNS_ZONE}` respectively.
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 
@@ -171,7 +171,13 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
   kubecfg delete kubeprod-manifest.jsonnet
   ```
 
-### Step 2: Delete the Azure DNS zone
+### Step 2: Wait for the `kubeprod` namespace to be deleted
+
+  ```bash
+  kubectl wait --for=delete ns/kubeprod --timeout=300s
+  ```
+
+### Step 3: Delete the Azure DNS zone
 
   ```bash
   az network dns zone delete \
@@ -181,7 +187,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
 
   Additionally you should remove the NS entries configured at the domain registrar.
 
-### Step 3: Delete Azure app registrations
+### Step 4: Delete Azure app registrations
 
   ```bash
   az ad app delete \
@@ -192,7 +198,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
     --id $(jq -r .oauthProxy.client_id kubeprod-autogen.json)
   ```
 
-### Step 4: Delete the AKS cluster
+### Step 5: Delete the AKS cluster
 
   ```bash
   az aks delete \
@@ -200,7 +206,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
     --resource-group ${AZURE_RESOURCE_GROUP}
   ```
 
-### Step 5: Delete the Azure resource group
+### Step 6: Delete the Azure resource group
 
   ```bash
   az group delete --name ${AZURE_RESOURCE_GROUP}
