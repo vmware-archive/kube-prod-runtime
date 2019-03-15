@@ -625,7 +625,7 @@ spec:
                             container(name: 'kaniko', shell: '/busybox/sh') {
                                 withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
                                     sh """#!/busybox/sh
-                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination experimental/kubeprod:${TAG_NAME}
+                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
                                     """
                                 }
                             }
