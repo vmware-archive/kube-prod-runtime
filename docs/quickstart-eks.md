@@ -18,12 +18,12 @@ This document walks you through setting up an Amazon Elastic Container Service f
 
 * [Amazon AWS account](https://aws.amazon.com/)
 * [Amazon CLI](https://aws.amazon.com/cli/)
-* [`eksctl`](https://aws.amazon.com/blogs/opensource/eksctl-eks-cluster-one-command/)
+* [Amazon EKS CLI](https://eksctl.io/)
 * [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
-* [`aws-iam-authenticator`](https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html)
+* [AWS IAM Authenticator for Kubernetes](https://docs.aws.amazon.com/eks/latest/userguide/install-aws-iam-authenticator.html)
 * [BKPR installer](install.md)
-* [kubecfg](https://github.com/ksonnet/kubecfg/releases)
-* [jq](https://stedolan.github.io/jq/)
+* [`kubecfg`](https://github.com/ksonnet/kubecfg/releases)
+* [`jq`](https://stedolan.github.io/jq/)
 
 ### DNS requirements
 
@@ -55,11 +55,13 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
 
   ```bash
   eksctl create cluster --name=${AWS_EKS_CLUSTER} \
-                        --color=fabulous \
                         --nodes=3 \
                         --version=${AWS_EKS_K8S_VERSION}
   ```
-  > **NOTE**: At the time of this writing, EKS clusters created with `eksctl` are affected by a [bug](https://github.com/awslabs/amazon-eks-ami/issues/193) that causes Elasticsearch to get into a crashloop. A temporary workaround consists of overriding the AMI used when creating the cluster. The AMI named `amazon-eks-node-1.10-v20190211` is known to work. You will need to find its ID that corresponds to the region and zone where you are creating the cluster. For instance:
+
+  > **TIP**: The `--ssh-access` command line flag to the `eks create cluster` command configures SSH access to the Kubernetes nodes. This is really useful when debugging issues that require you to log in to the nodes.
+
+  > **NOTE**: At the time of this writing, EKS clusters created with `eksctl` are affected by a [bug](https://github.com/awslabs/amazon-eks-ami/issues/193) that causes Elasticsearch to get into a crashloop. The workaround consists of overriding the AMI used when creating the cluster. The AMI named `amazon-eks-node-1.10-v20190211` is known to work. You will need to find its ID that corresponds to the region and zone where you are creating the cluster. For instance:
   >
   > | Region         |          AMI ID         |
   > |:--------------:|:-----------------------:|
@@ -76,7 +78,6 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
   >
   > ```bash
   >  eksctl create cluster --name=${AWS_EKS_CLUSTER} \
-  >                        --color=fabulous \
   >                        --nodes=3 \
   >                        --version=${AWS_EKS_K8S_VERSION} \
   >                        --node-ami ami-074583f8d5a05e27b
@@ -115,20 +116,19 @@ If you are new to using BKPR on EKS, or if you want to create a new User Pool in
 
 <p align="center"><img src="eks/1-new-user-pool.png" width=840/></p>
 
-4. Go to the **Policies** section and select a password strength. Be sure to also select the **Only allow administrators to create users** option as shown below, otherwise anyone could potentially create a new user and log in:
+4. Go to the **Policies** and select the **Only allow administrators to create users** option, otherwise anyone would be able to sign up and gain access to services running in the cluster. **Save changes** before continuing to the next step:
 
 <p align="center"><img src="eks/2-policies.png" width=840/></p>
 
-5. Feel free to customize other sections, like **Tags**, to your liking. Once done, go back to the **Review** section:
+5. Feel free to customize other sections, like **Tags**, to your liking. Once done, go to the **Review** section and click on the **Create pool** button:
 
 <p align="center"><img src="eks/3-review.png" width=840/></p>
 
-6. Click the **Create pool** button.
-7. Go to **App integration -> Domain name** setting and configure the Amazon Cognito domain, which has to be unique to all users in an AWS Region. Once done, click the **Save changes** button:
+6. Go to **App integration > Domain name** setting and configure the Amazon Cognito domain, which has to be unique to all users in an AWS Region. Once done, click the **Save changes** button:
 
 <p align="center"><img src="eks/4-domain.png" width=840/></p>
 
-8. Select the **General settings** option, note the **Pool Id** and export its value:
+7. Select the **General settings** option, note the **Pool Id** and export its value:
 
   ```bash
   export AWS_COGNITO_USER_POOL_ID=eu-central-1_sHSdWT6VL
@@ -181,7 +181,7 @@ Please note that it can take a while for the DNS changes to propagate.
 
 ### Step 5: Access logging and monitoring dashboards
 
-After the DNS changes have propagated, you should be able to access the Prometheus and Kibana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}` and `https://kibana.${BKPR_DNS_ZONE}` respectively.
+After the DNS changes have propagated, you should be able to access the Prometheus, Kibana and Grafana dashboards by visiting `https://prometheus.${BKPR_DNS_ZONE}`, `https://kibana.${BKPR_DNS_ZONE}` and `https://grafana.${BKPR_DNS_ZONE}` respectively. Login with credentials created in the [Create a user](#create-a-user) step.
 
 Congratulations! You can now deploy your applications on the Kubernetes cluster and BKPR will help you manage and monitor them effortlessly.
 
@@ -220,14 +220,20 @@ Re-run the `kubeprod install` command from the [Deploy BKPR](#step-3-deploy-bkpr
   kubecfg delete kubeprod-manifest.jsonnet
   ```
 
-### Step 2: Delete the Hosted Zone in Route 53
+### Step 2: Wait for the `kubeprod` namespace to be deleted
+
+  ```bash
+  kubectl wait --for=delete ns/kubeprod --timeout=300s
+  ```
+
+### Step 3: Delete the Hosted Zone in Route 53
 
   ```bash
   BKPR_DNS_ZONE_ID=$(aws route53 list-hosted-zones-by-name --dns-name "${BKPR_DNS_ZONE}" \
                                                            --max-items 1 \
                                                            --query 'HostedZones[0].Id' \
                                                            --output text)
-  aws route53 list-resource-record-sets --hosted-zone-id \${BKPR_DNS_ZONE_ID} \
+  aws route53 list-resource-record-sets --hosted-zone-id ${BKPR_DNS_ZONE_ID} \
                                         --query '{ChangeBatch:{Changes:ResourceRecordSets[?Type != `NS` && Type != `SOA`].{Action:`DELETE`,ResourceRecordSet:@}}}' \
                                         --output json > changes
 
@@ -243,26 +249,26 @@ Re-run the `kubeprod install` command from the [Deploy BKPR](#step-3-deploy-bkpr
 
   Additionally you should remove the NS entries configured at the domain registrar.
 
-### Step 3: Delete the BKPR user
+### Step 4: Delete the BKPR user
 
   ```bash
   ACCOUNT=$(aws sts get-caller-identity | jq -r .Account)
   aws iam detach-user-policy --user-name "bkpr-${BKPR_DNS_ZONE}" --policy-arn "arn:aws:iam::${ACCOUNT}:policy/bkpr-${BKPR_DNS_ZONE}"
   aws iam delete-policy --policy-arn "arn:aws:iam::${ACCOUNT}:policy/bkpr-${BKPR_DNS_ZONE}"
-  ACCESS_KEY_ID=$(cat kubeprod-autogen.json | jq -r .externalDns.aws_access_key_id)
+  ACCESS_KEY_ID=$(jq -r .externalDns.aws_access_key_id kubeprod-autogen.json)
   aws iam delete-access-key --user-name "bkpr-${BKPR_DNS_ZONE}" --access-key-id "${ACCESS_KEY_ID}"
   aws iam delete-user --user-name "bkpr-${BKPR_DNS_ZONE}"
   ```
 
-### Step 4: Delete the BKPR App Client
+### Step 5: Delete the BKPR App Client
 
   ```bash
-  USER_POOL=$(cat kubeprod-autogen.json | jq -r .oauthProxy.aws_user_pool_id)
-  CLIENT_ID=$(cat kubeprod-autogen.json | jq -r .oauthProxy.client_id)
+  USER_POOL=$(jq -r .oauthProxy.aws_user_pool_id kubeprod-autogen.json)
+  CLIENT_ID=$(jq -r .oauthProxy.client_id kubeprod-autogen.json)
   aws cognito-idp delete-user-pool-client --user-pool-id "${USER_POOL}" --client-id "${CLIENT_ID}"
   ```
 
-### Step 5: Delete the EKS cluster
+### Step 6: Delete the EKS cluster
 
   ```bash
   eksctl delete cluster --name ${AWS_EKS_CLUSTER}

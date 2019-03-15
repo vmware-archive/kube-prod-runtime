@@ -24,8 +24,8 @@ This document walks you through setting up a Google Kubernetes Engine (GKE) clus
 * [Google Cloud SDK](https://cloud.google.com/sdk/)
 * [Kubernetes CLI](https://kubernetes.io/docs/tasks/tools/install-kubectl/)
 * [BKPR installer](install.md)
-* [kubecfg](https://github.com/ksonnet/kubecfg/releases)
-* [jq](https://stedolan.github.io/jq/)
+* [`kubecfg`](https://github.com/ksonnet/kubecfg/releases)
+* [`jq`](https://stedolan.github.io/jq/)
 
 ### DNS and G Suite requirements
 
@@ -215,7 +215,13 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
   kubecfg delete kubeprod-manifest.jsonnet
   ```
 
-### Step 2: Delete the Cloud DNS zone
+### Step 2: Wait for the `kubeprod` namespace to be deleted
+
+  ```bash
+  kubectl wait --for=delete ns/kubeprod --timeout=300s
+  ```
+
+### Step 3: Delete the Cloud DNS zone
 
   ```bash
   BKPR_DNS_ZONE_NAME=$(gcloud dns managed-zones list --filter dnsName:${BKPR_DNS_ZONE} --format='value(name)')
@@ -223,7 +229,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
   gcloud dns managed-zones delete ${BKPR_DNS_ZONE_NAME}
   ```
 
-### Step 3: Delete service account and IAM profile
+### Step 4: Delete service account and IAM profile
 
   ```bash
   GCLOUD_SERVICE_ACCOUNT=$(gcloud iam service-accounts list --filter "displayName:${BKPR_DNS_ZONE} AND email:bkpr-edns" --format='value(email)')
@@ -233,18 +239,10 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
   gcloud iam service-accounts delete ${GCLOUD_SERVICE_ACCOUNT}
   ```
 
-### Step 4: Delete the GKE cluster
+### Step 5: Delete the GKE cluster
 
   ```bash
   gcloud container clusters delete ${GCLOUD_K8S_CLUSTER}
-  ```
-
-### Step 5: Delete any leftover GCE disks
-
-  ```bash
-  GCLOUD_DISKS_FILTER=${GCLOUD_K8S_CLUSTER:0:18}
-  gcloud compute disks delete --zone ${BKPR_DNS_ZONE} \
-    $(gcloud compute disks list --filter name:${GCLOUD_DISKS_FILTER%-} --format='value(name)')
   ```
 
 ## Further reading
