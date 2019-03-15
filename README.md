@@ -52,7 +52,7 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 ### Logging stack
 
 * [Elasticsearch](docs/components.md#elasticsearch): A distributed, RESTful search and analytics engine
-* [Fluentd](docs/components.mdfluentd): A data collector for unified logging layer
+* [Fluentd](docs/components.md#fluentd): A data collector for unified logging layer
 * [Kibana](docs/components.md#kibana): A visualization tool for Elasticsearch data
 
 ![Logging stack](docs/images/logging-stack.png)
