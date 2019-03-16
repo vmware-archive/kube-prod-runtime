@@ -8,6 +8,12 @@ pr_status = [
   "continuous-integration/jenkins/pr-merge"
 ]
 
+block_labels = [
+    "status/on-hold",
+    "status/blocked",
+    "status/wip",
+]
+
 required_approvals = 1
 
 # Extend to 3h - default is 1h
