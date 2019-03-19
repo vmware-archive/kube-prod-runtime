@@ -53,7 +53,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
   serviceAccount: kube.ServiceAccount($.p + "elasticsearch-logging") + $.metadata {
   },
 
-  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") + $.metadata {
+  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") + $.labels {
     rules: [
       {
         apiGroups: [""],
