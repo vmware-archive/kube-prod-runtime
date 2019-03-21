@@ -191,8 +191,11 @@ spec:
     command:
     - 'cat'
   - name: 'kaniko'
-    image: 'gcr.io/kaniko-project/executor:debug-v0.8.0'
+    image: 'gcr.io/kaniko-project/executor:debug-v0.9.0'
     tty: true
+    env:
+    - name: 'DOCKER_CONFIG'
+      value: '/root/.docker'
     command:
     - '/busybox/cat'
     volumeMounts:
