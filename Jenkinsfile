@@ -299,7 +299,7 @@ spec:
                                                         --num-nodes 3                               \
                                                         --zone ${zone}                              \
                                                         --preemptible                               \
-                                                        --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
+                                                        --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)},team=bkpr,created_by=jenkins-bkpr'
                                                     """
                                                     sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
                                                     sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
@@ -407,7 +407,7 @@ spec:
                                                             --generate-ssh-keys                     \
                                                             --service-principal \$AZURE_CLIENT_ID   \
                                                             --client-secret \$AZURE_CLIENT_SECRET   \
-                                                            --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
+                                                            --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}' 'team=bkpr' 'created_by=jenkins-bkpr'
                                                         """
                                                     }
                                                     sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \${KUBECONFIG}"
