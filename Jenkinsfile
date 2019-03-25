@@ -118,7 +118,9 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                             """
                         } catch (error) {
                             if(pauseForDebugging) {
-                                input 'Paused for manual debugging'
+                                timeout(time: 15, unit: 'MINUTES') {
+                                    input 'Paused for manual debugging'
+                                }
                             }
                             throw error
                         } finally {
@@ -136,7 +138,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 sh "kubecfg delete kubeprod-manifest.jsonnet || true"
             }
             container('kubectl') {
-                sh "kubectl wait --for=delete ns/kubeprod --timeout=600s || true"
+                sh "kubectl wait --for=delete ns/kubeprod --timeout=300s || true"
             }
         }
     } finally {
@@ -209,7 +211,7 @@ spec:
     env.GOPATH = "/go"
 
     node(label) {
-        timeout(time: 120) {
+        timeout(time: 150, unit: 'MINUTES') {
             withEnv([
                 "HOME=${env.WORKSPACE}",
                 "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",
