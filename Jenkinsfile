@@ -119,7 +119,9 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                             """
                         } catch (error) {
                             if(pauseForDebugging) {
-                                input 'Paused for manual debugging'
+                                timeout(time: 15, unit: 'MINUTES') {
+                                    input 'Paused for manual debugging'
+                                }
                             }
                             throw error
                         } finally {
@@ -137,7 +139,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 sh "kubecfg delete kubeprod-manifest.jsonnet || true"
             }
             container('kubectl') {
-                sh "kubectl wait --for=delete ns/kubeprod --timeout=600s || true"
+                sh "kubectl wait --for=delete ns/kubeprod --timeout=300s || true"
             }
         }
     } finally {
@@ -223,7 +225,7 @@ spec:
     env.GOPATH = "/go"
 
     node(label) {
-        timeout(time: 120) {
+        timeout(time: 150, unit: 'MINUTES') {
             withEnv([
                 "HOME=${env.WORKSPACE}",
                 "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",
@@ -277,7 +279,7 @@ spec:
                     }, failFast: true
                 )
 
-                def maxRetries = 3
+                def maxRetries = 2
                 def platforms = [:]
 
                 // See:
@@ -291,10 +293,15 @@ spec:
                     platforms[platform] = {
                         stage(platform) {
                             def retryNum = 0
+
                             retry(maxRetries) {
                                 def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
+
+                                if (retryNum > 0) {
+                                    sleep 180
+                                }
 
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
@@ -313,7 +320,7 @@ spec:
                                                         --num-nodes 3                               \
                                                         --zone ${zone}                              \
                                                         --preemptible                               \
-                                                        --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)}'
+                                                        --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)},team=bkpr,created_by=jenkins-bkpr'
                                                     """
                                                     sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
                                                     sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
@@ -385,6 +392,10 @@ spec:
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
 
+                                if (retryNum > 0) {
+                                    sleep 180
+                                }
+
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
                                     withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
@@ -421,7 +432,7 @@ spec:
                                                             --generate-ssh-keys                     \
                                                             --service-principal \$AZURE_CLIENT_ID   \
                                                             --client-secret \$AZURE_CLIENT_SECRET   \
-                                                            --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}'
+                                                            --tags 'platform=${platform}' 'branch=${BRANCH_NAME}' 'build=${BUILD_URL}' 'team=bkpr' 'created_by=jenkins-bkpr'
                                                         """
                                                     }
                                                     sh "az aks get-credentials --name ${clusterName} --resource-group ${resourceGroup} --admin --file \${KUBECONFIG}"
@@ -502,6 +513,10 @@ spec:
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
 
+                                if (retryNum > 0) {
+                                    sleep 180
+                                }
+
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
                                     withEnv([
@@ -526,7 +541,7 @@ spec:
                                                         --version ${kversion} \
                                                         --node-type m5.large \
                                                         --nodes 3 \
-                                                        --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL}'
+                                                        --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL},team=bkpr,created_by=jenkins-bkpr'
                                                     """
                                                 }
 
