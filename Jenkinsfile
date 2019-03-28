@@ -284,7 +284,7 @@ spec:
 
                 // See:
                 //  gcloud container get-server-config
-                def gkeKversions = ["1.11"]
+                def gkeKversions = ["1.11", "1.12"]
                 for (kversion in gkeKversions) {
                     def project = 'bkprtesting'
                     def zone = 'us-east1-b'
@@ -378,7 +378,7 @@ spec:
 
                 // See:
                 //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-                def aksKversions = ["1.10", "1.11"]
+                def aksKversions = ["1.11", "1.12"]
                 for (kversion in aksKversions) {
                     def resourceGroup = 'jenkins-bkpr-rg'
                     def location = "eastus"
@@ -498,7 +498,7 @@ spec:
                     }
                 }
 
-                def eksKversions = ["1.10", "1.11"]
+                def eksKversions = ["1.11"]
                 for (kversion in eksKversions) {
                     def awsRegion = "us-east-1"
                     def awsUserPoolId = "${awsRegion}_zkRzdsjxA"
