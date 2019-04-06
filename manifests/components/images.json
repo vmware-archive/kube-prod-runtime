@@ -4,7 +4,7 @@
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "elasticsearch": "bitnami/elasticsearch:6.6.2-r1",
     "external-dns": "bitnami/external-dns:0.5.12-r4",
-    "fluentd": "bitnami/fluentd:1.4.1-r6",
+    "fluentd": "bitnami/fluentd:1.4.2-r4",
     "grafana": "bitnami/grafana:6.0.2-r6",
     "kibana": "bitnami/kibana:6.6.2-r4",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.23.0-r5",
