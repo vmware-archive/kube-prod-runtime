@@ -44,6 +44,11 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
   },
 
   certCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Certificate") {
+    metadata+: {
+      labels+: {
+        "controller-tools.k8s.io": "1.0",
+      },
+    },
     spec+: {
       additionalPrinterColumns+: [
         {
@@ -81,9 +86,20 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
     },
   },
 
-  issuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Issuer"),
+  issuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Issuer") {
+    metadata+: {
+      labels+: {
+        "controller-tools.k8s.io": "1.0",
+      },
+    },
+  },
 
   orderCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Order") {
+    metadata+: {
+      labels+: {
+        "controller-tools.k8s.io": "1.0",
+      },
+    },
     spec+: {
       additionalPrinterColumns+: [
         {
@@ -114,6 +130,11 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
   },
 
   challengeCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "Challenge") {
+    metadata+: {
+      labels+: {
+        "controller-tools.k8s.io": "1.0",
+      },
+    },
     spec+: {
       additionalPrinterColumns+: [
         {
@@ -129,6 +150,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
         {
           JSONPath: ".status.reason",
           name: "Reason",
+          priority: 1,
           type: "string",
         },
         {
@@ -142,6 +164,11 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
   },
 
   clusterissuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "ClusterIssuer") {
+    metadata+: {
+      labels+: {
+        "controller-tools.k8s.io": "1.0",
+      },
+    },
     spec+: {
       scope: "Cluster",
     },
