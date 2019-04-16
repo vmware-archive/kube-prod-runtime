@@ -22,12 +22,13 @@ BKPR has been tested to work on a bare-minimum Kubernetes cluster with three kub
 
 The following matrix shows which Kubernetes versions and platforms are supported:
 
-| BKPR release | AKS versions  | GKE versions | EKS versions |
-|:------------:|:-------------:|:------------:|:-------------:
-|     `0.3`    | `1.8`-`1.9`   |      N/A     |      N/A     |
-|     `1.1`    | `1.9`-`1.10`  | `1.9`-`1.10` |      N/A     |
-|     `1.1`    | `1.10`-`1.11` | `1.11`       |      N/A     |
-|     `1.2`    | `1.10`-`1.11` | `1.11`       | `1.10`-`1.11`|
+| BKPR release |  AKS versions |  GKE versions |  EKS versions |
+|--------------|---------------|---------------|---------------|
+| `0.3`        | `1.8`-`1.9`   | N/A           | N/A           |
+| `1.1`        | `1.9`-`1.10`  | `1.9`-`1.10`  | N/A           |
+| `1.1`        | `1.10`-`1.11` | `1.11`        | N/A           |
+| `1.2`        | `1.10`-`1.11` | `1.11`        | `1.10`-`1.11` |
+| `1.3`        | `1.11`-`1.12` | `1.11`-`1.12` | `1.11`        |
 
 ## Quickstart
 
@@ -80,19 +81,20 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 
 The following matrix shows which versions of each component are used and supported in the most recent releases of BKPR:
 
-|   Component   |          BKPR 1.0  |          BKPR 1.1  |
-|:-------------:|-------------------:|-------------------:|
-|   Prometheus  |            `2.3.x` |            `2.6.x` |
-|     Kibana    |            `5.6.x` |            `5.6.x` |
-| Elasticsearch |            `5.6.x` |            `5.6.x` |
-|  cert-manager |            `0.5.x` |            `0.5.x` |
-|  Alertmanager |           `0.15.x` |           `0.15.x` |
-|  ExternalDNS  |            `0.5.x` |            `0.5.x` |
-| nginx-ingress |           `0.19.x` |           `0.21.x` |
-|  oauth2_proxy |     `0.20180625.x` |            `3.0.x` |
-|    Heapster   |            `1.5.x` |              `N/A` |
-|    Fluentd    |            `1.2.x` |            `1.3.x` |
+|   Component   |    BKPR 1.0    | BKPR 1.1 | BKPR 1.2 | BKPR 1.3 |
+|---------------|----------------|----------|----------|----------|
+| Alertmanager  | `0.15.x`       | `0.15.x` | `0.16.x` | `0.16.x` |
+| cert-manager  | `0.5.x`        | `0.5.x`  | `0.6.x`  | `0.7.x`  |
+| Elasticsearch | `5.6.x`        | `5.6.x`  | `6.6.x`  | `6.7.x`  |
+| ExternalDNS   | `0.5.x`        | `0.5.x`  | `0.5.x`  | `0.5.x`  |
+| Fluentd       | `1.2.x`        | `1.3.x`  | `1.4.x`  | `1.4.x`  |
+| Heapster      | `1.5.x`        | `N/A`    | `N/A`    | `N/A`    |
+| Kibana        | `5.6.x`        | `5.6.x`  | `6.6.x`  | `6.7.x`  |
+| nginx-ingress | `0.19.x`       | `0.21.x` | `0.23.x` | `0.23.x` |
+| oauth2_proxy  | `0.20180625.x` | `3.0.x`  | `3.1.x`  | `3.1.x`  |
+| Prometheus    | `2.3.x`        | `2.6.x`  | `2.7.x`  | `2.8.x`  |
 
 ## Contributing
 
 If you would like to become an active contributor to this project please follow the instructions provided in [contribution guidelines](CONTRIBUTING.md).
+
