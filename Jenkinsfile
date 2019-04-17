@@ -293,10 +293,6 @@ spec:
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
 
-                                if (retryNum > 0) {
-                                    sleep 180
-                                }
-
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
                                     withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
@@ -385,10 +381,6 @@ spec:
                                 def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
-
-                                if (retryNum > 0) {
-                                    sleep 180
-                                }
 
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
