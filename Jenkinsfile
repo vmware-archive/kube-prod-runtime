@@ -140,6 +140,9 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 dnsDestroy()
             }
         } finally {
+            container('kubectl') {
+                sh "kubectl get po,deploy,svc,ing --all-namespaces || true"
+            }
             withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
                 sh "kubecfg delete kubeprod-manifest.jsonnet || true"
             }
