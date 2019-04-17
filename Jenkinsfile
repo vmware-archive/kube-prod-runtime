@@ -484,6 +484,7 @@ spec:
                                                 container('az') {
                                                     def output = sh(returnStdout: true, script: "az network dns zone show --name ${dnsZone} --resource-group ${resourceGroup} --query nameServers")
                                                     insertGlueRecords(clusterName, readJSON(text: output), "60", parentZone, parentZoneResourceGroup)
+                                                    sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${dnsZone} --expire-time 60 --minimum-ttl 60 --refresh-time 60 --retry-time 60"
                                                 }
                                             }
                                             // dnsDestroy
