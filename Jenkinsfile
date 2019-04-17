@@ -90,6 +90,11 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
             sh "kubectl cluster-info"
         }
 
+        // HACK: We have been experiencing the following error while executing "kubeprod install"
+        //       "Error: unable to retrieve the complete list of server APIs: metrics.k8s.io/v1beta1: the server is currently unable to handle the request"
+        //       To workaround this issue a 60 sec sleep is added to allow the api server to become READY before performing the installation.
+        sleep 60
+
         try {
             sh "kubeprod install ${kubeprodArgs} --manifests=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests"
             try {
@@ -135,6 +140,9 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 dnsDestroy()
             }
         } finally {
+            container('kubectl') {
+                sh "kubectl get po,deploy,svc,ing --all-namespaces || true"
+            }
             withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
                 sh "kubecfg delete kubeprod-manifest.jsonnet || true"
             }
@@ -299,10 +307,6 @@ spec:
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
 
-                                if (retryNum > 0) {
-                                    sleep 180
-                                }
-
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
                                     withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
@@ -391,10 +395,6 @@ spec:
                                 def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
-
-                                if (retryNum > 0) {
-                                    sleep 180
-                                }
 
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
@@ -512,10 +512,6 @@ spec:
                                 def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
                                 def adminEmail = "${clusterName}@${parentZone}"
                                 def dnsZone = "${clusterName}.${parentZone}"
-
-                                if (retryNum > 0) {
-                                    sleep 180
-                                }
 
                                 retryNum++
                                 dir("${env.WORKSPACE}/${clusterName}") {
