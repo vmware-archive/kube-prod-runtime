@@ -29,7 +29,7 @@ local kube = import "kube.libsonnet";
 
   trimUrl(str):: (
     if std.endsWith(str, "/") then
-      std.substr(str, 1, std.length(str) - 1)
+      std.substr(str, 0, std.length(str) - 1)
     else
       str
   ),
