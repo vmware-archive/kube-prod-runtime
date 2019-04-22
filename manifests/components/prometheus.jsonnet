@@ -232,7 +232,7 @@ local get_cm_web_hook_url = function(port, path) (
                   "web.external-url": $.ingress.prom_url,
 
                   "config.file": this.volumeMounts_.config.mountPath + "/prometheus.yml",
-                  "storage.tsdb.retention": "%dd" % $.retention_days,
+                  "storage.tsdb.retention.time": "%dd" % $.retention_days,
 
                   // These are unmodified upstream console files. May
                   // want to ship in config instead.
