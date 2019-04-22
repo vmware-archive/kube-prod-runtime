@@ -1,0 +1,3 @@
+[submodule "manifests/components/grafana-dashboards"]
+	path = manifests/components/grafana-dashboards
+	url = https://github.com/bitnami-labs/kubernetes-grafana-dashboards
