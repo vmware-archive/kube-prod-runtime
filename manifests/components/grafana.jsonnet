@@ -98,11 +98,11 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     local this = self,
     dashboard_provider:: {
       // Grafana dashboards configuration
-      "Kubernetes": {
+      "kubernetes": {
         folder: "Kubernetes",
         type: "file",
         disableDeletion: false,
-        editable: "false",
+        editable: false,
         options: {
           path: GRAFANA_DASHBOARDS_CONFIG + "/kubernetes",
         },
@@ -111,7 +111,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     data+: {
       _config:: {
         apiVersion: 1,
-        dashboards_provider: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.dashboard_provider)],
+        providers: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.dashboard_provider)],
       },
       "dashboards_provider.yml": kubecfg.manifestYaml(self._config),
     },
@@ -120,13 +120,9 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   kubernetes_dashboards: kube.ConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
     local this = self,
     data+: {
-      _config:: {
-        apiVersion: 1,
-        "k8s_cluster_capacity.json": import "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
-        "k8s_cluster_workloads_summary.json": import "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_workloads_summary.json",
-        "k8s_resource_usage_namespace_pods.json": import "grafana-dashboards/handcrafted/kubernetes/k8s_resource_usage_namespace_pods.json",
-      },
-      "kubernetes_dashboards.yml": kubecfg.manifestYaml(self._config),
+      "k8s_cluster_capacity.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
+      "k8s_cluster_workloads_summary.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_workloads_summary.json",
+      "k8s_resource_usage_namespace_pods.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_resource_usage_namespace_pods.json",
     },
   },
 
@@ -179,7 +175,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
                   readOnly: true,
                 },
                 kubernetes_dashboards: {
-                  mountPath: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "/kubernetes"),
+                  mountPath: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
                   readOnly: true,
                 },
               },
