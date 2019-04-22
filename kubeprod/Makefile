@@ -87,8 +87,4 @@ endif
 clean:
 	rm -rf $(BINDIR) ./_dist
 
-init-submodules:
-	git submodule init; \
-	git submodule update --init --remote --recursive; \
-
-.PHONY: init-submodules all release dist checksum test fmt vet archiver clean
+.PHONY: all release dist checksum test fmt vet archiver clean

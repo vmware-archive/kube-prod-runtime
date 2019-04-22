@@ -11,8 +11,12 @@ JFILES := \
 validate: $(UNITTESTS:%.jsonnet=%.jsonnet-validate)
 validate: $(PLATFORMS:%.jsonnet=%.jsonnet-validate)
 
+init-submodules:
+	git submodule init; \
+	git submodule update --init --remote --recursive;
+
 %.jsonnet-validate: %.jsonnet $(JFILES)
 	$(KUBECFG) validate --ignore-unknown $<
 
-.PHONY: all validate
+.PHONY: all init-submodules validate
 .PHONY: %.jsonnet-validate
