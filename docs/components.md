@@ -377,6 +377,60 @@ The following example shows how to override the amount of persistent storage req
 }
 ```
 
+#### Grafana dashboards
+
+Grafana comes with a preset of dashboards that are meant to give an overview of the Kubernetes cluster.
+This set of dashboards is imported from [bitnami-labs/kubernetes-grafana-dashboards](https://github.com/bitnami-labs/kubernetes-grafana-dashboards) and loaded in Grafana via ConfigMaps. Check the [Grafana documentation](https://grafana.com/docs/administration/provisioning/#dashboards) to understand how the Grafana provisioning works.
+
+If you are interested in provisioning your own dashboards, you should extend the `dashboard_provider` object in order to add different Grafana folders where you can store your dashboards:
+
+~~~jsonnet
+dashboards_provider: kube.ConfigMap($.p + "grafana-dashboards-configuration") + $.metadata {
+  local this = self,
+  dashboard_provider:: {
+    // Grafana dashboards configuration
+    "kubernetes": {
+      folder: "Kubernetes",
+      type: "file",
+      disableDeletion: false,
+      editable: false,
+      options: {
+        path: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
+      },
+    },
+    "custom": {
+      folder: "Custom",
+      type: "file",
+      disableDeletion: false,
+      editable: false,
+      options: {
+        path: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "custom"),
+      },
+    },
+  },
+  data+: {
+    _config:: {
+      apiVersion: 1,
+      providers: kube.mapToNamedList(this.dashboard_provider),
+    },
+    "dashboards_provider.yml": kubecfg.manifestYaml(self._config),
+  },
+},
+~~~
+
+Furthermore, you will have to create a ConfigMap that imports the dashboard:
+
+~~~jsonnet
+custom_dashboards: kube.ConfigMap($.p + "grafana-custom-dashboards") + $.metadata {
+  local this = self,
+  data+: {
+    "custom_dashboard.json": importstr "path/to/custom/dashbord/custom_dashboard.json",
+  },
+},
+~~~
+
+And mount that ConfigMap in the desired location inside the Grafana pod.
+
 ## Ingress stack
 ### NGINX Ingress Controller
 

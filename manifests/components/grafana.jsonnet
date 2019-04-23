@@ -104,14 +104,14 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
         disableDeletion: false,
         editable: false,
         options: {
-          path: GRAFANA_DASHBOARDS_CONFIG + "/kubernetes",
+          path: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
         },
       },
     },
     data+: {
       _config:: {
         apiVersion: 1,
-        providers: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.dashboard_provider)],
+        providers: kube.mapToNamedList(this.dashboard_provider),
       },
       "dashboards_provider.yml": kubecfg.manifestYaml(self._config),
     },
