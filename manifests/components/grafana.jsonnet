@@ -23,6 +23,7 @@ local utils = import "../lib/utils.libsonnet";
 
 local GRAFANA_IMAGE = (import "images.json")["grafana"];
 local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
+local GRAFANA_DASHBOARDS_CONFIG = "/opt/bitnami/grafana/conf/provisioning/dashboards";
 local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
 
 // TODO: add blackbox-exporter
@@ -92,12 +93,47 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     },
   },
 
+  // Generates YAML dashboard configuration under provisioning/dashboards/
+  dashboards_provider: kube.ConfigMap($.p + "grafana-dashboards-configuration") + $.metadata {
+    local this = self,
+    dashboard_provider:: {
+      // Grafana dashboards configuration
+      "kubernetes": {
+        folder: "Kubernetes",
+        type: "file",
+        disableDeletion: false,
+        editable: false,
+        options: {
+          path: GRAFANA_DASHBOARDS_CONFIG + "/kubernetes",
+        },
+      },
+    },
+    data+: {
+      _config:: {
+        apiVersion: 1,
+        providers: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.dashboard_provider)],
+      },
+      "dashboards_provider.yml": kubecfg.manifestYaml(self._config),
+    },
+  },
+
+  kubernetes_dashboards: kube.ConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
+    local this = self,
+    data+: {
+      "k8s_cluster_capacity.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
+      "k8s_cluster_workloads_summary.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_workloads_summary.json",
+      "k8s_resource_usage_namespace_pods.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_resource_usage_namespace_pods.json",
+    },
+  },
+
   grafana: kube.StatefulSet($.p + "grafana") + $.metadata {
     spec+: {
       template+: {
         spec+: {
           volumes_+: {
             datasources: kube.ConfigMapVolume($.datasources),
+            dashboards_provider: kube.ConfigMapVolume($.dashboards_provider),
+            kubernetes_dashboards: kube.ConfigMapVolume($.kubernetes_dashboards),
           },
           containers_+: {
             grafana: kube.Container("grafana") {
@@ -131,6 +167,15 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
                 datasources: {
                   mountPath: utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
                   subPath: "bkpr.yml",
+                  readOnly: true,
+                },
+                dashboards_provider: {
+                  mountPath: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "dashboards_provider.yml"),
+                  subPath: "dashboards_provider.yml",
+                  readOnly: true,
+                },
+                kubernetes_dashboards: {
+                  mountPath: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
                   readOnly: true,
                 },
               },

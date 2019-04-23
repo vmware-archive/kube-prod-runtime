@@ -256,6 +256,7 @@ spec:
                 stage('Checkout') {
                     dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
                         checkout scm
+                        sh 'git submodule update --init'
                     }
                 }
 
