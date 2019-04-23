@@ -90,7 +90,7 @@ The following matrix shows which versions of each component are used and support
 | Fluentd       | `1.2.x`        | `1.3.x`  | `1.4.x`  | `1.4.x`  |
 | Heapster      | `1.5.x`        | `N/A`    | `N/A`    | `N/A`    |
 | Kibana        | `5.6.x`        | `5.6.x`  | `6.6.x`  | `6.7.x`  |
-| nginx-ingress | `0.19.x`       | `0.21.x` | `0.23.x` | `0.23.x` |
+| nginx-ingress | `0.19.x`       | `0.21.x` | `0.23.x` | `0.24.x` |
 | oauth2_proxy  | `0.20180625.x` | `3.0.x`  | `3.1.x`  | `3.1.x`  |
 | Prometheus    | `2.3.x`        | `2.6.x`  | `2.7.x`  | `2.8.x`  |
 
