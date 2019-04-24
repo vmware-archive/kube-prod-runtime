@@ -121,8 +121,9 @@ var _ = Describe("Exporters", func() {
 			}
 			fmt.Fprintf(GinkgoWriter, "}\n")
 		}
-
-		Expect(series).To(match)
+		Eventually(func() bool {
+			return Expect(series).To(match)
+		}, "2m", "5s").Should(BeTrue())
 	},
 		Entry("prometheus", `prometheus_tsdb_head_chunks{kubernetes_namespace="kubeprod",name="prometheus"}`, Not(BeEmpty())),
 		Entry("alertmanager", `alertmanager_peer_position`, Not(BeEmpty())),
