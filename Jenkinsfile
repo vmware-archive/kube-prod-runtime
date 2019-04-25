@@ -596,7 +596,7 @@ spec:
                                                     }
                                                 }
                                                 container('eksctl') {
-                                                    sh "eksctl delete cluster --name ${clusterName}"
+                                                    sh "eksctl delete cluster --name ${clusterName} --timeout 10m0s || true"
                                                 }
                                             }
                                             // dnsSetup
