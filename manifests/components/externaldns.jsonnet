@@ -48,7 +48,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
       {
         apiGroups: [""],
         resources: ["nodes"],
-        verbs: ["list"],
+        verbs: ["get","watch","list"],
       },
     ],
   },
