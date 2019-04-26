@@ -96,34 +96,23 @@ var _ = Describe("Exporters", func() {
 			"match[]": selector,
 			"start":   fmt.Sprintf("%d", time.Now().Add(-20*time.Minute).Unix()),
 		}
-		resultRaw, err := c.CoreV1().
-			Services("kubeprod").
-			ProxyGet("http", "prometheus", "9090", "api/v1/series", params).
-			DoRaw()
-		Expect(err).NotTo(HaveOccurred())
 
-		resp := promResponse{}
-		json.Unmarshal(resultRaw, &resp)
-		var series []map[string]string
-		json.Unmarshal(resp.Data, &series)
+		Eventually(func() ([]map[string]string, error) {
+			var series []map[string]string
+			resultRaw, err := c.CoreV1().
+				Services("kubeprod").
+				ProxyGet("http", "prometheus", "9090", "api/v1/series", params).
+				DoRaw()
+			if err != nil {
+				return nil, err
+			}
 
-		fmt.Fprintf(GinkgoWriter, "%s found %d timeseries:\n", selector, len(series))
-		for i, s := range series {
-			if i >= 10 {
-				fmt.Fprintf(GinkgoWriter, "(truncated ...)\n")
-				break
-			}
-			fmt.Fprintf(GinkgoWriter, "%s{", s["__name__"])
-			for k, v := range s {
-				if k != "__name__" {
-					fmt.Fprintf(GinkgoWriter, "%s=%q,", k, v)
-				}
-			}
-			fmt.Fprintf(GinkgoWriter, "}\n")
-		}
-		Eventually(func() bool {
-			return Expect(series).To(match)
-		}, "2m", "5s").Should(BeTrue())
+			resp := promResponse{}
+			json.Unmarshal(resultRaw, &resp)
+			json.Unmarshal(resp.Data, &series)
+
+			return series, err
+		}, "5m", "5s").Should(match)
 	},
 		Entry("prometheus", `prometheus_tsdb_head_chunks{kubernetes_namespace="kubeprod",name="prometheus"}`, Not(BeEmpty())),
 		Entry("alertmanager", `alertmanager_peer_position`, Not(BeEmpty())),
