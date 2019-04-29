@@ -211,7 +211,7 @@ var _ = Describe("Ingress", func() {
 				}
 
 				return lbAddr, nil
-			}, "20m", "5s").
+			}, "5m", "5s").
 				ShouldNot(WithTransform(isPrivateIP, BeTrue()))
 		})
 
@@ -249,7 +249,7 @@ var _ = Describe("Ingress", func() {
 
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "20m", "5s").
+			}, "5m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
@@ -295,7 +295,7 @@ var _ = Describe("Ingress", func() {
 			Eventually(func() (*http.Response, error) {
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "30m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
@@ -336,7 +336,7 @@ var _ = Describe("Ingress", func() {
 					// NB: will follow redirects
 					resp, err = getURL(client, testUrl)
 					return resp, err
-				}, "20m", "5s").
+				}, "10m", "5s").
 					Should(WithTransform(statusCode, Or(Equal(200), Equal(400))))
 
 				fmt.Fprintf(GinkgoWriter, "Response:\n%#v", resp)
@@ -400,7 +400,7 @@ var _ = Describe("Ingress", func() {
 					// NB: will follow redirects
 					resp, err = getURL(client, testUrl)
 					return resp, err
-				}, "20m", "5s").
+				}, "10m", "5s").
 					Should(WithTransform(statusCode, Equal(200)))
 
 				fmt.Fprintf(GinkgoWriter, "Response:\n%#v", resp)
