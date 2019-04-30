@@ -71,7 +71,7 @@ metadata:
   annotations:
     prometheus.io/scrape: "true"
     prometheus.io/port: "9104"
-    prometheus.io/metrics: "/metrics"
+    prometheus.io/path: "/metrics"
 spec:
   type: ClusterIP
   ports:
