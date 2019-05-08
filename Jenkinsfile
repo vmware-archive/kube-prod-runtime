@@ -16,6 +16,20 @@ def parentZoneResourceGroup = 'jenkins-bkpr-rg'
 // Force using our pod
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
+def scmCheckout() {
+    def repo_url = env.GITHUB_REPO_GIT_URL
+    def sha = env.GITHUB_PR_HEAD_SHA ? env.GITHUB_PR_HEAD_SHA : env.GITHUB_BRANCH_HEAD_SHA
+
+    sh """
+    git init --quiet
+    git remote add origin ${repo_url}
+    git config --add remote.origin.fetch '+refs/pull/*/head:refs/remotes/origin/pr/*'
+    git fetch origin --quiet
+    git checkout ${sha} --quiet
+    git submodule update --init
+    """
+}
+
 def withGo(Closure body) {
     container('go') {
         withEnv([
@@ -255,8 +269,7 @@ spec:
 
                 stage('Checkout') {
                     dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
-                        checkout scm
-                        sh 'git submodule update --init'
+                        scmCheckout()
                     }
                 }
 
@@ -621,7 +634,7 @@ spec:
                 parallel platforms
 
                 stage('Release') {
-                    if (env.TAG_NAME) {
+                    if (env.GITHUB_TAG_NAME) {
                         dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
                             withGo() {
                                 withCredentials([
@@ -635,8 +648,8 @@ spec:
                                         "PATH+AWLESS=${tool 'awless'}",
                                         "GITHUB_USER=bitnami",
                                     ]) {
-                                        sh "make dist VERSION=${TAG_NAME}"
-                                        sh "make publish VERSION=${TAG_NAME}"
+                                        sh "make dist VERSION=${GITHUB_TAG_NAME}"
+                                        sh "make publish VERSION=${GITHUB_TAG_NAME}"
                                     }
                                 }
                             }
@@ -644,7 +657,7 @@ spec:
                             container(name: 'kaniko', shell: '/busybox/sh') {
                                 withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
                                     sh """#!/busybox/sh
-                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
+                                    /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${GITHUB_TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${GITHUB_TAG_NAME}
                                     """
                                 }
                             }
