@@ -30,6 +30,50 @@ def scmCheckout() {
     """
 }
 
+def scmPostCommitStatus(String state) {
+    def target_url = env.BUILD_URL + 'display/redirect'
+    def repo = ''
+    def sha = ''
+    def context = ''
+    def desc = ''
+    def url = ''
+
+    if(env.GITHUB_BRANCH_NAME != null) {
+        sha = env.GITHUB_BRANCH_HEAD_SHA
+        url = env.GITHUB_BRANCH_URL
+        context = 'continuous-integration/jenkins/branch'
+    } else {
+        sha = env.GITHUB_PR_HEAD_SHA
+        url = env.GITHUB_PR_URL
+        context = 'continuous-integration/jenkins/pr-merge'
+    }
+    params = url.replaceAll('https://github.com/', '').split('/');
+    repo = params[0] + '/' + params[1]
+
+    switch(state) {
+        case 'success':
+            desc = 'This commit looks good'
+            break
+        case 'error':
+        case 'failure':
+            desc = 'This commit cannot be built'
+            break
+        case 'pending':
+            desc = 'Waiting for status to be reported'
+            break
+        default:
+            return
+    }
+
+    withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+        sh """
+        curl -sSf \"https://api.github.com/repos/${repo}/statuses/${sha}?access_token=${GITHUB_TOKEN}\" \
+            -H \"Content-Type: application/json\" -X POST -o /dev/null \
+            -d \"{\\\"state\\\": \\\"${state}\\\",\\\"context\\\": \\\"${context}\\\", \\\"description\\\": \\\"${desc}\\\", \\\"target_url\\\": \\\"${target_url}\\\"}\"
+        """
+    }
+}
+
 def withGo(Closure body) {
     container('go') {
         withEnv([
@@ -252,6 +296,8 @@ spec:
                 "HOME=${env.WORKSPACE}",
                 "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",
             ]) {
+                scmPostCommitStatus("pending")
+
                 stage('Bootstrap') {
                     withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
                         container('gcloud') {
@@ -666,6 +712,8 @@ spec:
                         Utils.markStageSkippedForConditional(STAGE_NAME)
                     }
                 }
+
+                scmPostCommitStatus("success")
             }
         }
     }
