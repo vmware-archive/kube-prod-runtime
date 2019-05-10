@@ -32,23 +32,11 @@ def scmCheckout() {
 
 def scmPostCommitStatus(String state) {
     def target_url = env.BUILD_URL + 'display/redirect'
-    def repo = ''
-    def sha = ''
-    def context = ''
+    def sha = env.GITHUB_PR_HEAD_SHA ?: (env.GITHUB_BRANCH_HEAD_SHA ?: env.GITHUB_TAG_HEAD_SHA)
+    def context = 'continuous-integration/jenkins/' + (env.GITHUB_BRANCH_NAME ? 'branch' : (env.GITHUB_TAG_NAME ? 'tag' : 'pr-merge'))
+    def params = (env.GITHUB_PR_URL ?: (env.GITHUB_BRANCH_URL ?: env.GITHUB_TAG_URL)).replaceAll('https://github.com/', '').split('/')
+    def repo = params[0] + '/' + params[1]
     def desc = ''
-    def url = ''
-
-    if(env.GITHUB_BRANCH_NAME != null) {
-        sha = env.GITHUB_BRANCH_HEAD_SHA
-        url = env.GITHUB_BRANCH_URL
-        context = 'continuous-integration/jenkins/branch'
-    } else {
-        sha = env.GITHUB_PR_HEAD_SHA
-        url = env.GITHUB_PR_URL
-        context = 'continuous-integration/jenkins/pr-merge'
-    }
-    params = url.replaceAll('https://github.com/', '').split('/');
-    repo = params[0] + '/' + params[1]
 
     switch(state) {
         case 'success':
