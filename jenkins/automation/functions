@@ -174,7 +174,7 @@ create_pull_request() {
     done < MAINTAINERS
   fi
 
-  hub pull-request -b "${base_branch}" -m "${pr_title}" ${REVIEWERS:+-r "${REVIEWERS}"} >/dev/null
+  hub pull-request -l "status/waiting-for-review" -b "${base_branch}" -m "${pr_title}" ${REVIEWERS:+-r "${REVIEWERS}"} >/dev/null
 }
 
 # deletes a branch from the specified remote, as well as locally
