@@ -18,7 +18,7 @@ def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
 def scmCheckout() {
     def repo_url = env.GITHUB_REPO_GIT_URL
-    def sha = env.GITHUB_PR_HEAD_SHA ? env.GITHUB_PR_HEAD_SHA : env.GITHUB_BRANCH_HEAD_SHA
+    def sha = env.GITHUB_PR_HEAD_SHA ?: (env.GITHUB_BRANCH_HEAD_SHA ?: env.GITHUB_TAG_HEAD_SHA)
 
     sh """
     git init --quiet
