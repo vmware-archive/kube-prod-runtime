@@ -72,7 +72,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   },
 
   // Generates YAML configuration under provisioning/datasources/
-  datasources: kube.ConfigMap($.p + "grafana-prometheus-datasource") + $.metadata {
+  datasources: utils.HashedConfigMap($.p + "grafana-datasource-configuration") + $.metadata {
     local this = self,
     datasources:: {
       // Built-in datasource for BKPR's Prometheus
