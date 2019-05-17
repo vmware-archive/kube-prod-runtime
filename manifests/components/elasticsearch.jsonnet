@@ -20,7 +20,7 @@
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = (import "images.json").elasticsearch;
+local ELASTICSEARCH_IMAGE = (import "images.json")["elasticsearch"];
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
@@ -47,7 +47,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     },
   },
 
-  metadata:: $.labels {
+  metadata:: $.labels + {
     metadata+: {
       namespace: "kubeprod",
     },
@@ -71,13 +71,13 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     subjects_+: [$.serviceAccount],
   },
 
-  disruptionBudget: kube.PodDisruptionBudget($.p + "elasticsearch-logging") + $.metadata {
+  disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.metadata {
     target_pod: $.sts.spec.template,
     spec+: { maxUnavailable: 1 },
   },
 
   // ConfigMap for additional Java security properties
-  java_security: kube.ConfigMap($.p + "java-elasticsearch-logging") + $.metadata {
+  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.metadata {
     data+: {
       "java.security": (importstr "elasticsearch-config/java.security"),
     },
@@ -117,7 +117,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               resources: {
                 requests: { cpu: "100m", memory: "1200Mi" },
                 limits: {
-                  cpu: "1",  // uses lots of CPU when indexing
+                  cpu: "1", // uses lots of CPU when indexing
                   memory: "2Gi",
                 },
               },
@@ -146,7 +146,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ES_JAVA_OPTS: std.join(" ", [
                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
-                  "-Xms%dm" % heapsize,  // ES asserts that these are equal
+                  "-Xms%dm" % heapsize, // ES asserts that these are equal
                   "-Xmx%dm" % heapsize,
                   "-XshowSettings:vm",
                 ]),
