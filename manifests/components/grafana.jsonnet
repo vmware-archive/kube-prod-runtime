@@ -73,7 +73,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   },
 
   // Generates YAML configuration under provisioning/datasources/
-  datasources: kube.ConfigMap($.p + "grafana-prometheus-datasource") + $.metadata {
+  datasources: utils.HashedConfigMap($.p + "grafana-datasource-configuration") + $.metadata {
     local this = self,
     datasources:: {
       // Built-in datasource for BKPR's Prometheus
@@ -94,7 +94,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   },
 
   // Generates YAML dashboard configuration under provisioning/dashboards/
-  dashboards_provider: kube.ConfigMap($.p + "grafana-dashboards-configuration") + $.metadata {
+  dashboards_provider: utils.HashedConfigMap($.p + "grafana-dashboards-configuration") + $.metadata {
     local this = self,
     dashboard_provider:: {
       // Grafana dashboards configuration
@@ -117,7 +117,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     },
   },
 
-  kubernetes_dashboards: kube.ConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
+  kubernetes_dashboards: utils.HashedConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
     local this = self,
     data+: {
       "k8s_cluster_capacity.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
