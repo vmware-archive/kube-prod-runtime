@@ -431,6 +431,24 @@ custom_dashboards: kube.ConfigMap($.p + "grafana-custom-dashboards") + $.metadat
 
 And mount that ConfigMap in the desired location inside the Grafana pod.
 
+#### Grafana Plugins
+
+Plugins enables users to add support for various types of datasources, panels and apps to Grafana. Checkout the official [Plugin Repository](https://grafana.com/plugins) to discover the available plugins for Grafana.
+
+To install additional plug-ins, override the `plugins` item inside the `grafana` scope, like this:
+
+```jsonnet
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    grafana+: {
+        plugins+: [
+            "grafana-piechart-panel",
+            "grafana-worldmap-panel",
+        ],
+    },
+}
+```
+
 ## Ingress stack
 ### NGINX Ingress Controller
 
