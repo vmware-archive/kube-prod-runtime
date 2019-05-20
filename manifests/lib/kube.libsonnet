@@ -37,8 +37,8 @@
   // Convert an octal (as a string) to number,
   parseOctal(s):: (
     local len = std.length(s);
-    local leading = std.substr(s, 0, len-1);
-    local last = std.substr(s, len-1, 1);
+    local leading = std.substr(s, 0, len - 1);
+    local last = std.substr(s, len - 1, 1);
     std.parseInt(last) + (if len > 1 then 8 * $.parseOctal(leading) else 0)
   ),
 
@@ -70,7 +70,8 @@
     if v >= start && v <= end then v - start + newstart else v,
   local remapChar(c, start, end, newstart) =
     std.char(remap(
-      std.codepoint(c), std.codepoint(start), std.codepoint(end), std.codepoint(newstart))),
+      std.codepoint(c), std.codepoint(start), std.codepoint(end), std.codepoint(newstart)
+    )),
   toLower(s):: (
     std.join("", [remapChar(c, "A", "Z", "a") for c in std.stringChars(s)])
   ),
@@ -116,7 +117,8 @@
     host_colon_port:: "%s:%s" % [self.host, self.spec.ports[0].port],
     http_url:: "http://%s/" % self.host_colon_port,
     proxy_urlpath:: "/api/v1/proxy/namespaces/%s/services/%s/" % [
-      self.metadata.namespace, self.metadata.name,
+      self.metadata.namespace,
+      self.metadata.name,
     ],
     // Useful in Ingress rules
     name_port:: {
@@ -179,7 +181,8 @@
 
     envList(map):: [
       if std.type(map[x]) == "object" then { name: x, valueFrom: map[x] } else { name: x, value: std.toString(map[x]) }
-      for x in std.objectFields(map)],
+      for x in std.objectFields(map)
+    ],
 
     env_:: {},
     env: self.envList(self.env_),
@@ -223,7 +226,7 @@
     containers: [{ name: $.hyphenate(name) } + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
 
     initContainers_:: {},
-    initContainers: [{name: $.hyphenate(name) } + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
+    initContainers: [{ name: $.hyphenate(name) } + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
 
     volumes_:: {},
     volumes: $.mapToNamedList(self.volumes_),
@@ -265,8 +268,11 @@
 
     // I keep thinking data values can be any JSON type.  This check
     // will remind me that they must be strings :(
-    local nonstrings = [k for k in std.objectFields(self.data)
-                        if std.type(self.data[k]) != "string"],
+    local nonstrings = [
+      k
+      for k in std.objectFields(self.data)
+      if std.type(self.data[k]) != "string"
+    ],
     assert std.length(nonstrings) == 0 : "data contains non-string values: %s" % [nonstrings],
   },
 
@@ -330,8 +336,11 @@
       strategy: {
         type: "RollingUpdate",
 
-        local pvcs = [v for v in deployment.spec.template.spec.volumes
-                      if std.objectHas(v, "persistentVolumeClaim")],
+        local pvcs = [
+          v
+          for v in deployment.spec.template.spec.volumes
+          if std.objectHas(v, "persistentVolumeClaim")
+        ],
         local is_stateless = std.length(pvcs) == 0,
 
         // Apps trying to maintain a majority quorum or similar will
@@ -403,8 +412,9 @@
         // they're no-ops).
         // In particular annotations={} is apparently a "change",
         // since the comparison is ignorant of defaults.
-        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + {apiVersion:: null, kind:: null} + kv[1])
-        for kv in $.objectItems(self.volumeClaimTemplates_)],
+        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + { apiVersion:: null, kind:: null } + kv[1])
+        for kv in $.objectItems(self.volumeClaimTemplates_)
+      ],
 
       replicas: 1,
       assert self.replicas >= 1,
@@ -414,25 +424,19 @@
   Job(name): $._Object("batch/v1", "Job", name) {
     local job = self,
 
-    spec: {
-      template: {
-        spec: $.PodSpec {
-          restartPolicy: "OnFailure",
-        },
-        metadata: {
+    spec: $.JobSpec {
+      template+: {
+        metadata+: {
           labels: job.metadata.labels,
         },
       },
-
-      completions: 1,
-      parallelism: 1,
     },
   },
 
   CronJob(name): $._Object("batch/v1beta1", "CronJob", name) {
     local cronjob = self,
- 
-   spec: {
+
+    spec: {
       jobTemplate: {
         spec: $.JobSpec {
           template+: {
@@ -491,7 +495,7 @@
       for r in self.spec.rules
       for p in r.http.paths
       if !std.startsWith(p.path, "/")
-      ],
+    ],
     assert std.length(rel_paths) == 0 : "paths must be absolute: " + rel_paths,
   },
 
@@ -563,7 +567,7 @@
     local this = self,
     target:: error "target is required",
     spec+: {
-      podSelector: {matchLabels: this.target.metadata.labels},
+      podSelector: { matchLabels: this.target.metadata.labels },
     },
   },
 

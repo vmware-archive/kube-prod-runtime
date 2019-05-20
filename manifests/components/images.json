@@ -2,6 +2,7 @@
     "alertmanager": "bitnami/alertmanager:0.17.0-r0",
     "cert-manager": "bitnami/cert-manager:0.7.2-r2",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
+    "curator": "bobrik/curator:5.7.6",
     "elasticsearch": "bitnami/elasticsearch:6.7.1-r2",
     "external-dns": "bitnami/external-dns:0.5.14-r0",
     "fluentd": "bitnami/fluentd:1.4.2-r4",
@@ -9,6 +10,5 @@
     "kibana": "bitnami/kibana:6.7.2-r1",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.24.1-r4",
     "oauth2_proxy": "bitnami/oauth2-proxy:3.1.0-r1",
-    "curator": "bobrik/curator:5.7.6",
     "prometheus": "bitnami/prometheus:2.9.2-r0"
 }
