@@ -39,6 +39,9 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   // Amount of persistent storage required by Alertmanager
   storage:: "1Gi",
 
+  // List of plugins to install
+  plugins:: [],
+
   prometheus:: error "No Prometheus service",
 
   // Default to "Admin". See http://docs.grafana.org/permissions/overview/ for
@@ -158,6 +161,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
                 GF_LOG_MODE: "console",
                 GF_LOG_LEVEL: "warn",
                 GF_METRICS_ENABLED: "true",
+                GF_INSTALL_PLUGINS: std.join(",", $.plugins),
               },
               ports_+: {
                 dashboard: { containerPort: 3000 },
