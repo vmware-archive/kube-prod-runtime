@@ -31,9 +31,7 @@ local elasticsearch_curator = {
   elasticsearch_port:: error 'elasticsearch_port must be externally provided ...',
   elasticsearch_curator_schedule:: error 'elasticsearch_curator_schedule must be externally provided ...',
   elasticsearch_curator_config: kube.ConfigMap($.name) {
-    metadata+: {
-      namespace: $.namespace,
-    },
+    metadata+: { namespace: $.namespace, },
     data+: {
       action_file_yml_tmpl:: |||
         ---
@@ -93,34 +91,26 @@ local elasticsearch_curator = {
     },
   },
   elasticsearch_curator_cronjob: kube.CronJob($.name) {
-    metadata+: {
-      namespace: $.namespace,
-    },
+    metadata+: { namespace: $.namespace },
     spec+: {
       schedule: $.elasticsearch_curator_schedule,
       jobTemplate+: {
-        spec+:
-          {
-            template+: {
-              spec+: {
-                containers_+: {
-                  curator: kube.Container('curator') {
-                    image: CURATOR_IMAGE,
-                    args: ['--config', '/etc/config/config.yml', '/etc/config/action_file.yml'],
-                    volumeMounts_+: {
-                      config_vol: {
-                        mountPath: '/etc/config',
-                        readOnly: true,
-                      },
-                    },
+        spec+: {
+          template+: {
+            spec+: {
+              containers_+: {
+                curator: kube.Container('curator') {
+                  image: CURATOR_IMAGE,
+                  args: ['--config', '/etc/config/config.yml', '/etc/config/action_file.yml'],
+                  volumeMounts_+: {
+                    config_vol: { mountPath: '/etc/config', readOnly: true, },
                   },
                 },
-                volumes_+: {
-                  config_vol: kube.ConfigMapVolume($.elasticsearch_curator_config),
-                },
               },
+              volumes_+: { config_vol: kube.ConfigMapVolume($.elasticsearch_curator_config), },
             },
           },
+        },
       },
     },
   },
