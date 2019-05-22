@@ -233,8 +233,8 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
   curator: elasticsearch_curator {
     retention_days:: 90,
-    elasticsearch_host: $.svc.metadata.name,
-    elasticsearch_port: ELASTICSEARCH_HTTP_PORT,
+    elasticsearch_host: $.svc.host,
+    elasticsearch_port: $.svc.port,
     elasticsearch_curator_schedule: "10 10 * * *",
   },
 }
