@@ -23,7 +23,7 @@ local utils = import '../lib/utils.libsonnet';
 local CURATOR_IMAGE = (import 'images.json').curator;
 
 // Implement elasticsearch-curator as a Kubernetes CronJob
-local elasticsearch_curator = {
+{
   namespace:: 'kubeprod',
   name:: 'elasticsearch-curator',
   retention_days:: error 'retention_days must be externally provided ...',
@@ -114,6 +114,4 @@ local elasticsearch_curator = {
       },
     },
   },
-};
-
-kube.List() { items_+: elasticsearch_curator }
+}

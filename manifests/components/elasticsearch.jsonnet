@@ -231,7 +231,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     },
   },
 
-  curator: elasticsearch_curator.items_ {
+  curator: elasticsearch_curator {
     retention_days:: 90,
     elasticsearch_host: $.svc.metadata.name,
     elasticsearch_port: ELASTICSEARCH_HTTP_PORT,
