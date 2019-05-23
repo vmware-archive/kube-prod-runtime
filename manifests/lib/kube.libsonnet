@@ -37,13 +37,13 @@
   // Convert an octal (as a string) to number,
   parseOctal(s):: (
     local len = std.length(s);
-    local leading = std.substr(s, 0, len-1);
-    local last = std.substr(s, len-1, 1);
+    local leading = std.substr(s, 0, len - 1);
+    local last = std.substr(s, len - 1, 1);
     std.parseInt(last) + (if len > 1 then 8 * $.parseOctal(leading) else 0)
   ),
 
   // Convert {foo: {a: b}} to [{name: foo, a: b}]
-  mapToNamedList(o):: [{ name: $.hyphenate(n) } + o[n] for n in std.objectFields(o)],
+  mapToNamedList(o):: [{name: $.hyphenate(n)} + o[n] for n in std.objectFields(o)],
 
   // Convert from SI unit suffixes to regular number
   siToNum(n):: (
@@ -70,7 +70,8 @@
     if v >= start && v <= end then v - start + newstart else v,
   local remapChar(c, start, end, newstart) =
     std.char(remap(
-      std.codepoint(c), std.codepoint(start), std.codepoint(end), std.codepoint(newstart))),
+      std.codepoint(c), std.codepoint(start), std.codepoint(end), std.codepoint(newstart)
+    )),
   toLower(s):: (
     std.join("", [remapChar(c, "A", "Z", "a") for c in std.stringChars(s)])
   ),
@@ -84,7 +85,7 @@
     kind: kind,
     metadata: {
       name: name,
-      labels: { name: std.join("-", std.split(this.metadata.name, ":")) },
+      labels: {name: std.join("-", std.split(this.metadata.name, ":"))},
     },
   },
 
@@ -99,8 +100,8 @@
   },
 
   Endpoints(name): $._Object("v1", "Endpoints", name) {
-    Ip(addr):: { ip: addr },
-    Port(p):: { port: p },
+    Ip(addr):: {ip: addr},
+    Port(p):: {port: p},
 
     subsets: [],
   },
@@ -116,7 +117,8 @@
     host_colon_port:: "%s:%s" % [self.host, self.spec.ports[0].port],
     http_url:: "http://%s/" % self.host_colon_port,
     proxy_urlpath:: "/api/v1/proxy/namespaces/%s/services/%s/" % [
-      self.metadata.namespace, self.metadata.name,
+      self.metadata.namespace,
+      self.metadata.name,
     ],
     // Useful in Ingress rules
     name_port:: {
@@ -143,7 +145,7 @@
 
   // TODO: This is a terrible name
   PersistentVolumeClaimVolume(pvc): {
-    persistentVolumeClaim: { claimName: pvc.metadata.name },
+    persistentVolumeClaim: {claimName: pvc.metadata.name},
   },
 
   StorageClass(name): $._Object("storage.k8s.io/v1beta1", "StorageClass", name) {
@@ -178,8 +180,9 @@
     imagePullPolicy: if std.endsWith(self.image, ":latest") then "Always" else "IfNotPresent",
 
     envList(map):: [
-      if std.type(map[x]) == "object" then { name: x, valueFrom: map[x] } else { name: x, value: std.toString(map[x]) }
-      for x in std.objectFields(map)],
+      if std.type(map[x]) == "object" then {name: x, valueFrom: map[x]} else {name: x, value: std.toString(map[x])}
+      for x in std.objectFields(map)
+    ],
 
     env_:: {},
     env: self.envList(self.env_),
@@ -220,10 +223,10 @@
     containers_:: {},
 
     local container_names_ordered = [self.default_container] + [n for n in container_names if n != self.default_container],
-    containers: [{ name: $.hyphenate(name) } + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
+    containers: [{name: $.hyphenate(name)} + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
 
     initContainers_:: {},
-    initContainers: [{name: $.hyphenate(name) } + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
+    initContainers: [{name: $.hyphenate(name)} + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
 
     volumes_:: {},
     volumes: $.mapToNamedList(self.volumes_),
@@ -240,7 +243,7 @@
   },
 
   HostPathVolume(path, type=""): {
-    hostPath: { path: path, type: type },
+    hostPath: {path: path, type: type},
   },
 
   GitRepoVolume(repository, revision): {
@@ -253,11 +256,11 @@
   },
 
   SecretVolume(secret): {
-    secret: { secretName: secret.metadata.name },
+    secret: {secretName: secret.metadata.name},
   },
 
   ConfigMapVolume(configmap): {
-    configMap: { name: configmap.metadata.name },
+    configMap: {name: configmap.metadata.name},
   },
 
   ConfigMap(name): $._Object("v1", "ConfigMap", name) {
@@ -265,8 +268,11 @@
 
     // I keep thinking data values can be any JSON type.  This check
     // will remind me that they must be strings :(
-    local nonstrings = [k for k in std.objectFields(self.data)
-                        if std.type(self.data[k]) != "string"],
+    local nonstrings = [
+      k
+      for k in std.objectFields(self.data)
+      if std.type(self.data[k]) != "string"
+    ],
     assert std.length(nonstrings) == 0 : "data contains non-string values: %s" % [nonstrings],
   },
 
@@ -284,7 +290,7 @@
 
     type: "Opaque",
     data_:: {},
-    data: { [k]: std.base64(secret.data_[k]) for k in std.objectFields(secret.data_) },
+    data: {[k]: std.base64(secret.data_[k]) for k in std.objectFields(secret.data_)},
   },
 
   // subtype of EnvVarSource
@@ -330,8 +336,11 @@
       strategy: {
         type: "RollingUpdate",
 
-        local pvcs = [v for v in deployment.spec.template.spec.volumes
-                      if std.objectHas(v, "persistentVolumeClaim")],
+        local pvcs = [
+          v
+          for v in deployment.spec.template.spec.volumes
+          if std.objectHas(v, "persistentVolumeClaim")
+        ],
         local is_stateless = std.length(pvcs) == 0,
 
         // Apps trying to maintain a majority quorum or similar will
@@ -404,7 +413,8 @@
         // In particular annotations={} is apparently a "change",
         // since the comparison is ignorant of defaults.
         std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + {apiVersion:: null, kind:: null} + kv[1])
-        for kv in $.objectItems(self.volumeClaimTemplates_)],
+        for kv in $.objectItems(self.volumeClaimTemplates_)
+      ],
 
       replicas: 1,
       assert self.replicas >= 1,
@@ -459,13 +469,13 @@
       for r in self.spec.rules
       for p in r.http.paths
       if !std.startsWith(p.path, "/")
-      ],
+    ],
     assert std.length(rel_paths) == 0 : "paths must be absolute: " + rel_paths,
   },
 
   ThirdPartyResource(name): $._Object("extensions/v1beta1", "ThirdPartyResource", name) {
     versions_:: [],
-    versions: [{ name: n } for n in self.versions_],
+    versions: [{name: n} for n in self.versions_],
   },
 
   CustomResourceDefinition(group, version, kind): {
@@ -541,14 +551,14 @@
         {
           weight: 50,
           podAffinityTerm: {
-            labelSelector: { matchLabels: pod.metadata.labels },
+            labelSelector: {matchLabels: pod.metadata.labels},
             topologyKey: "failure-domain.beta.kubernetes.io/zone",
           },
         },
         {
           weight: 100,
           podAffinityTerm: {
-            labelSelector: { matchLabels: pod.metadata.labels },
+            labelSelector: {matchLabels: pod.metadata.labels},
             topologyKey: "kubernetes.io/hostname",
           },
         },

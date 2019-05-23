@@ -17,11 +17,11 @@
  * limitations under the License.
  */
 
-local kubecfg = import "kubecfg.libsonnet";
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 
-local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
+local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
 
 {
   p:: "",
@@ -81,9 +81,9 @@ local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
         host: this.host,
         http: {
           paths: [
-            { path: "/oauth2/", backend: $.svc.name_port },
+            {path: "/oauth2/", backend: $.svc.name_port},
             // The "/" block is only used for the location regex rewrite
-            { path: "/", backend: $.svc.name_port },
+            {path: "/", backend: $.svc.name_port},
           ],
         },
       }],
@@ -108,7 +108,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json")["oauth2_proxy"];
                 "cookie-refresh": "3h",
                 "set-xauthrequest": true,
                 "tls-cert": "",
-                "upstream": "file:///dev/null",
+                upstream: "file:///dev/null",
                 "redirect-url": "https://%s/oauth2/callback" % $.ingress.host,
                 "cookie-domain": utils.parentDomain($.ingress.host),
               },

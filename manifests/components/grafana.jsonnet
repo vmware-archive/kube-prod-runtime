@@ -18,10 +18,10 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 
-local GRAFANA_IMAGE = (import "images.json")["grafana"];
+local GRAFANA_IMAGE = (import "images.json").grafana;
 local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
 local GRAFANA_DASHBOARDS_CONFIG = "/opt/bitnami/grafana/conf/provisioning/dashboards";
 local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
@@ -67,7 +67,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
           host: this.host,
           http: {
             paths: [
-              { path: "/", backend: $.svc.name_port },
+              {path: "/", backend: $.svc.name_port},
             ],
           },
         },
@@ -101,7 +101,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     local this = self,
     dashboard_provider:: {
       // Grafana dashboards configuration
-      "kubernetes": {
+      kubernetes: {
         folder: "Kubernetes",
         type: "file",
         disableDeletion: false,
@@ -142,7 +142,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
             grafana: kube.Container("grafana") {
               image: GRAFANA_IMAGE,
               resources: {
-                limits: { cpu: "100m", memory: "100Mi" },
+                limits: {cpu: "100m", memory: "100Mi"},
                 requests: self.limits,
               },
               env_+: {
@@ -164,10 +164,10 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
                 GF_INSTALL_PLUGINS: std.join(",", $.plugins),
               },
               ports_+: {
-                dashboard: { containerPort: 3000 },
+                dashboard: {containerPort: 3000},
               },
               volumeMounts_+: {
-                datadir: { mountPath: GRAFANA_DATA_MOUNTPOINT },
+                datadir: {mountPath: GRAFANA_DATA_MOUNTPOINT},
                 datasources: {
                   mountPath: utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
                   subPath: "bkpr.yml",
@@ -188,7 +188,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
                 successThreshold: 1,
               },
               readinessProbe: {
-                tcpSocket: { port: "dashboard" },
+                tcpSocket: {port: "dashboard"},
                 successThreshold: 2,
                 initialDelaySeconds: 30,
               },

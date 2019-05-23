@@ -41,7 +41,7 @@ local kube = import "kube.libsonnet";
 
   parentDomain(fqdn):: (
     local parts = std.split(fqdn, ".");
-    local tail = [parts[i] for i in std.range(1, std.length(parts)-1)];
+    local tail = [parts[i] for i in std.range(1, std.length(parts) - 1)];
     assert std.length(tail) >= 1 : "Tried to use parent of top-level DNS domain %s" % fqdn;
     std.join(".", tail)
   ),

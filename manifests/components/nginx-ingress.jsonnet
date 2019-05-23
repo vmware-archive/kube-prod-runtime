@@ -35,7 +35,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
       "proxy-connect-timeout": "15",
       "disable-ipv6": "false",
 
-      "hsts": "true",
+      hsts: "true",
       //"hsts-include-subdomains": "false",
 
       "enable-vts-status": "true",
@@ -52,7 +52,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
   udpconf: kube.ConfigMap($.p + "udp-services") + $.metadata {
   },
 
-  ingressControllerClusterRole: kube.ClusterRole($.p+"nginx-ingress-controller") {
+  ingressControllerClusterRole: kube.ClusterRole($.p + "nginx-ingress-controller") {
     rules: [
       {
         apiGroups: [""],
@@ -110,12 +110,12 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
       {
         apiGroups: [""],
         resources: ["endpoints"],
-        verbs: ["get"], // ["create", "update"],
+        verbs: ["get"],  // ["create", "update"],
       },
     ],
   },
 
-  ingressControllerClusterRoleBinding: kube.ClusterRoleBinding($.p+"nginx-ingress-controller") {
+  ingressControllerClusterRoleBinding: kube.ClusterRoleBinding($.p + "nginx-ingress-controller") {
     roleRef_: $.ingressControllerClusterRole,
     subjects_: [$.serviceAccount],
   },
@@ -136,7 +136,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
         {name: "https", port: 443, protocol: "TCP"},
       ],
       type: "LoadBalancer",
-      externalTrafficPolicy: "Local", // preserve source IP (where supported)
+      externalTrafficPolicy: "Local",  // preserve source IP (where supported)
     },
   },
 
@@ -165,7 +165,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
             "prometheus.io/scrape": "true",
             "prometheus.io/port": "10254",
             "prometheus.io/path": "/metrics",
-          }
+          },
         },
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,

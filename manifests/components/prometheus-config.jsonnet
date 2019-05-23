@@ -36,9 +36,9 @@ local NODE_NAME = "__meta_kubernetes_node_name";
 
 {
   global: {
-    scrape_interval_secs:: 60, // default
+    scrape_interval_secs:: 60,  // default
     scrape_interval: "%ds" % self.scrape_interval_secs,
-    evaluation_interval: "60s", // default
+    evaluation_interval: "60s",  // default
   },
 
   alerting: {
@@ -336,6 +336,8 @@ local NODE_NAME = "__meta_kubernetes_node_name";
       ],
     },
   },
-  scrape_configs: [{job_name: k} + self.scrape_configs_[k]
-                   for k in std.objectFields(self.scrape_configs_)],
+  scrape_configs: [
+    {job_name: k} + self.scrape_configs_[k]
+    for k in std.objectFields(self.scrape_configs_)
+  ],
 }

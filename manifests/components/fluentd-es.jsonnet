@@ -18,10 +18,10 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 
-local FLUENTD_ES_IMAGE = (import "images.json")["fluentd"];
+local FLUENTD_ES_IMAGE = (import "images.json").fluentd;
 local FLUENTD_ES_CONF_PATH = "/opt/bitnami/fluentd/conf";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_FILE = "/opt/bitnami/fluentd/logs/fluentd.log";
@@ -36,7 +36,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     },
   },
 
-  criticalPod:: { metadata+: { annotations+: { "scheduler.alpha.kubernetes.io/critical-pod": "" } } },
+  criticalPod:: {metadata+: {annotations+: {"scheduler.alpha.kubernetes.io/critical-pod": ""}}},
 
   es: error "elasticsearch is required",
 
@@ -84,7 +84,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
             "prometheus.io/scrape": "true",
             "prometheus.io/port": "24231",
             "prometheus.io/path": "/metrics",
-          }
+          },
         },
         spec+: {
           containers_+: {
@@ -98,16 +98,16 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
                 ES_HOST: $.es.svc.host,
               },
               resources: {
-                requests: { cpu: "100m", memory: "200Mi" },
-                limits: { memory: "500Mi" },
+                requests: {cpu: "100m", memory: "200Mi"},
+                limits: {memory: "500Mi"},
               },
               volumeMounts_+: {
                 varlog: {
                   mountPath: "/var/log",
                   readOnly: true,
                 },
-                varlogpos: { mountPath: FLUENTD_ES_LOG_POS_PATH },
-                varlogbuffers: { mountPath: FLUENTD_ES_LOG_BUFFERS_PATH },
+                varlogpos: {mountPath: FLUENTD_ES_LOG_POS_PATH},
+                varlogbuffers: {mountPath: FLUENTD_ES_LOG_BUFFERS_PATH},
                 varlibdockercontainers: {
                   mountPath: "/var/lib/docker/containers",
                   readOnly: true,
