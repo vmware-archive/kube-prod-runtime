@@ -150,6 +150,32 @@ Kibana connects to the Elasticsearch cluster via the `elasticsearch-logging` Kub
 
 Kibana is a stateless component and therefore does not have any persistent storage requirements.
 
+#### Customization
+
+##### Kibana plug-ins
+
+Add-on functionality for Kibana is implemented with plug-in modules. Some known plug-ins for Kibana are listed here: https://www.elastic.co/guide/en/kibana/6.7/known-plugins.html. Please ensure the plugins you install are compatible with the version of Kibana installed by your BKPR version.
+
+To install additional plug-ins, override the `plugins` item inside the `kibana` scope, like this:
+
+```jsonnet
+(import "../../manifests/platforms/aks.jsonnet") {
+    config:: import "kubeprod-autogen.json",
+    kibana+: {
+        plugins+: {
+            "enhanced-table": {
+                version: "1.2.0",
+                url: "https://github.com/fbaligand/kibana-enhanced-table/releases/download/v1.2.0/enhanced-table-1.2.0_6.7.2.zip",
+            },
+            "network_vis": {
+                version: "6.7.2-3",
+                url: "https://github.com/uniberg/kbn_sankey_vis/releases/download/6.7.2-3/sankey_vis-6.7.2-3.zip",
+            },
+        },
+    },
+}
+```
+
 ## Monitoring stack
 ### Prometheus
 

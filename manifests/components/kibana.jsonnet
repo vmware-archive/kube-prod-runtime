@@ -22,6 +22,7 @@ local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local KIBANA_IMAGE = (import "images.json")["kibana"];
+local KIBANA_PLUGINS_PATH = "/opt/bitnami/kibana/plugins";
 
 local strip_trailing_slash(s) = (
   if std.endsWith(s, "/") then
@@ -38,9 +39,23 @@ local strip_trailing_slash(s) = (
     },
   },
 
+  // List of Kibana plug-ins to install
+  plugins:: {
+    /* Example:
+    logtrail: {
+      version: "0.1.31",
+      url: "https://github.com/sivasamyk/logtrail/releases/download/v0.1.31/logtrail-6.7.1-0.1.31.zip",
+    },
+    */
+  },
+
   es: error "elasticsearch is required",
 
   serviceAccount: kube.ServiceAccount($.p + "kibana") + $.metadata {
+  },
+
+  pvc: kube.PersistentVolumeClaim($.p + "kibana-plugins") + $.metadata {
+    storage: "2Gi",
   },
 
   deploy: kube.Deployment($.p + "kibana") + $.metadata {
@@ -49,6 +64,40 @@ local strip_trailing_slash(s) = (
         spec+: {
           securityContext: {
             fsGroup: 1001,
+          },
+          volumes_+: {
+            plugins: kube.PersistentVolumeClaimVolume($.pvc),
+          },
+          initContainers_+: {
+            kibana_plugins_install: kube.Container("kibana-plugins-install") {
+              image: KIBANA_IMAGE,
+              securityContext: {
+                allowPrivilegeEscalation: false,
+              },
+              local wanted = std.join("\n", ["%s@%s,%s" % [k, $.plugins[k].version, $.plugins[k].url] for k in std.objectFields($.plugins)]),
+              command: [
+                "/bin/sh",
+                "-c",
+                |||
+                  set -e
+                  rm -rf /opt/bitnami/kibana/plugins/lost+found
+                  echo %s | sort > /tmp/wanted.list
+                  /opt/bitnami/kibana/bin/kibana-plugin list | grep @ | sort > /tmp/installed.list
+                  join -v2 -t, -j1 /tmp/wanted.list /tmp/installed.list | while read plugin; do
+                    ${plugin:+/opt/bitnami/kibana/bin/kibana-plugin remove "${plugin%%@*}"}
+                  done
+                  join -v1 -t, -j1 -o1.2 /tmp/wanted.list /tmp/installed.list | while read url; do
+                    ${url:+/opt/bitnami/kibana/bin/kibana-plugin install --no-optimize "$url"}
+                  done
+                ||| % std.escapeStringBash(wanted)
+              ],
+              volumeMounts_+: {
+                // Persistence for Kibana plugins
+                plugins: {
+                  mountPath: KIBANA_PLUGINS_PATH,
+                },
+              },
+            },
           },
           containers_+: {
             kibana: kube.Container("kibana") {
@@ -73,6 +122,12 @@ local strip_trailing_slash(s) = (
               },
               ports_+: {
                 ui: { containerPort: 5601 },
+              },
+              volumeMounts_+: {
+                // Persistence for Kibana plugins
+                plugins: {
+                  mountPath: KIBANA_PLUGINS_PATH,
+                },
               },
             },
           },
