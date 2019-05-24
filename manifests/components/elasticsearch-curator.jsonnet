@@ -17,21 +17,21 @@
  * limitations under the License.
  */
 
-local kube = import '../lib/kube.libsonnet';
-local utils = import '../lib/utils.libsonnet';
+local kube = import "../lib/kube.libsonnet";
+local utils = import "../lib/utils.libsonnet";
 
-local CURATOR_IMAGE = (import 'images.json').curator;
+local CURATOR_IMAGE = (import "images.json").curator;
 
 // Implement elasticsearch-curator as a Kubernetes CronJob
 {
-  namespace:: 'kubeprod',
-  name:: 'elasticsearch-curator',
-  retention_days:: error 'retention_days must be externally provided ...',
-  elasticsearch_host:: error 'elasticsearch_host must be externally provided ...',
-  elasticsearch_port:: error 'elasticsearch_port must be externally provided ...',
-  elasticsearch_curator_schedule:: error 'elasticsearch_curator_schedule must be externally provided ...',
+  namespace:: "kubeprod",
+  name:: "elasticsearch-curator",
+  retention:: error "retention must be externally provided ...",
+  host:: error "host must be externally provided ...",
+  port:: error "port must be externally provided ...",
+  schedule:: error "schedule must be externally provided ...",
   elasticsearch_curator_config: kube.ConfigMap($.name) {
-    metadata+: { namespace: $.namespace, },
+    metadata+: {namespace: $.namespace},
     data+: {
       action_file_yml_tmpl:: |||
         ---
@@ -86,28 +86,28 @@ local CURATOR_IMAGE = (import 'images.json').curator;
           logformat: default
           blacklist: ['elasticsearch', 'urllib3']
       |||,
-      'action_file.yml': std.format(self.action_file_yml_tmpl, [$.retention_days]),
-      'config.yml': std.format(self.config_yml_tmpl, [$.elasticsearch_host, $.elasticsearch_port]),
+      "action_file.yml": std.format(self.action_file_yml_tmpl, [$.retention]),
+      "config.yml": std.format(self.config_yml_tmpl, [$.host, $.port]),
     },
   },
   elasticsearch_curator_cronjob: kube.CronJob($.name) {
-    metadata+: { namespace: $.namespace },
+    metadata+: {namespace: $.namespace},
     spec+: {
-      schedule: $.elasticsearch_curator_schedule,
+      schedule: $.schedule,
       jobTemplate+: {
         spec+: {
           template+: {
             spec+: {
               containers_+: {
-                curator: kube.Container('curator') {
+                curator: kube.Container("curator") {
                   image: CURATOR_IMAGE,
-                  args: ['--config', '/etc/config/config.yml', '/etc/config/action_file.yml'],
+                  args: ["--config", "/etc/config/config.yml", "/etc/config/action_file.yml"],
                   volumeMounts_+: {
-                    config_vol: { mountPath: '/etc/config', readOnly: true, },
+                    config_vol: {mountPath: "/etc/config", readOnly: true},
                   },
                 },
               },
-              volumes_+: { config_vol: kube.ConfigMapVolume($.elasticsearch_curator_config), },
+              volumes_+: {config_vol: kube.ConfigMapVolume($.elasticsearch_curator_config)},
             },
           },
         },

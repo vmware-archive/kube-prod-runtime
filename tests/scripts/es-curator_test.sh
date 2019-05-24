@@ -4,7 +4,7 @@
 set -e
 
 # Set retention days
-RETENTION_DAYS="90"
+RETENTION_DAYS="5"
 
 #
 if [ "$(uname -s)" == 'Darwin' ]; then
@@ -15,10 +15,10 @@ elif [ "$(uname -s)" == 'Linux' ]; then
     date="date"
 fi
 
-# Create a list of 365 indices
-LIST_INDICES=$(for i in $(seq 0 364); do ${date} -d "-$i day" +%Y.%m.%d; done | sort)
+# Create a list of 15 indices
+LIST_INDICES=$(for i in $(seq 0 14); do ${date} -d "-$i day" +%Y.%m.%d; done | sort)
 
-# We should have 365 indices
+# We should have 15 indices
 TOTAL_INDICES=$(echo "${LIST_INDICES}" | wc -w | tr -d ' ')
 
 # Create a temporary file for dumping stuff there
@@ -42,17 +42,7 @@ fi
 
 # Create the curator cronjob
 # Overwrite the tempfile
-jsonnet --ext-str "retention_days=${RETENTION_DAYS}" \
-    --ext-str "host=http://elasticsearch-logging.kubeprod.svc.cluster.local" \
-    --ext-str "port=9200" --ext-str "schedule=*/2 * * * *" \
-    -e '(import "../../manifests/components/elasticsearch-curator.jsonnet") + {
-          items_+: {
-    	    retention_days: std.parseInt(std.extVar("retention_days")),
-    	    elasticsearch_host: std.extVar("host"),
-    	    elasticsearch_curator_schedule: std.extVar("schedule"),
-    	    elasticsearch_port: std.parseInt(std.extVar("port")),
-                },
-          }' >"${tempfile}"
+kubecfg show ./elasticsearch-curator-tests.jsonnet >"${tempfile}"
 
 # Delete default cronjob to create ours later. Allow failure
 kubectl delete -f "${tempfile}" || true
@@ -60,12 +50,12 @@ kubectl delete -f "${tempfile}" || true
 # Let the port-fwd to stablish the connection
 sleep 15
 
-# Create  365 indices, one per day of the year, 10 in parallel
+# Create  15 indices, one per day of the year, 10 in parallel
 echo "${LIST_INDICES}" | xargs -n1 -P10 -I@ curl -s -X PUT \
     http://localhost:9200/logstash-@ >/dev/null 2>&1
 
-# Sleep for 5 minutes for let indices go green
-sleep 300
+# Sleep for 2 minutes to let indices go green
+sleep 120
 
 # Deploy to k8s
 kubectl replace --force --validate=true -f "${tempfile}"
@@ -78,7 +68,7 @@ NOW_INDICES=$(curl -s http://localhost:9200/_cat/indices | grep -cE "green(.*)op
 
 # Check how many indices exists.
 # We should have "${RETENTION_DAYS}" indices
-if [ "${TOTAL_INDICES}" == '365' ] && [ "${NOW_INDICES}" == "${RETENTION_DAYS}" ]; then
+if [ "${TOTAL_INDICES}" == '15' ] && [ "${NOW_INDICES}" == "${RETENTION_DAYS}" ]; then
     echo "Cleaned up indices successfully"
     exit 0
 else
