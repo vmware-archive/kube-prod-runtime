@@ -22,6 +22,9 @@ local utils = import "../lib/utils.libsonnet";
 
 local CURATOR_IMAGE = (import "images.json").curator;
 
+local action_file_yml_tmpl = importstr "elasticsearch-config/action_file_yml_tmpl";
+local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
+
 // Implement elasticsearch-curator as a Kubernetes CronJob
 {
   namespace:: "kubeprod",
@@ -33,61 +36,8 @@ local CURATOR_IMAGE = (import "images.json").curator;
   elasticsearch_curator_config: kube.ConfigMap($.name) {
     metadata+: {namespace: $.namespace},
     data+: {
-      action_file_yml_tmpl:: |||
-        ---
-        # Remember, leave a key empty if there is no value.  None will be a string,
-        # not a Python "NoneType"
-        #
-        # Also remember that all examples have 'disable_action' set to True.  If you
-        # want to use this action as a template, be sure to set this to False after
-        # copying it.
-        actions:
-          1:
-            action: delete_indices
-            description: "Clean up ES by deleting old indices"
-            options:
-              timeout_override:
-              continue_if_exception: False
-              disable_action: False
-              ignore_empty_list: True
-            filters:
-            - filtertype: age
-              source: name
-              direction: older
-              timestring: '%%Y.%%m.%%d'
-              unit: days
-              unit_count: %d
-              field:
-              stats_result:
-              epoch:
-              exclude: False
-      |||,
-      config_yml_tmpl:: |||
-        ---
-        # Remember, leave a key empty if there is no value.  None will be a string,
-        # not a Python "NoneType"
-        client:
-          hosts:
-            - %s
-          port: %d
-          url_prefix:
-          use_ssl: False
-          certificate:
-          client_cert:
-          client_key:
-          ssl_no_validate: False
-          http_auth:
-          timeout: 30
-          master_only: False
-
-        logging:
-          loglevel: INFO
-          logfile:
-          logformat: default
-          blacklist: ['elasticsearch', 'urllib3']
-      |||,
-      "action_file.yml": std.format(self.action_file_yml_tmpl, [$.retention]),
-      "config.yml": std.format(self.config_yml_tmpl, [$.host, $.port]),
+      "action_file.yml": std.format(action_file_yml_tmpl, [$.retention]),
+      "config.yml": std.format(config_yml_tmpl, [$.host, $.port]),
     },
   },
   elasticsearch_curator_cronjob: kube.CronJob($.name) {
