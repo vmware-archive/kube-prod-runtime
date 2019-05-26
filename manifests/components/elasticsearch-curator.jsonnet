@@ -33,6 +33,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
   host:: error "host must be externally provided ...",
   port:: error "port must be externally provided ...",
   schedule:: error "schedule must be externally provided ...",
+
   elasticsearch_curator_config: kube.ConfigMap($.name) {
     metadata+: {namespace: $.namespace},
     data+: {
@@ -40,6 +41,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
       "config.yml": std.format(config_yml_tmpl, [$.host, $.port]),
     },
   },
+
   elasticsearch_curator_cronjob: kube.CronJob($.name) {
     metadata+: {namespace: $.namespace},
     spec+: {
