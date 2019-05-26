@@ -230,7 +230,6 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
       sessionAffinity: "None",
     },
   },
-
   curator: elasticsearch_curator {
     retention:: 90,
     host: $.svc.host,
