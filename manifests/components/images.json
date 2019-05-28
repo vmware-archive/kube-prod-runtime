@@ -6,7 +6,7 @@
     "external-dns": "bitnami/external-dns:0.5.14-r0",
     "fluentd": "bitnami/fluentd:1.5.0-r1",
     "grafana": "bitnami/grafana:6.1.6-r3",
-    "kibana": "bitnami/kibana:6.8.0-r7",
+    "kibana": "bitnami/kibana:6.8.0-r8",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.24.1-r4",
     "oauth2_proxy": "bitnami/oauth2-proxy:3.1.0-r1",
     "prometheus": "bitnami/prometheus:2.9.2-r0"
