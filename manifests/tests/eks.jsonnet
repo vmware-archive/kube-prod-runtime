@@ -20,7 +20,7 @@
 // Test EKS
 
 (import "../platforms/eks.jsonnet") {
-  "letsencrypt_contact_email": "noone@nowhere.com",
+  letsencrypt_contact_email: "noone@nowhere.com",
   config: {
     dnsZone: "test.example.com",
     externalDns: {

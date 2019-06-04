@@ -21,9 +21,9 @@ local kube = import "../lib/kube.libsonnet";
 
 local trim = function(str) (
   if std.startsWith(str, " ") || std.startsWith(str, "\n") then
-  trim(std.substr(str, 1, std.length(str) - 1))
+    trim(std.substr(str, 1, std.length(str) - 1))
   else if std.endsWith(str, " ") || std.endsWith(str, "\n") then
-  trim(std.substr(str, 0, std.length(str) - 1))
+    trim(std.substr(str, 0, std.length(str) - 1))
   else
     str
 );

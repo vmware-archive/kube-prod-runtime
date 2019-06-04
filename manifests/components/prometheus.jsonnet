@@ -18,14 +18,14 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 
-local PROMETHEUS_IMAGE = (import "images.json")["prometheus"];
+local PROMETHEUS_IMAGE = (import "images.json").prometheus;
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
-local ALERTMANAGER_IMAGE = (import "images.json")["alertmanager"];
+local ALERTMANAGER_IMAGE = (import "images.json").alertmanager;
 local ALERTMANAGER_PORT = 9093;
 
 local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
@@ -57,13 +57,13 @@ local get_cm_web_hook_url = function(port, path) (
   local ingested_samples_per_second = time_series / $.config.global.scrape_interval_secs,
   local needed_space = retention_seconds * ingested_samples_per_second * bytes_per_sample,
 
-  retention_days:: 366/2,
+  retention_days:: 366 / 2,
   storage:: 1.5 * needed_space / 1e6,
 
-  # Default monitoring rules
+  // Default monitoring rules
   basic_rules:: {
     K8sApiUnavailable: {
-      expr: "max(up{job=\"kubernetes_apiservers\"}) != 1",
+      expr: 'max(up{job="kubernetes_apiservers"}) != 1',
       "for": "10m",
       annotations: {
         summary: "Kubernetes API is unavailable",
@@ -82,7 +82,7 @@ local get_cm_web_hook_url = function(port, path) (
   },
   monitoring_rules:: {
     PrometheusBadConfig: {
-      expr: "prometheus_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
+      expr: 'prometheus_config_last_reload_successful{kubernetes_namespace="%s"} == 0' % $.metadata.metadata.namespace,
       "for": "10m",
       labels: {severity: "critical"},
       annotations: {
@@ -91,7 +91,7 @@ local get_cm_web_hook_url = function(port, path) (
       },
     },
     AlertmanagerBadConfig: {
-      expr: "alertmanager_config_last_reload_successful{kubernetes_namespace=\"%s\"} == 0" % $.metadata.metadata.namespace,
+      expr: 'alertmanager_config_last_reload_successful{kubernetes_namespace="%s"} == 0' % $.metadata.metadata.namespace,
       "for": "10m",
       labels: {severity: "critical"},
       annotations: {
@@ -148,7 +148,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "monitoring.rules",
-          rules: [{alert: kv[0]} + kv[1], for kv in kube.objectItems($.monitoring_rules)],
+          rules: [{alert: kv[0]} + kv[1] for kv in kube.objectItems($.monitoring_rules)],
         },
       ],
     },
@@ -360,7 +360,7 @@ local get_cm_web_hook_url = function(port, path) (
                   "webhook-method": "POST",
                 },
                 volumeMounts_+: {
-                  config: { mountPath: "/config", readOnly: true },
+                  config: {mountPath: "/config", readOnly: true},
                 },
               },
             },
@@ -403,10 +403,10 @@ local get_cm_web_hook_url = function(port, path) (
                   "path.sysfs": v.sysfs.mountPath,
 
                   "collector.filesystem.ignored-mount-points":
-                  "^(/rootfs|/host)?/(sys|proc|dev|host|etc)($|/)",
+                    "^(/rootfs|/host)?/(sys|proc|dev|host|etc)($|/)",
 
                   "collector.filesystem.ignored-fs-types":
-                  "^(sys|proc|auto|cgroup|devpts|ns|au|fuse\\.lxc|mqueue)(fs)?$",
+                    "^(sys|proc|auto|cgroup|devpts|ns|au|fuse\\.lxc|mqueue)(fs)?$",
                 },
                 /* fixme
                 args+: [
@@ -440,8 +440,9 @@ local get_cm_web_hook_url = function(port, path) (
     },
 
     clusterRole: kube.ClusterRole($.p + "kube-state-metrics") {
+      local core = "",  // workaround empty-string-key bug in `jsonnet fmt`
       local listwatch = {
-        "": ["nodes", "pods", "services", "resourcequotas", "replicationcontrollers", "limitranges", "persistentvolumeclaims", "namespaces"],
+        [core]: ["nodes", "pods", "services", "resourcequotas", "replicationcontrollers", "limitranges", "persistentvolumeclaims", "namespaces"],
         extensions: ["daemonsets", "deployments", "replicasets"],
         apps: ["statefulsets"],
         batch: ["cronjobs", "jobs"],
@@ -502,7 +503,18 @@ local get_cm_web_hook_url = function(port, path) (
                 args_: {
                   collectors_:: std.set([
                     // remove "cronjobs" for kubernetes/kube-state-metrics#295
-                    "daemonsets", "deployments", "limitranges", "nodes", "pods", "replicasets", "replicationcontrollers", "resourcequotas", "services", "jobs", "statefulsets", "persistentvolumeclaims",
+                    "daemonsets",
+                    "deployments",
+                    "limitranges",
+                    "nodes",
+                    "pods",
+                    "replicasets",
+                    "replicationcontrollers",
+                    "resourcequotas",
+                    "services",
+                    "jobs",
+                    "statefulsets",
+                    "persistentvolumeclaims",
                   ]),
                   collectors: std.join(",", self.collectors_),
                 },

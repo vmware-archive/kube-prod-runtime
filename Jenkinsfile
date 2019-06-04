@@ -327,8 +327,11 @@ spec:
                             stage('Manifests') {
                                 withGo() {
                                     dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests") {
-                                        withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
-                                            sh 'make validate KUBECFG="kubecfg -v"'
+                                        withEnv([
+                                            "PATH+KUBECFG=${tool 'kubecfg'}",
+                                            "PATH+JSONNET=${tool 'jsonnet'}",
+                                        ]) {
+                                            sh 'make fmttest validate KUBECFG="kubecfg -v"'
                                         }
                                     }
                                 }

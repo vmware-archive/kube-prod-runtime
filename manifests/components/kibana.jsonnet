@@ -18,10 +18,10 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
-local kubecfg = import "kubecfg.libsonnet";
 local utils = import "../lib/utils.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 
-local KIBANA_IMAGE = (import "images.json")["kibana"];
+local KIBANA_IMAGE = (import "images.json").kibana;
 local KIBANA_PLUGINS_PATH = "/opt/bitnami/kibana/plugins";
 
 local strip_trailing_slash(s) = (
@@ -89,7 +89,7 @@ local strip_trailing_slash(s) = (
                   join -v1 -t, -j1 -o1.2 /tmp/wanted.list /tmp/installed.list | while read url; do
                     ${url:+/opt/bitnami/kibana/bin/kibana-plugin install --no-optimize "$url"}
                   done
-                ||| % std.escapeStringBash(wanted)
+                ||| % std.escapeStringBash(wanted),
               ],
               volumeMounts_+: {
                 // Persistence for Kibana plugins
@@ -110,7 +110,7 @@ local strip_trailing_slash(s) = (
                   cpu: "10m",
                 },
                 limits: {
-                  cpu: "1000m", // initial startup requires lots of cpu
+                  cpu: "1000m",  // initial startup requires lots of cpu
                 },
               },
               env_+: {
@@ -121,7 +121,7 @@ local strip_trailing_slash(s) = (
                 XPACK_SECURITY_ENABLED: "false",
               },
               ports_+: {
-                ui: { containerPort: 5601 },
+                ui: {containerPort: 5601},
               },
               volumeMounts_+: {
                 // Persistence for Kibana plugins
@@ -150,7 +150,7 @@ local strip_trailing_slash(s) = (
           host: this.host,
           http: {
             paths: [
-              { path: this.kibanaPath, backend: $.svc.name_port },
+              {path: this.kibanaPath, backend: $.svc.name_port},
             ],
           },
         },

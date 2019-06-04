@@ -31,8 +31,8 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
 
   // Letsencrypt environments
   letsencrypt_environments:: {
-    "prod": $.letsencryptProd.metadata.name,
-    "staging": $.letsencryptStaging.metadata.name,
+    prod: $.letsencryptProd.metadata.name,
+    staging: $.letsencryptStaging.metadata.name,
   },
   // Letsencrypt environment (defaults to the production one)
   letsencrypt_environment:: "prod",
@@ -52,7 +52,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
     spec+: {
       additionalPrinterColumns+: [
         {
-          JSONPath: ".status.conditions[?(@.type==\"Ready\")].status",
+          JSONPath: '.status.conditions[?(@.type=="Ready")].status',
           name: "Ready",
           type: "string",
         },
@@ -68,7 +68,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
           type: "string",
         },
         {
-          JSONPath: ".status.conditions[?(@.type==\"Ready\")].message",
+          JSONPath: '.status.conditions[?(@.type=="Ready")].message',
           name: "Status",
           priority: 1,
           type: "string",
@@ -160,7 +160,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
           type: "date",
         },
       ],
-    }
+    },
   },
 
   clusterissuerCRD: kube.CustomResourceDefinition("certmanager.k8s.io", "v1alpha1", "ClusterIssuer") {
@@ -205,12 +205,12 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
     ],
   },
 
-  clusterRoleBinding: kube.ClusterRoleBinding($.p+"cert-manager") {
+  clusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager") {
     roleRef_: $.clusterRole,
     subjects_+: [$.sa],
   },
 
-  deploy: kube.Deployment($.p+"cert-manager") + $.metadata {
+  deploy: kube.Deployment($.p + "cert-manager") + $.metadata {
     spec+: {
       template+: {
         metadata+: {
@@ -247,7 +247,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
     },
   },
 
-  letsencryptStaging: $.ClusterIssuer($.p+"letsencrypt-staging") {
+  letsencryptStaging: $.ClusterIssuer($.p + "letsencrypt-staging") {
     local this = self,
     spec+: {
       acme+: {
@@ -260,7 +260,7 @@ local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
   },
 
   letsencryptProd: $.letsencryptStaging {
-    metadata+: {name: $.p+"letsencrypt-prod"},
+    metadata+: {name: $.p + "letsencrypt-prod"},
     spec+: {
       acme+: {
         server: "https://acme-v02.api.letsencrypt.org/directory",

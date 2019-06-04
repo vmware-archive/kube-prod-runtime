@@ -20,7 +20,7 @@
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local ELASTICSEARCH_IMAGE = (import "images.json")["elasticsearch"];
+local ELASTICSEARCH_IMAGE = (import "images.json").elasticsearch;
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
@@ -44,7 +44,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     },
   },
 
-  metadata:: $.labels + {
+  metadata:: $.labels {
     metadata+: {
       namespace: "kubeprod",
     },
@@ -68,13 +68,13 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     subjects_+: [$.serviceAccount],
   },
 
-  disruptionBudget: kube.PodDisruptionBudget($.p+"elasticsearch-logging") + $.metadata {
+  disruptionBudget: kube.PodDisruptionBudget($.p + "elasticsearch-logging") + $.metadata {
     target_pod: $.sts.spec.template,
-    spec+: { maxUnavailable: 1 },
+    spec+: {maxUnavailable: 1},
   },
 
   // ConfigMap for additional Java security properties
-  java_security: kube.ConfigMap($.p+"java-elasticsearch-logging") + $.metadata {
+  java_security: kube.ConfigMap($.p + "java-elasticsearch-logging") + $.metadata {
     data+: {
       "java.security": (importstr "elasticsearch-config/java.security"),
     },
@@ -85,7 +85,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
     spec+: {
       podManagementPolicy: "Parallel",
       replicas: 3,
-      updateStrategy: { type: "RollingUpdate" },
+      updateStrategy: {type: "RollingUpdate"},
       template+: {
         metadata+: {
           annotations+: {
@@ -112,19 +112,19 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 runAsUser: 1001,
               },
               resources: {
-                requests: { cpu: "100m", memory: "1200Mi" },
+                requests: {cpu: "100m", memory: "1200Mi"},
                 limits: {
-                  cpu: "1", // uses lots of CPU when indexing
+                  cpu: "1",  // uses lots of CPU when indexing
                   memory: "2Gi",
                 },
               },
               ports_+: {
-                db: { containerPort: ELASTICSEARCH_HTTP_PORT },
-                transport: { containerPort: ELASTICSEARCH_TRANSPORT_PORT },
+                db: {containerPort: ELASTICSEARCH_HTTP_PORT},
+                transport: {containerPort: ELASTICSEARCH_TRANSPORT_PORT},
               },
               volumeMounts_+: {
                 // Persistence for ElasticSearch data
-                data: { mountPath: ELASTICSEARCH_DATA_MOUNTPOINT },
+                data: {mountPath: ELASTICSEARCH_DATA_MOUNTPOINT},
                 java_security: {
                   mountPath: JAVA_SECURITY_MOUNTPOINT,
                   subPath: "java.security",
@@ -143,13 +143,13 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ES_JAVA_OPTS: std.join(" ", [
                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
-                  "-Xms%dm" % heapsize, // ES asserts that these are equal
+                  "-Xms%dm" % heapsize,  // ES asserts that these are equal
                   "-Xmx%dm" % heapsize,
                   "-XshowSettings:vm",
                 ]),
               },
               readinessProbe: {
-                httpGet: { path: "/_cluster/health?local=true", port: "db" },
+                httpGet: {path: "/_cluster/health?local=true", port: "db"},
                 // don't allow rolling updates to kill containers until the cluster is green
                 // ...meaning it's not allocating replicas or relocating any shards
                 initialDelaySeconds: 120,
@@ -174,10 +174,10 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 "web.telemetry-path": "/metrics",
               },
               ports_+: {
-                metrics: { containerPort: 9102 },
+                metrics: {containerPort: 9102},
               },
               livenessProbe: {
-                httpGet: { path: "/", port: "metrics" },
+                httpGet: {path: "/", port: "metrics"},
               },
             },
           },
@@ -197,7 +197,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
         },
       },
       volumeClaimTemplates_+: {
-        data: { storage: "100Gi" },
+        data: {storage: "100Gi"},
       },
     },
   },

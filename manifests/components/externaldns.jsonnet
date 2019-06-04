@@ -38,7 +38,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
       {
         apiGroups: [""],
         resources: ["pods"],
-        verbs: ["get","watch","list"],
+        verbs: ["get", "watch", "list"],
       },
       {
         apiGroups: ["extensions"],
@@ -48,7 +48,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
       {
         apiGroups: [""],
         resources: ["nodes"],
-        verbs: ["get","watch","list"],
+        verbs: ["get", "watch", "list"],
       },
     ],
   },
