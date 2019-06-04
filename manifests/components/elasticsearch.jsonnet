@@ -29,6 +29,9 @@ local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
 // Mount point for the custom Java security properties configuration file
 local JAVA_SECURITY_MOUNTPOINT = "/opt/bitnami/java/lib/security/java.security.custom";
 
+// Use elasticsearch curator to rotate indices
+local elasticsearch_curator = import "elasticsearch-curator.jsonnet";
+
 local ELASTICSEARCH_HTTP_PORT = 9200;
 local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
@@ -226,5 +229,11 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
       publishNotReadyAddresses: true,
       sessionAffinity: "None",
     },
+  },
+  curator: elasticsearch_curator {
+    retention:: 90,
+    host: $.svc.host,
+    port: $.svc.port,
+    schedule: "10 10 * * *",
   },
 }

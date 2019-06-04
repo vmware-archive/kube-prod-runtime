@@ -424,19 +424,45 @@
   Job(name): $._Object("batch/v1", "Job", name) {
     local job = self,
 
-    spec: {
-      template: {
-        spec: $.PodSpec {
-          restartPolicy: "OnFailure",
-        },
-        metadata: {
+    spec: $.JobSpec {
+      template+: {
+        metadata+: {
           labels: job.metadata.labels,
         },
       },
-
-      completions: 1,
-      parallelism: 1,
     },
+  },
+
+  CronJob(name): $._Object("batch/v1beta1", "CronJob", name) {
+    local cronjob = self,
+
+    spec: {
+      jobTemplate: {
+        spec: $.JobSpec {
+          template+: {
+            metadata+: {
+              labels: cronjob.metadata.labels,
+            },
+          },
+        },
+      },
+      schedule: error "Need to provide spec.schedule",
+      successfulJobsHistoryLimit: 10,
+      failedJobsHistoryLimit: 20,
+      concurrencyPolicy: "Forbid",
+    },
+  },
+
+  JobSpec: {
+    local this = self,
+
+    template: {
+      spec: $.PodSpec {
+        restartPolicy: "OnFailure",
+      },
+    },
+    completions: 1,
+    parallelism: 1,
   },
 
   DaemonSet(name): $._Object("extensions/v1beta1", "DaemonSet", name) {
