@@ -14,7 +14,5 @@ block_labels = [
     "status/wip",
 ]
 
-required_approvals = 1
-
 # Extend to 3h - default is 1h
 timeout_sec = 10800
