@@ -4,6 +4,8 @@ LABEL maintainer "Bitnami <containers@bitnami.com>"
 
 ARG BKPR_VERSION
 
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+
 RUN : "${BKPR_VERSION:?BKPR_VERSION build argument not specified}"
 
 RUN install_packages wget ca-certificates \
