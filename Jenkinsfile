@@ -17,48 +17,57 @@ def parentZoneResourceGroup = 'jenkins-bkpr-rg'
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
 def scmCheckout() {
-    def repo_url = env.GITHUB_REPO_GIT_URL
-    def sha = env.GITHUB_PR_HEAD_SHA ?: (env.GITHUB_BRANCH_HEAD_SHA ?: env.GITHUB_TAG_HEAD_SHA)
-
-    sh """
-    git init --quiet
-    git remote add origin ${repo_url}
-    git config --add remote.origin.fetch '+refs/pull/*/head:refs/remotes/origin/pr/*'
-    git fetch origin --quiet
-    git checkout ${sha} --quiet
-    git submodule update --init
-    """
+    // PR builds are handled using the github-integration plugin to
+    // control builds from github comments and labels
+    if(env.GITHUB_PR_HEAD_SHA) {
+        def repo_url = env.GITHUB_REPO_GIT_URL
+        def sha = env.GITHUB_PR_HEAD_SHA
+        sh """
+        git init --quiet
+        git remote add origin ${repo_url}
+        git config --add remote.origin.fetch '+refs/pull/*/head:refs/remotes/origin/pr/*'
+        git fetch origin --quiet
+        git checkout ${sha} --quiet
+        """
+    } else {
+        checkout scm
+    }
+    sh 'git submodule update --init'
 }
 
 def scmPostCommitStatus(String state) {
-    def target_url = env.BUILD_URL + 'display/redirect'
-    def sha = env.GITHUB_PR_HEAD_SHA ?: (env.GITHUB_BRANCH_HEAD_SHA ?: env.GITHUB_TAG_HEAD_SHA)
-    def context = 'continuous-integration/jenkins/' + (env.GITHUB_BRANCH_NAME ? 'branch' : (env.GITHUB_TAG_NAME ? 'tag' : 'pr-merge'))
-    def params = (env.GITHUB_PR_URL ?: (env.GITHUB_BRANCH_URL ?: env.GITHUB_TAG_URL)).replaceAll('https://github.com/', '').split('/')
-    def repo = params[0] + '/' + params[1]
-    def desc = ''
+    // PR builds are handled using the github-integration plugin to
+    // control builds from github comments and labels
+    if(env.GITHUB_PR_HEAD_SHA) {
+        def target_url = env.BUILD_URL + 'display/redirect'
+        def sha = env.GITHUB_PR_HEAD_SHA
+        def context = 'continuous-integration/jenkins/pr-merge'
+        def params = (env.GITHUB_PR_URL).replaceAll('https://github.com/', '').split('/')
+        def repo = params[0] + '/' + params[1]
+        def desc = ''
 
-    switch(state) {
-        case 'success':
-            desc = 'This commit looks good'
-            break
-        case 'error':
-        case 'failure':
-            desc = 'This commit cannot be built'
-            break
-        case 'pending':
-            desc = 'Waiting for status to be reported'
-            break
-        default:
-            return
-    }
+        switch(state) {
+            case 'success':
+                desc = 'This commit looks good'
+                break
+            case 'error':
+            case 'failure':
+                desc = 'This commit cannot be built'
+                break
+            case 'pending':
+                desc = 'Waiting for status to be reported'
+                break
+            default:
+                return
+        }
 
-    withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
-        sh """
-        curl -sSf \"https://api.github.com/repos/${repo}/statuses/${sha}?access_token=${GITHUB_TOKEN}\" \
-            -H \"Content-Type: application/json\" -X POST -o /dev/null \
-            -d \"{\\\"state\\\": \\\"${state}\\\",\\\"context\\\": \\\"${context}\\\", \\\"description\\\": \\\"${desc}\\\", \\\"target_url\\\": \\\"${target_url}\\\"}\"
-        """
+        withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
+            sh """
+            curl -sSf \"https://api.github.com/repos/${repo}/statuses/${sha}?access_token=${GITHUB_TOKEN}\" \
+                -H \"Content-Type: application/json\" -X POST -o /dev/null \
+                -d \"{\\\"state\\\": \\\"${state}\\\",\\\"context\\\": \\\"${context}\\\", \\\"description\\\": \\\"${desc}\\\", \\\"target_url\\\": \\\"${target_url}\\\"}\"
+            """
+        }
     }
 }
 
@@ -672,7 +681,7 @@ spec:
                     parallel platforms
 
                     stage('Release') {
-                        if (env.GITHUB_TAG_NAME) {
+                        if(env.TAG_NAME) {
                             dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime") {
                                 withGo() {
                                     withCredentials([
@@ -686,8 +695,8 @@ spec:
                                             "PATH+AWLESS=${tool 'awless'}",
                                             "GITHUB_USER=bitnami",
                                         ]) {
-                                            sh "make dist VERSION=${GITHUB_TAG_NAME}"
-                                            sh "make publish VERSION=${GITHUB_TAG_NAME}"
+                                            sh "make dist VERSION=${TAG_NAME}"
+                                            sh "make publish VERSION=${TAG_NAME}"
                                         }
                                     }
                                 }
@@ -695,7 +704,7 @@ spec:
                                 container(name: 'kaniko', shell: '/busybox/sh') {
                                     withEnv(['PATH+KANIKO=/busybox:/kaniko']) {
                                         sh """#!/busybox/sh
-                                        /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${GITHUB_TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${GITHUB_TAG_NAME}
+                                        /kaniko/executor --dockerfile `pwd`/Dockerfile --build-arg BKPR_VERSION=${TAG_NAME} --context `pwd` --destination kubeprod/kubeprod:${TAG_NAME}
                                         """
                                     }
                                 }
@@ -704,7 +713,6 @@ spec:
                             Utils.markStageSkippedForConditional(STAGE_NAME)
                         }
                     }
-
                     scmPostCommitStatus("success")
                 } catch (error) {
                     scmPostCommitStatus("failure")
