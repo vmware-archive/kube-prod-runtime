@@ -186,10 +186,10 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
           },
           initContainers_+: {
             elasticsearch_logging_init: kube.Container("elasticsearch-logging-init") {
-              image: "alpine:3.6",
+              image: "bitnami/minideb:stretch",
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
               // NOTE: copied verbatim from https://www.elastic.co/guide/en/elasticsearch/reference/5.6/vm-max-map-count.html
-              command: ["/sbin/sysctl", "-w", "vm.max_map_count=262144"],
+              command: ["sh", "-c", "install_packages procps && sysctl -w vm.max_map_count=262144"],
               securityContext: {
                 privileged: true,
               },
