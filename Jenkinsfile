@@ -240,11 +240,6 @@ spec:
     tty: true
     command:
     - 'cat'
-  - name: 'eksctl'
-    image: 'weaveworks/eksctl:093ee46b-dirty-d45cade'
-    tty: true
-    command:
-    - 'cat'
   - name: 'aws'
     image: 'mesosphere/aws-cli:1.14.5'
     tty: true
@@ -584,6 +579,7 @@ spec:
                                             "KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}",
                                             "AWS_DEFAULT_REGION=${awsRegion}",
                                             "PATH+AWSIAMAUTHENTICATOR=${tool 'aws-iam-authenticator'}",
+                                            "PATH+JQ=${tool 'eksctl'}",
                                         ]) {
                                             // kubeprod requires `GOOGLE_APPLICATION_CREDENTIALS`
                                             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
@@ -593,18 +589,16 @@ spec:
                                                     // Create EKS cluster: requires AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY environment
                                                     // variables to reference a user in AWS with the correct privileges to create an EKS
                                                     // cluster: https://github.com/weaveworks/eksctl/issues/204#issuecomment-450280786
-                                                    container('eksctl') {
-                                                        sh """
-                                                        eksctl create cluster \
-                                                            --name ${clusterName} \
-                                                            --region ${awsRegion} \
-                                                            --zones ${awsZones.join(',')} \
-                                                            --version ${kversion} \
-                                                            --node-type m5.large \
-                                                            --nodes 3 \
-                                                            --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL},team=bkpr,created_by=jenkins-bkpr'
-                                                        """
-                                                    }
+                                                    sh """
+                                                    eksctl create cluster \
+                                                        --name ${clusterName} \
+                                                        --region ${awsRegion} \
+                                                        --zones ${awsZones.join(',')} \
+                                                        --version ${kversion} \
+                                                        --node-type m5.large \
+                                                        --nodes 3 \
+                                                        --tags 'platform=${platform},branch=${BRANCH_NAME},build=${BUILD_URL},team=bkpr,created_by=jenkins-bkpr'
+                                                    """
 
                                                     writeFile([file: "${env.WORKSPACE}/${clusterName}/kubeprod-manifest.jsonnet", text: """
                                                         (import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/eks.jsonnet") {
@@ -655,7 +649,7 @@ spec:
                                                             """
                                                         }
                                                     }
-                                                    container('eksctl') {
+                                                    withEnv(["PATH+JQ=${tool 'eksctl'}"]) {
                                                         sh "eksctl delete cluster --name ${clusterName} --timeout 10m0s || true"
                                                     }
                                                 }
