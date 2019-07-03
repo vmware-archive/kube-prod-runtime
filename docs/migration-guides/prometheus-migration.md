@@ -81,12 +81,12 @@ local rsync_container_name = "sidecar-rsync";
 
 // sidecar-rsync container (mounting <volume_name>) to be exposed via rsync
 local rsync_container = kube.Container(rsync_container_name) {
-  image: "alpine:3.8",
+  image: "bitnami/minideb:stretch",
   args: [
     "sh",
     "-c",
     |||
-      apk update && apk add rsync
+      install_packages rsync
       echo '%s' | base64 -d > /rsync.conf
       rsync -vvv --daemon --no-detach --config=/rsync.conf
     ||| % [rsync_conf_b64],
@@ -187,8 +187,8 @@ local kube = import "kube.libsonnet";
             spec+: {
               containers_+: {
                 rsync: kube.Container("sidecar-rsync") {
-                  image: "alpine:3.8",
-                  args+: ["sh", "-c", "apk update && apk add rsync curl && tail -f /dev/null"],
+                  image: "bitnami/minideb:stretch",
+                  args+: ["sh", "-c", "install_packages rsync curl && tail -f /dev/null"],
                   volumeMounts_+: {
                     data: { mountPath: "/data" },
                   },
@@ -214,7 +214,7 @@ After deploying them, the Prometheus pod will have 3 containers:
 ```console
 $ kubectl get pods -o=jsonpath='{range .items[*]}{"\n"}{.metadata.name}{":\t"}{range .spec.containers[*]}{.image}{", "}{end}{end}' | grep prometheus |\
 sort
-prometheus-0: bitnami/prometheus:2.4.3-r31, jimmidyson/configmap-reload:v0.2.2, alpine:3.8,
+prometheus-0: bitnami/prometheus:2.4.3-r31, jimmidyson/configmap-reload:v0.2.2, bitnami/minideb:stretch,
 ```
 
 ## Step 3: Sync with the compaction times of the Prometheus TSDB
