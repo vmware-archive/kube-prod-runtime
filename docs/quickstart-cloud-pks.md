@@ -36,60 +36,44 @@ This document walks you through setting up an VMware Cloud PKS (cPKS) cluster an
 
 In this section, you will deploy a VMware Cloud PKS (cPKS) cluster using the Cloud PKS CLI.
 
-***leaving off here...***
-
-* Log in to your Microsoft Azure account by executing `az login` and follow the onscreen instructions.
+* Log in to your VMware Cloud PKS account by executing `vke account login -t <organization-id> -r <refresh-token>`.  See [docs on login](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=1&cad=rja&uact=8&ved=2ahUKEwigtpX3_enjAhWZPM0KHVjOBJgQFjAAegQIABAB&url=https%3A%2F%2Fdocs.vmware.com%2Fen%2FVMware-Cloud-PKS%2Fservices%2Fcom.vmware.cloudpks.doc%2FGUID-FF001D2D-66BC-4837-AABF-AD4F9584A8DC.html&usg=AOvVaw3OFKtn_74DA1OVMoRcb10-) for more details.
 
 * Configure the following environment variables:
 
   ```bash
   export BKPR_DNS_ZONE=my-domain.com
-  export AZURE_USER=$(az account show --query user.name -o tsv)
-  export AZURE_SUBSCRIPTION_ID=xxxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-  export AZURE_REGION=eastus
-  export AZURE_RESOURCE_GROUP=my-kubeprod-group
-  export AZURE_AKS_CLUSTER=my-aks-cluster
-  export AZURE_AKS_K8S_VERSION=1.11.5
+  export PKS_ENCRYPT_USER=someuser@my-domain.com
+  export PKS_REGION=us-east-1 # use `vke info region list` to see available regions
+  export PKS_FOLDER=SharedFolder
+  export PKS_PROJECT=SharedProject
+  export PKS_CLUSTER_TYPE=production # or development
+  export PKS_CLUSTER=my-pks-cluster
+  export PKS_K8S_VERSION=1.12.9-1 # see `vke cluster versions list --region ${PKS_REGION}` for version options
   ```
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
-  - `AZURE_USER` specifies the email address used in requests to Let's Encrypt.
-  - `AZURE_SUBSCRIPTION_ID` specifies the Azure subscription id. `az account list -o table` lists your Microsoft Azure subscriptions.
-  - `AZURE_REGION` specifies the Azure region code.
-  - `AZURE_RESOURCE_GROUP` specifies the name of the Azure resource group in which resources should be created.
-  - `AZURE_AKS_CLUSTER` specifies the name of the AKS cluster.
-  - `AZURE_AKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `az aks get-versions --location ${AZURE_REGION} -o table` lists the versions available in your region.
+  - `PKS_ENCRYPT_USER` specifies the email address used in requests to Let's Encrypt.
+  - `PKS_REGION` specifies the region to deploy a cluster into
+  - `PKS_FOLDER` specifies the name of the folder in which resources should be created.
+  - `PKS_PROJECT` specifies the name of the project in which resources should be created.
+  - `PKS_CLUSTER` specifies the name of the cluster.
+  - `PKS_K8S_VERSION` specifies the version of Kubernetes to use for creating the cluster. The [BKPR Kubernetes version support matrix](../README.md#kubernetes-version-support-matrix-for-bkpr-10) lists the base Kubernetes versions supported by BKPR. `vke cluster versions list --region ${PKS_REGION}` lists the versions available in your region.
 
-* Set the default subscription account:
 
-  ```bash
-  az account set --subscription ${AZURE_SUBSCRIPTION_ID}
-  ```
-
-* Create the resource group for AKS:
+* Create a smart cluster from the command line using the following.  [See the docs](https://docs.vmware.com/en/VMware-Cloud-PKS/services/com.vmware.cloudpks.doc/GUID-76505050-7D87-4C20-A82B-C1EF2E15253C.html) for more details.
 
   ```bash
-  az group create --name ${AZURE_RESOURCE_GROUP} --location ${AZURE_REGION}
+  vke folder set ${PKS_FOLDER}
+  vke project set ${PKS_PROJECT}
+  vke cluster create --cluster-type ${PKS_CLUSTER_TYPE} --name ${PKS_CLUSTER} --region ${PKS_REGION} --version ${PKS_K8S_VERSION}
   ```
 
-* Create the AKS cluster:
-
-  ```bash
-  az aks create \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --name "${AZURE_AKS_CLUSTER}" \
-    --kubernetes-version ${AZURE_AKS_K8S_VERSION} --verbose
-  ```
-
-  Provisioning a AKS cluster can take a long time to complete. Please be patient while the request is being processed.
+  Provisioning a cluster can take minutes to complete. Please be patient while the request is being processed.
 
 * Configure `kubectl` to use the new cluster:
 
   ```bash
-  az aks get-credentials \
-    --resource-group "${AZURE_RESOURCE_GROUP}" \
-    --name "${AZURE_AKS_CLUSTER}" \
-    --overwrite-existing
+  vke cluster auth setup ${PKS_CLUSTER}
   ```
 
 * Verify that your cluster is up and running:
@@ -104,9 +88,9 @@ To bootstrap your Kubernetes cluster with BKPR:
 
   ```bash
   kubeprod install aks \
-    --email ${AZURE_USER} \
+    --email "${PKS_ENCRYPT_USER}" \
     --dns-zone "${BKPR_DNS_ZONE}" \
-    --dns-resource-group "${AZURE_RESOURCE_GROUP}"
+    # TODO --dns-resource-group "${AZURE_RESOURCE_GROUP}"
   ```
 
 Wait for all the pods in the cluster to enter `Running` state:
