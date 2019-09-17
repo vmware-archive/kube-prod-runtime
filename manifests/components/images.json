@@ -1,5 +1,5 @@
 {
-    "alertmanager": "bitnami/alertmanager:0.18.0-r0",
+    "alertmanager": "bitnami/alertmanager:0.19.0-r47",
     "cert-manager": "bitnami/cert-manager:0.7.2-r2",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "curator": "bobrik/curator:5.7.6",
