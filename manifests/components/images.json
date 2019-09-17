@@ -4,7 +4,7 @@
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "curator": "bobrik/curator:5.7.6",
     "elasticsearch": "bitnami/elasticsearch:6.8.0-r31",
-    "external-dns": "bitnami/external-dns:0.5.15-r0",
+    "external-dns": "bitnami/external-dns:0.5.16-r21",
     "fluentd": "bitnami/fluentd:1.6.2-r3",
     "grafana": "bitnami/grafana:6.2.5-r7",
     "kibana": "bitnami/kibana:6.8.0-r29",
