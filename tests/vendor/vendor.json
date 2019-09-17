@@ -515,8 +515,10 @@
 		{
 			"checksumSHA1": "rG9Pp6KrdR37TyROnXx+r1CUKs4=",
 			"path": "github.com/pusher/oauth2_proxy/cookie",
-			"revision": "c83335324e551e4d16f3838c0b570fc76416adf3",
-			"revisionTime": "2019-02-17T11:56:05Z"
+			"revision": "ee4ebe53bf1234265b838076760dc72b5d92d32e",
+			"revisionTime": "2019-04-12T10:26:55Z",
+			"version": "v3.2.0",
+			"versionExact": "v3.2.0"
 		},
 		{
 			"checksumSHA1": "KnNrKeXkIcdOkWXlK57sn4Jn8SE=",
