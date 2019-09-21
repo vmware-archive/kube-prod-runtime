@@ -1,6 +1,6 @@
 {
     "alertmanager": "bitnami/alertmanager:0.18.0-r0",
-    "cert-manager": "bitnami/cert-manager:0.10.0-r14",
+    "cert-manager": "bitnami/cert-manager:0.10.0-r16",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "curator": "bobrik/curator:5.7.6",
     "elasticsearch": "bitnami/elasticsearch:6.8.0-r31",
