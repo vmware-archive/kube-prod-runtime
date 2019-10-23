@@ -227,6 +227,9 @@ spec:
       requests:
         cpu: '10m'
         memory: '1Gi'
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: '/home/jenkins'
   - name: 'gcloud'
     image: 'google/cloud-sdk:236.0.0'
     tty: true
@@ -235,16 +238,25 @@ spec:
     env:
     - name: 'CLOUDSDK_CORE_DISABLE_PROMPTS'
       value: '1'
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: '/home/jenkins'
   - name: 'az'
     image: 'microsoft/azure-cli:2.0.59'
     tty: true
     command:
     - 'cat'
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: '/home/jenkins'
   - name: 'aws'
     image: 'mesosphere/aws-cli:1.14.5'
     tty: true
     command:
     - 'cat'
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: '/home/jenkins'
   - name: 'kubectl'
     image: 'lachlanevenson/k8s-kubectl:v1.13.3'
     tty: true
@@ -253,6 +265,9 @@ spec:
     securityContext:
       runAsUser: 0
       fsGroup: 0
+    volumeMounts:
+    - name: workspace-volume
+      mountPath: '/home/jenkins'
   - name: 'kaniko'
     image: 'gcr.io/kaniko-project/executor:debug-v0.9.0'
     tty: true
@@ -264,6 +279,8 @@ spec:
     volumeMounts:
     - name: docker-config
       mountPath: /root
+    - name: workspace-volume
+      mountPath: '/home/jenkins'
     securityContext:
       runAsUser: 0
       fsGroup: 0
