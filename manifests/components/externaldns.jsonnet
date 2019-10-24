@@ -28,16 +28,95 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
     },
   },
 
+  dnsEndpointCRD: kube.CustomResourceDefinition("externaldns.k8s.io", "v1beta1", "DNSEndpoint") {
+    metadata+: {
+      labels+: {
+        api: "externaldns",
+        "kubebuilder.k8s.io": "1.0.0",
+      },
+    },
+    spec+: {
+      subresources+: {
+        status+: {},
+      },
+      validation+: {
+        openAPIV3Schema+: {
+          properties+: {
+            apiVersion: {
+              type: "string",
+            },
+            kind: {
+              type: "string",
+            },
+            metadata: {
+              type: "object",
+            },
+            spec+: {
+              properties+: {
+                endpoints+: {
+                  items+: {
+                    properties: {
+                      dnsName: {
+                        type: "string",
+                      },
+                      labels: {
+                        type: "object",
+                      },
+                      providerSpecific: {
+                        items: {
+                          properties: {
+                            name: {
+                              type: "string",
+                            },
+                            value: {
+                              type: "string",
+                            },
+                          },
+                          type: "object",
+                        },
+                        type: "array",
+                      },
+                      recordTTL: {
+                        format: "int64",
+                        type: "integer",
+                      },
+                      recordType: {
+                        type: "string",
+                      },
+                      targets: {
+                        items: {
+                          type: "string",
+                        },
+                        type: "array",
+                      },
+                    },
+                    type: "object",
+                  },
+                  type: "array",
+                },
+              },
+              type: "object",
+            },
+            status+: {
+              properties+: {
+                observedGeneration: {
+                  format: "int64",
+                  type: "integer",
+                },
+              },
+              type: "object",
+            },
+          },
+        },
+      },
+    },
+  },
+
   clusterRole: kube.ClusterRole($.p + "external-dns") {
     rules: [
       {
         apiGroups: [""],
-        resources: ["services"],
-        verbs: ["get", "watch", "list"],
-      },
-      {
-        apiGroups: [""],
-        resources: ["pods"],
+        resources: ["services", "pods", "nodes"],
         verbs: ["get", "watch", "list"],
       },
       {
@@ -46,9 +125,19 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
         verbs: ["get", "watch", "list"],
       },
       {
-        apiGroups: [""],
-        resources: ["nodes"],
+        apiGroups: ["networking.k8s.io"],
+        resources: ["ingresses", "gateways"],
         verbs: ["get", "watch", "list"],
+      },
+      {
+        apiGroups: ["externaldns.k8s.io"],
+        resources: ["dnsendpoints"],
+        verbs: ["get", "watch", "list"],
+      },
+      {
+        apiGroups: ["externaldns.k8s.io"],
+        resources: ["dnsendpoints/status"],
+        verbs: ["update"],
       },
     ],
   },
