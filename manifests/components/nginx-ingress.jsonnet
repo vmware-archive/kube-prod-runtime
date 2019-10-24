@@ -80,6 +80,16 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
         verbs: ["update"],
       },
       {
+        apiGroups: ["networking.k8s.io"],
+        resources: ["ingresses"],
+        verbs: ["get", "list", "watch"],
+      },
+      {
+        apiGroups: ["networking.k8s.io"],
+        resources: ["ingresses/status"],
+        verbs: ["update"],
+      },
+      {
         apiGroups: [""],
         resources: ["events"],
         verbs: ["create", "patch"],
