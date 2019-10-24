@@ -3,7 +3,7 @@
     "cert-manager": "bitnami/cert-manager:0.6.2-r10",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "elasticsearch": "bitnami/elasticsearch:6.6.2-r1",
-    "external-dns": "bitnami/external-dns:0.5.15-r0",
+    "external-dns": "bitnami/external-dns:0.5.17-r30",
     "fluentd": "bitnami/fluentd:1.4.2-r4",
     "grafana": "bitnami/grafana:5.4.3-r18",
     "kibana": "bitnami/kibana:6.6.2-r4",
