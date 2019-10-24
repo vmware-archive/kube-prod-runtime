@@ -574,7 +574,7 @@ spec:
                         }
                     }
 
-                    def eksKversions = ["1.10", "1.11"]
+                    def eksKversions = ["1.11"]
                     for (x in eksKversions) {
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
