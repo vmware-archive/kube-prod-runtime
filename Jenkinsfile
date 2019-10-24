@@ -365,7 +365,7 @@ spec:
 
                     // See:
                     //  gcloud container get-server-config
-                    def gkeKversions = ["1.11"]
+                    def gkeKversions = []
                     for (x in gkeKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
