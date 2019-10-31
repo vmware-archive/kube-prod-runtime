@@ -90,11 +90,19 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
           containers_+: {
             fluentd_es: kube.Container("fluentd-es") {
               image: FLUENTD_ES_IMAGE,
+              command: ["fluentd"],
+              args: [
+                "--config=/opt/bitnami/fluentd/conf/fluentd.conf",
+                "--plugin=/opt/bitnami/fluentd/plugins",
+                "--log=%s" % FLUENTD_ES_LOG_FILE,
+                "--log-rotate-age=5",
+                "--log-rotate-size=104857600",
+                "--no-supervisor",
+              ],
               securityContext: {
                 runAsUser: 0,  // required to be able to read system-wide logs.
               },
               env_+: {
-                FLUENTD_OPT: "-o %s --log-rotate-age 5 --log-rotate-size 104857600 --no-supervisor" % FLUENTD_ES_LOG_FILE,
                 ES_HOST: $.es.svc.host,
               },
               resources: {
