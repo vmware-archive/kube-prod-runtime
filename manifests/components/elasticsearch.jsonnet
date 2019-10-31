@@ -143,6 +143,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
                 ELASTICSEARCH_PORT_NUMBER: ELASTICSEARCH_HTTP_PORT,
                 ELASTICSEARCH_NODE_PORT_NUMBER: ELASTICSEARCH_TRANSPORT_PORT,
                 ELASTICSEARCH_CLUSTER_HOSTS: $.svc.metadata.name,
+                ELASTICSEARCH_CLUSTER_MASTER_HOSTS: "%s-0" % $.sts.metadata.name,
                 local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ES_JAVA_OPTS: std.join(" ", [
                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
