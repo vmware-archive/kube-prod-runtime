@@ -1,14 +1,14 @@
 {
-    "alertmanager": "bitnami/alertmanager:0.18.0-r0",
+    "alertmanager": "bitnami/alertmanager:0.19.0-r50",
     "cert-manager": "bitnami/cert-manager:0.7.2-r2",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "curator": "bobrik/curator:5.7.6",
-    "elasticsearch": "bitnami/elasticsearch:6.8.0-r31",
-    "external-dns": "bitnami/external-dns:0.5.15-r0",
-    "fluentd": "bitnami/fluentd:1.6.2-r3",
-    "grafana": "bitnami/grafana:6.2.5-r7",
-    "kibana": "bitnami/kibana:6.8.0-r29",
-    "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.24.1-r4",
-    "oauth2_proxy": "bitnami/oauth2-proxy:3.1.0-r1",
-    "prometheus": "bitnami/prometheus:2.11.1-r3"
+    "elasticsearch": "bitnami/elasticsearch:7.4.1-r5",
+    "external-dns": "bitnami/external-dns:0.5.17-r30",
+    "fluentd": "bitnami/fluentd:1.7.4-r1",
+    "grafana": "bitnami/grafana:6.4.3-r5",
+    "kibana": "bitnami/kibana:7.4.1-r4",
+    "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.26.1-r10",
+    "oauth2_proxy": "bitnami/oauth2-proxy:4.0.0-r62",
+    "prometheus": "bitnami/prometheus:2.13.1-r4"
 }

@@ -107,7 +107,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
                 "cookie-secure": "true",
                 "cookie-refresh": "3h",
                 "set-xauthrequest": true,
-                "tls-cert": "",
+                "tls-cert-file": "",
                 upstream: "file:///dev/null",
                 "redirect-url": "https://%s/oauth2/callback" % $.ingress.host,
                 "cookie-domain": utils.parentDomain($.ingress.host),

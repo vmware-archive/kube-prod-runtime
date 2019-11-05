@@ -46,8 +46,12 @@ func RandString(n int) string {
 	return string(b)
 }
 
+type total struct {
+	Value int `json:"value"`
+}
+
 type hits struct {
-	Total int `json:"total"`
+	Total total `json:"total"`
 }
 
 type apiResponse struct {
@@ -55,7 +59,7 @@ type apiResponse struct {
 }
 
 func totalHits(resp *apiResponse) int {
-	return resp.Hits.Total
+	return resp.Hits.Total.Value
 }
 
 // This test uses https://onsi.github.io/ginkgo/ - see there for docs

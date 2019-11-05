@@ -23,6 +23,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -295,7 +296,7 @@ var _ = Describe("Ingress", func() {
 			Eventually(func() (*http.Response, error) {
 				resp, err = getURL(client, url)
 				return resp, err
-			}, "10m", "5s").
+			}, "15m", "5s").
 				Should(WithTransform(statusCode, Equal(200)))
 
 			defer resp.Body.Close()
@@ -336,7 +337,7 @@ var _ = Describe("Ingress", func() {
 					// NB: will follow redirects
 					resp, err = getURL(client, testUrl)
 					return resp, err
-				}, "10m", "5s").
+				}, "15m", "5s").
 					Should(WithTransform(statusCode, Or(Equal(200), Equal(400))))
 
 				fmt.Fprintf(GinkgoWriter, "Response:\n%#v", resp)
@@ -346,7 +347,8 @@ var _ = Describe("Ingress", func() {
 				Expect(resp.Request.URL.Host).To(Or(
 					Equal("accounts.google.com"),
 					Equal("login.microsoftonline.com"),
-					Equal("cognito-idp.us-east-1.amazonaws.com"),
+					MatchRegexp(`^cognito-idp\..*\.amazonaws\.com$`),
+					MatchRegexp(`^.*\.auth\..*\.amazoncognito\.com$`),
 				))
 			})
 
@@ -400,7 +402,7 @@ var _ = Describe("Ingress", func() {
 					// NB: will follow redirects
 					resp, err = getURL(client, testUrl)
 					return resp, err
-				}, "10m", "5s").
+				}, "15m", "5s").
 					Should(WithTransform(statusCode, Equal(200)))
 
 				fmt.Fprintf(GinkgoWriter, "Response:\n%#v", resp)
@@ -412,50 +414,61 @@ var _ = Describe("Ingress", func() {
 				b := string(body)
 				fmt.Fprintf(GinkgoWriter, "Body:\n%s", b)
 
+				Expect(b).To(ContainSubstring("x-auth-request-user=" + session.User))
+				Expect(b).To(ContainSubstring("x-auth-request-email=" + session.Email))
 				Expect(b).To(ContainSubstring("real path=/some/path"))
-				Expect(b).To(ContainSubstring("x-auth-request-user=testuser"))
-				Expect(b).To(ContainSubstring("x-auth-request-email=" + email))
 				Expect(b).NotTo(ContainSubstring("authentication"))
 			})
 		})
 	})
 })
 
-// See github.com/pusher/oauth2_proxy/providers/session_state.go
+// SessionState is used to store information about the currently authenticated user session
 type SessionState struct {
-	AccessToken  string
-	IDToken      string
-	ExpiresOn    time.Time
-	RefreshToken string
-	Email        string
-	User         string
+	AccessToken  string    `json:",omitempty"`
+	IDToken      string    `json:",omitempty"`
+	ExpiresOn    time.Time `json:"-"`
+	RefreshToken string    `json:",omitempty"`
+	Email        string    `json:",omitempty"`
+	User         string    `json:",omitempty"`
 }
 
-func (s *SessionState) accountInfo() string {
-	return fmt.Sprintf("email:%s user:%s", s.Email, s.User)
+type SessionStateJSON struct {
+	*SessionState
+	ExpiresOn *time.Time `json:",omitempty"`
 }
 
-func (s *SessionState) EncryptedString(c *cookie.Cipher) (string, error) {
+func (s *SessionState) EncodeSessionState(c *cookie.Cipher) (string, error) {
+	var ss SessionState
 	var err error
-	a := s.AccessToken
-	if a != "" {
-		if a, err = c.Encrypt(a); err != nil {
+
+	ss = *s
+	if ss.AccessToken != "" {
+		ss.AccessToken, err = c.Encrypt(ss.AccessToken)
+		if err != nil {
 			return "", err
 		}
 	}
-	i := s.IDToken
-	if i != "" {
-		if i, err = c.Encrypt(i); err != nil {
+	if ss.IDToken != "" {
+		ss.IDToken, err = c.Encrypt(ss.IDToken)
+		if err != nil {
 			return "", err
 		}
 	}
-	r := s.RefreshToken
-	if r != "" {
-		if r, err = c.Encrypt(r); err != nil {
+	if ss.RefreshToken != "" {
+		ss.RefreshToken, err = c.Encrypt(ss.RefreshToken)
+		if err != nil {
 			return "", err
 		}
 	}
-	return fmt.Sprintf("%s|%s|%s|%d|%s", s.accountInfo(), a, i, s.ExpiresOn.Unix(), r), nil
+
+	// Embed SessionState and ExpiresOn pointer into SessionStateJSON
+	ssj := &SessionStateJSON{SessionState: &ss}
+	if !ss.ExpiresOn.IsZero() {
+		ssj.ExpiresOn = &ss.ExpiresOn
+	}
+	b, err := json.Marshal(ssj)
+	return string(b), err
 }
 
 func oauth2ProxyCookie(cookieSecret string, session SessionState, now time.Time) ([]*http.Cookie, error) {
@@ -466,24 +479,25 @@ func oauth2ProxyCookie(cookieSecret string, session SessionState, now time.Time)
 		return nil, err
 	}
 
-	s, err := session.EncryptedString(cipher)
+	s, err := session.EncodeSessionState(cipher)
 	if err != nil {
 		return nil, err
 	}
 
 	value := cookie.SignedValue(cookieSecret, cookieName, s, now)
+
 	// Cookie value+name must be <4kiB
 	Expect(len(value)).To(BeNumerically("<", 4096-len(cookieName)))
 
 	return []*http.Cookie{
 		{
 			Name:     cookieName, // --cookie-name
-			Secure:   true,       // --cookie-secure
+			Value:    value,
+			Path:     "/",
 			Domain:   *dnsSuffix, // --cookie-domain
 			HttpOnly: true,       // --cookie-httponly
-			Path:     "/",
+			Secure:   true,       // --cookie-secure
 			Expires:  now.Add(1 * time.Hour),
-			Value:    value,
 		},
 	}, nil
 }
