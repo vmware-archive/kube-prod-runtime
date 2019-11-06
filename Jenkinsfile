@@ -130,7 +130,7 @@ String gcpLabel(String s) {
     s.replaceAll(/[^a-zA-Z0-9_-]+/, '-').toLowerCase().take(62)
 }
 
-def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, boolean pauseForDebugging, Closure clusterSetup, Closure clusterDestroy, Closure dnsSetup, Closure dnsDestroy) {
+def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArgs, boolean lastRetry, Closure clusterSetup, Closure clusterDestroy, Closure dnsSetup, Closure dnsDestroy) {
     // Regex of tests that are temporarily skipped.  Empty-string
     // to run everything.  Include pointers to tracking issues.
     def skip = ''
@@ -178,14 +178,16 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                                 -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}
                             """
                         } catch (error) {
-                            if(pauseForDebugging) {
+                            /*
+                            if(lastRetry) {
                                 timeout(time: 15, unit: 'MINUTES') {
                                     input 'Paused for manual debugging'
                                 }
                             }
+                            */
                             throw error
                         } finally {
-                            if(pauseForDebugging) {
+                            if(lastRetry) {
                                 junit 'junit/*.xml'
                             }
                         }
