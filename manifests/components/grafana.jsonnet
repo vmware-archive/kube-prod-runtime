@@ -132,6 +132,13 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   grafana: kube.StatefulSet($.p + "grafana") + $.metadata {
     spec+: {
       template+: {
+        metadata+: {
+          annotations+: {
+            "prometheus.io/scrape": "true",
+            "prometheus.io/port": "3000",
+            "prometheus.io/path": "/metrics",
+          },
+        },
         spec+: {
           volumes_+: {
             datasources: kube.ConfigMapVolume($.datasources),
