@@ -578,7 +578,7 @@ spec:
                     for (x in eksKversions) {
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
-                        def awsUserPoolId = "${awsRegion}_zkRzdsjxA"
+                        def awsUserPoolId = "${awsRegion}_QkFNHuI5g"
                         def awsZones = ["us-east-1b", "us-east-1f"]
                         def platform = "eks-" + kversion
 
