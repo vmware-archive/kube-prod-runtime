@@ -438,22 +438,21 @@ local get_cm_web_hook_url = function(port, path) (
   ksm: {
     serviceAccount: kube.ServiceAccount($.p + "kube-state-metrics") + $.metadata {
     },
-
-    clusterRole: kube.ClusterRole($.p + "kube-state-metrics") {
-      local core = "",  // workaround empty-string-key bug in `jsonnet fmt`
-      local listwatch = {
-        [core]: ["nodes", "pods", "services", "resourcequotas", "replicationcontrollers", "limitranges", "persistentvolumeclaims", "namespaces"],
-        extensions: ["daemonsets", "deployments", "replicasets"],
-        apps: ["statefulsets"],
-        batch: ["cronjobs", "jobs"],
-      },
-      all_resources:: std.set(std.flattenArrays(kube.objectValues(listwatch))),
-      rules: [{
-        apiGroups: [k],
-        resources: listwatch[k],
-        verbs: ["list", "watch"],
-      } for k in std.objectFields(listwatch)],
-    },
+    
+    clusterRole+: kube.ClusterRole($.p + 'kube-state-metrics') {
+		local core = '',  // workaround empty-string-key bug in `jsonnet fmt`
+		local listwatch = {
+		  [core]: ['nodes', 'pods', 'services', 'resourcequotas', 'replicationcontrollers', 'limitranges', 'persistentvolumeclaims', 'namespaces'],
+		  apps: ['statefulsets', 'daemonsets', 'deployments', 'replicasets'],
+		  batch: ['cronjobs', 'jobs'],
+		},
+		all_resources:: std.set(std.flattenArrays(kube.objectValues(listwatch))),
+		rules: [{
+		  apiGroups: [k],
+		  resources: listwatch[k],
+		  verbs: ['list', 'watch'],
+		} for k in std.objectFields(listwatch)],
+	  },
 
     clusterRoleBinding: kube.ClusterRoleBinding($.p + "kube-state-metrics") {
       roleRef_: $.ksm.clusterRole,
@@ -496,7 +495,7 @@ local get_cm_web_hook_url = function(port, path) (
             serviceAccountName: $.ksm.serviceAccount.metadata.name,
             containers_+: {
               default+: kube.Container("ksm") {
-                image: "quay.io/coreos/kube-state-metrics:v1.1.0",
+                image: "quay.io/coreos/kube-state-metrics:v1.8.0",
                 ports_: {
                   metrics: {containerPort: 8080},
                 },
