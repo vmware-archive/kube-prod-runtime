@@ -438,21 +438,21 @@ local get_cm_web_hook_url = function(port, path) (
   ksm: {
     serviceAccount: kube.ServiceAccount($.p + "kube-state-metrics") + $.metadata {
     },
-    
-    clusterRole+: kube.ClusterRole($.p + 'kube-state-metrics') {
-		local core = '',  // workaround empty-string-key bug in `jsonnet fmt`
-		local listwatch = {
-		  [core]: ['nodes', 'pods', 'services', 'resourcequotas', 'replicationcontrollers', 'limitranges', 'persistentvolumeclaims', 'namespaces'],
-		  apps: ['statefulsets', 'daemonsets', 'deployments', 'replicasets'],
-		  batch: ['cronjobs', 'jobs'],
-		},
-		all_resources:: std.set(std.flattenArrays(kube.objectValues(listwatch))),
-		rules: [{
-		  apiGroups: [k],
-		  resources: listwatch[k],
-		  verbs: ['list', 'watch'],
-		} for k in std.objectFields(listwatch)],
-	  },
+
+    clusterRole+: kube.ClusterRole($.p + "kube-state-metrics") {
+      local core = "",  // workaround empty-string-key bug in `jsonnet fmt`
+      local listwatch = {
+        [core]: ["nodes", "pods", "services", "resourcequotas", "replicationcontrollers", "limitranges", "persistentvolumeclaims", "namespaces"],
+        apps: ["statefulsets", "daemonsets", "deployments", "replicasets"],
+        batch: ["cronjobs", "jobs"],
+      },
+      all_resources:: std.set(std.flattenArrays(kube.objectValues(listwatch))),
+      rules: [{
+        apiGroups: [k],
+        resources: listwatch[k],
+        verbs: ["list", "watch"],
+      } for k in std.objectFields(listwatch)],
+    },
 
     clusterRoleBinding: kube.ClusterRoleBinding($.p + "kube-state-metrics") {
       roleRef_: $.ksm.clusterRole,
