@@ -439,7 +439,7 @@ local get_cm_web_hook_url = function(port, path) (
     serviceAccount: kube.ServiceAccount($.p + "kube-state-metrics") + $.metadata {
     },
 
-    clusterRole+: kube.ClusterRole($.p + "kube-state-metrics") {
+    clusterRole: kube.ClusterRole($.p + "kube-state-metrics") {
       local core = "",  // workaround empty-string-key bug in `jsonnet fmt`
       local listwatch = {
         [core]: ["nodes", "pods", "services", "resourcequotas", "replicationcontrollers", "limitranges", "persistentvolumeclaims", "namespaces"],
