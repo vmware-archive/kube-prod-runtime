@@ -10,6 +10,8 @@ local helpers = (import 'helpers.jsonnet');
 local voidKubecfgInternals(obj) = (
   obj
   + helpers.setAtPath('grafana.datasources.data', { 'bkpr.yml': '' })
+  + helpers.setAtPath('grafana.dashboards_provider.data', { 'dashboards_provider.yml': '' })
+  + helpers.setAtPath('grafana.kubernetes_dashboards.data', { })
   + helpers.setAtPath('prometheus.rules', {})
   + helpers.setAtPath('prometheus.prometheus.config.data', { 'prometheus.yml': '' })
   + helpers.setAtPath('prometheus.alertmanager.config.data', { 'config.yml': '' })
