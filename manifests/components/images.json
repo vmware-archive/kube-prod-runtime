@@ -10,5 +10,5 @@
     "kibana": "bitnami/kibana:7.4.1-r4",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.26.1-r10",
     "oauth2_proxy": "bitnami/oauth2-proxy:4.0.0-r62",
-    "prometheus": "bitnami/prometheus:2.14.0-r10"
+    "prometheus": "bitnami/prometheus:2.14.0-r11"
 }
