@@ -6,7 +6,7 @@
     "elasticsearch": "bitnami/elasticsearch:7.4.1-r5",
     "external-dns": "bitnami/external-dns:0.5.17-r30",
     "fluentd": "bitnami/fluentd:1.7.4-r1",
-    "grafana": "bitnami/grafana:6.4.4-r10",
+    "grafana": "bitnami/grafana:6.4.4-r11",
     "kibana": "bitnami/kibana:7.4.1-r4",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.26.1-r10",
     "oauth2_proxy": "bitnami/oauth2-proxy:4.0.0-r62",
