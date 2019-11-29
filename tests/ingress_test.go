@@ -279,7 +279,7 @@ var _ = Describe("Ingress", func() {
 			}
 
 			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "kubernetes.io/tls-acme", "true")
-			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "certmanager.k8s.io/cluster-issuer", "letsencrypt-staging")
+			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "cert-manager.io/cluster-issuer", "letsencrypt-staging")
 			ing.Spec.TLS = []xv1beta1.IngressTLS{{
 				Hosts:      []string{ing.Spec.Rules[0].Host},
 				SecretName: fmt.Sprintf("%s-tls", ing.GetName()),
