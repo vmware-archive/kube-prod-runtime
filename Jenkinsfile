@@ -370,7 +370,7 @@ spec:
 
                     // See:
                     //  gcloud container get-server-config
-                    def gkeKversions = ["1.13", "1.14"]
+                    def gkeKversions = ["1.14", "1.15"]
                     for (x in gkeKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
@@ -463,7 +463,7 @@ spec:
 
                     // See:
                     //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-                    def aksKversions = ["1.13", "1.14"]
+                    def aksKversions = ["1.14", "1.15"]
                     for (x in aksKversions) {
                         def kversion = x  // local bind required because closures
                         def resourceGroup = 'jenkins-bkpr-rg'
@@ -581,7 +581,7 @@ spec:
                         }
                     }
 
-                    def eksKversions = ["1.13", "1.14"]
+                    def eksKversions = ["1.14"]
                     for (x in eksKversions) {
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
