@@ -1,5 +1,5 @@
 {
-    "alertmanager": "bitnami/alertmanager:0.19.0-r50",
+    "alertmanager": "bitnami/alertmanager:0.20.0-r20",
     "cert-manager": "bitnami/cert-manager:0.12.0-r29",
     "cert-manager-acmesolver": "quay.io/jetstack/cert-manager-acmesolver:v0.12.0",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
@@ -7,9 +7,9 @@
     "elasticsearch": "bitnami/elasticsearch:7.4.1-r5",
     "external-dns": "bitnami/external-dns:0.5.17-r30",
     "fluentd": "bitnami/fluentd:1.8.1-r8",
-    "grafana": "bitnami/grafana:6.4.3-r5",
+    "grafana": "bitnami/grafana:6.5.2-r19",
     "kibana": "bitnami/kibana:7.4.1-r4",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.26.1-r10",
     "oauth2_proxy": "bitnami/oauth2-proxy:4.0.0-r62",
-    "prometheus": "bitnami/prometheus:2.13.1-r4"
+    "prometheus": "bitnami/prometheus:2.15.1-r8"
 }
