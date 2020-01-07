@@ -25,11 +25,12 @@ local PROMETHEUS_IMAGE = (import "images.json").prometheus;
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
+local NODE_EXPORTER_IMAGE = (import "images.json")["node-exporter"];
+
 local ALERTMANAGER_IMAGE = (import "images.json").alertmanager;
 local ALERTMANAGER_PORT = 9093;
 
 local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
-
 // Builds the `webhook-url` used by a container to trigger a reload
 // after a ConfigMap change
 local get_cm_web_hook_url = function(port, path) (
@@ -396,7 +397,7 @@ local get_cm_web_hook_url = function(port, path) (
             }],
             containers_+: {
               default: kube.Container("node-exporter") {
-                image: "bitnami/node-exporter:0.17.0-r1",
+                image: NODE_EXPORTER_IMAGE,
                 local v = self.volumeMounts_,
                 args_+: {
                   "path.procfs": v.procfs.mountPath,

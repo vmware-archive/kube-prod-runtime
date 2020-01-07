@@ -10,6 +10,7 @@
     "grafana": "bitnami/grafana:6.5.2-r19",
     "kibana": "bitnami/kibana:7.4.1-r4",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.26.2-r4",
+    "node-exporter": "bitnami/node-exporter:0.18.1-r205",
     "oauth2_proxy": "bitnami/oauth2-proxy:4.1.0-r21",
     "prometheus": "bitnami/prometheus:2.15.1-r8"
 }
