@@ -112,6 +112,7 @@ def insertGlueRecords(String name, java.util.List nameServers, String ttl, Strin
         for (ns in nameServers) {
             sh "az network dns record-set ns add-record --resource-group ${resourceGroup} --zone-name ${zone} --record-set-name ${name} --nsdname ${ns}"
         }
+        sh "az network dns record-set soa update --resource-group ${resourceGroup} --zone-name ${name}.${dnsZone} --expire-time 60 --minimum-ttl 60 --refresh-time 60 --retry-time 60"
         sh "az network dns record-set ns update --resource-group ${resourceGroup} --zone-name ${zone} --name ${name} --set ttl=${ttl}"
     }
 }
