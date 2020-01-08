@@ -173,6 +173,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
                 "txt-prefix": "_externaldns.",
                 "txt-owner-id": this.ownerId,
                 "domain-filter": this.ownerId,
+                "log-level": "warning",
               },
               args+: ["--source=%s" % s for s in self.args_.sources_],
               ports_+: {
