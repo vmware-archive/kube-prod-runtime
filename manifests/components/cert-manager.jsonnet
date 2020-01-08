@@ -354,6 +354,7 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
             default: kube.Container("cert-manager") {
               image: CERT_MANAGER_IMAGE,
               args_+: {
+                v: "3",
                 "acme-http01-solver-image": CERT_MANAGER_ACMESOLVER_IMAGE,
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
                 "leader-election-namespace": "$(POD_NAMESPACE)",
