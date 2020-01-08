@@ -20,7 +20,7 @@
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
-local CURATOR_IMAGE = (import "images.json").curator;
+local ELASTICSEARCH_CURATOR_IMAGE = (import "images.json")["elasticsearch-curator"];
 
 local action_file_yml_tmpl = importstr "elasticsearch-config/action_file_yml_tmpl";
 local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
@@ -52,7 +52,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
             spec+: {
               containers_+: {
                 curator: kube.Container("curator") {
-                  image: CURATOR_IMAGE,
+                  image: ELASTICSEARCH_CURATOR_IMAGE,
                   args: ["--config", "/etc/config/config.yml", "/etc/config/action_file.yml"],
                   volumeMounts_+: {
                     config_vol: {mountPath: "/etc/config", readOnly: true},
