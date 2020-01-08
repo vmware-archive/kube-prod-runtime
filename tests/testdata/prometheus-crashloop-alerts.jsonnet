@@ -28,8 +28,8 @@ local kubecfg = import "kubecfg.libsonnet";
           rules: [
             {
               alert: "CrashLooping_test",
-              expr: "sum(rate(kube_pod_container_status_restarts[10m])) BY (namespace, container) * 600 > 0",
-              labels: {severity: "notice"},
+              expr: "sum(rate(kube_pod_container_status_restarts_total[10m])) BY (namespace, container) * 600 > 0",
+              labels: {severity: "critical"},
             },
           ],
         },
