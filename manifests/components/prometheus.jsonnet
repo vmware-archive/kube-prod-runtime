@@ -25,7 +25,11 @@ local PROMETHEUS_IMAGE = (import "images.json").prometheus;
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
+local KUBE_STATE_METRICS_IMAGE = (import "images.json")["kube-state-metrics"];
+
 local NODE_EXPORTER_IMAGE = (import "images.json")["node-exporter"];
+
+local ADDON_RESIZER_IMAGE = (import "images.json")["addon-resizer"];
 
 local ALERTMANAGER_IMAGE = (import "images.json").alertmanager;
 local ALERTMANAGER_PORT = 9093;
@@ -64,40 +68,37 @@ local get_cm_web_hook_url = function(port, path) (
   // Default monitoring rules
   basic_rules:: {
     K8sApiUnavailable: {
-      expr: 'max(up{job="kubernetes_apiservers"}) != 1',
-      "for": "10m",
+      expr: 'absent(up{job="kubernetes-apiservers"} == 1)',
+      "for": "15m",
+      labels: {severity: "critical"},
       annotations: {
-        summary: "Kubernetes API is unavailable",
-        description: "Kubernetes API is not responding",
+        message: "Kubernetes API has disappeared from Prometheus target discovery",
       },
     },
     CrashLooping: {
-      expr: "sum(rate(kube_pod_container_status_restarts[15m])) BY (namespace, container) * 3600 > 0",
+      expr: "rate(kube_pod_container_status_restarts_total[15m]) * 60 * 5 > 0",
       "for": "1h",
-      labels: {severity: "notice"},
+      labels: {severity: "critical"},
       annotations: {
-        summary: "Frequently restarting container",
-        description: "{{$labels.namespace}}/{{$labels.container}} is restarting {{$value}} times per hour",
+        message: "Pod {{ $labels.namespace }}/{{ $labels.pod }} ({{ $labels.container }}) is restarting {{ $value }} times / 5 minutes.",
       },
     },
   },
   monitoring_rules:: {
     PrometheusBadConfig: {
-      expr: 'prometheus_config_last_reload_successful{kubernetes_namespace="%s"} == 0' % $.metadata.metadata.namespace,
+      expr: 'max_over_time(prometheus_config_last_reload_successful{kubernetes_namespace="%s"}[5m]) == 0' % $.metadata.metadata.namespace,
       "for": "10m",
       labels: {severity: "critical"},
       annotations: {
-        summary: "Prometheus failed to reload config",
-        description: "Config error with prometheus, see container logs",
+        message: "Prometheus {{ $labels.namespace }}/{{ $labels.pod }} has failed to reload its configuration.",
       },
     },
     AlertmanagerBadConfig: {
       expr: 'alertmanager_config_last_reload_successful{kubernetes_namespace="%s"} == 0' % $.metadata.metadata.namespace,
       "for": "10m",
-      labels: {severity: "critical"},
+      labels: {severity: "warning"},
       annotations: {
-        summary: "Alertmanager failed to reload config",
-        description: "Config error with alertmanager, see container logs",
+        message: "Reloading Alertmanager's configuration has failed for {{ $labels.namespace }}/{{ $labels.pod }}.",
       },
     },
   },
@@ -443,10 +444,18 @@ local get_cm_web_hook_url = function(port, path) (
     clusterRole: kube.ClusterRole($.p + "kube-state-metrics") {
       local core = "",  // workaround empty-string-key bug in `jsonnet fmt`
       local listwatch = {
-        [core]: ["nodes", "pods", "services", "resourcequotas", "replicationcontrollers", "limitranges", "persistentvolumeclaims", "namespaces"],
-        extensions: ["daemonsets", "deployments", "replicasets"],
-        apps: ["statefulsets"],
+        [core]: ["configmaps", "endpoints", "limitranges", "namespaces", "nodes", "persistentvolumeclaims", "persistentvolumes", "pods", "replicationcontrollers", "resourcequotas", "secrets", "services"],
+        "admissionregistration.k8s.io": ["mutatingwebhookconfigurations", "validatingwebhookconfigurations"],
+        apps: ["daemonsets", "deployments", "replicasets", "statefulsets"],
+        autoscaling: ["horizontalpodautoscalers"],
+        "autoscaling.k8s.io": ["verticalpodautoscalers"],
         batch: ["cronjobs", "jobs"],
+        "certificates.k8s.io": ["certificatesigningrequests"],
+        extensions: ["daemonsets", "deployments", "ingresses", "replicasets"],
+        "networking.k8s.io": ["ingresses", "networkpolicies"],
+        policy: ["poddisruptionbudgets"],
+        "storage.k8s.io": ["storageclasses", "volumeattachments"],
+        "storageclasses.k8s.io": ["storageclasses"],
       },
       all_resources:: std.set(std.flattenArrays(kube.objectValues(listwatch))),
       rules: [{
@@ -497,25 +506,40 @@ local get_cm_web_hook_url = function(port, path) (
             serviceAccountName: $.ksm.serviceAccount.metadata.name,
             containers_+: {
               default+: kube.Container("ksm") {
-                image: "quay.io/coreos/kube-state-metrics:v1.1.0",
+                image: KUBE_STATE_METRICS_IMAGE,
                 ports_: {
                   metrics: {containerPort: 8080},
                 },
                 args_: {
                   collectors_:: std.set([
-                    // remove "cronjobs" for kubernetes/kube-state-metrics#295
+                    // "verticalpodautoscalers",
+                    "certificatesigningrequests",
+                    "configmaps",
+                    "cronjobs",
                     "daemonsets",
                     "deployments",
+                    "endpoints",
+                    "horizontalpodautoscalers",
+                    "ingresses",
+                    "jobs",
                     "limitranges",
+                    "mutatingwebhookconfigurations",
+                    "namespaces",
+                    "networkpolicies",
                     "nodes",
+                    "persistentvolumeclaims",
+                    "persistentvolumes",
+                    "poddisruptionbudgets",
                     "pods",
                     "replicasets",
                     "replicationcontrollers",
                     "resourcequotas",
+                    "secrets",
                     "services",
-                    "jobs",
                     "statefulsets",
-                    "persistentvolumeclaims",
+                    "storageclasses",
+                    "validatingwebhookconfigurations",
+                    "volumeattachments",
                   ]),
                   collectors: std.join(",", self.collectors_),
                 },
@@ -528,7 +552,7 @@ local get_cm_web_hook_url = function(port, path) (
                 },
               },
               resizer: kube.Container("addon-resizer") {
-                image: "k8s.gcr.io/addon-resizer:1.8.4",
+                image: ADDON_RESIZER_IMAGE,
                 command: ["/pod_nanny"],
                 args_+: {
                   container: spec.containers[0].name,
