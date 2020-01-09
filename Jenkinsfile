@@ -217,7 +217,7 @@ kind: Pod
 spec:
   containers:
   - name: 'go'
-    image: 'golang:1.12.11-stretch'
+    image: 'golang:1.12.14-stretch'
     tty: true
     command:
     - 'cat'
@@ -232,7 +232,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'gcloud'
-    image: 'google/cloud-sdk:268.0.0'
+    image: 'google/cloud-sdk:275.0.0'
     tty: true
     command:
     - 'cat'
@@ -243,7 +243,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'az'
-    image: 'microsoft/azure-cli:2.0.61'
+    image: 'mcr.microsoft.com/azure-cli:2.0.79'
     tty: true
     command:
     - 'cat'
@@ -259,7 +259,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'kubectl'
-    image: 'lachlanevenson/k8s-kubectl:v1.16.2'
+    image: 'lachlanevenson/k8s-kubectl:v1.16.4'
     tty: true
     command:
     - 'cat'
