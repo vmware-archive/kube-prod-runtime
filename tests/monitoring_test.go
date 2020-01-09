@@ -112,7 +112,7 @@ var _ = Describe("Exporters", func() {
 			json.Unmarshal(resp.Data, &series)
 
 			return series, err
-		}, "5m", "5s").Should(match)
+		}, "10m", "5s").Should(match)
 	},
 		Entry("prometheus", `prometheus_tsdb_head_chunks{kubernetes_namespace="kubeprod",name="prometheus"}`, Not(BeEmpty())),
 		Entry("alertmanager", `alertmanager_peer_position`, Not(BeEmpty())),
@@ -170,7 +170,7 @@ var _ = Describe("Monitoring", func() {
 				json.Unmarshal(resp.Data, &series)
 
 				return series, err
-			}, "5m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(countSeries, BeNumerically(">", 0)))
 
 			Expect(series[0].Container).To(Equal(deploy.Spec.Template.Spec.Containers[0].Name))
@@ -193,7 +193,7 @@ var _ = Describe("Monitoring", func() {
 				json.Unmarshal(resp.Data, &managers)
 
 				return managers.Active, err
-			}, "5m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(countEndpoints, BeNumerically(">", 0)))
 
 			Expect(managers.Active[0].Url).To(ContainSubstring(am_path + "/api/v1/alerts"))
@@ -223,7 +223,7 @@ var _ = Describe("Monitoring", func() {
 				json.Unmarshal(resp.Data, &series)
 
 				return series, err
-			}, "5m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(countSeries, BeNumerically(">", 0)))
 
 			Expect(series[0].Container).To(Equal(deploy.Spec.Template.Spec.Containers[0].Name))
@@ -247,7 +247,7 @@ var _ = Describe("Monitoring", func() {
 				json.Unmarshal(resp.Data, &alerts)
 
 				return alerts, err
-			}, "5m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(countAlerts, BeNumerically(">", 0)))
 
 			Expect(alerts[0].Label.Container).To(Equal(deploy.Spec.Template.Spec.Containers[0].Name))

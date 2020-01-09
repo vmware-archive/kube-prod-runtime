@@ -107,7 +107,7 @@ var _ = Describe("Logging", func() {
 				resp := apiResponse{}
 				json.Unmarshal(resultRaw, &resp)
 				return &resp, err
-			}, "5m", "5s").
+			}, "10m", "5s").
 				Should(WithTransform(totalHits, BeNumerically(">", 0)))
 		})
 	})
