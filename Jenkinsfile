@@ -83,8 +83,8 @@ def withGo(Closure body) {
     }
 }
 
-def waitForRollout(String namespace, int minutes) {
-    timeout(time: minutes, unit: 'MINUTES') {
+def waitForRollout(String namespace, int rolloutTimeout, int postRollOutSleep) {
+    timeout(time: rolloutTimeout, unit: 'SECONDS') {
         container('kubectl') {
             try {
                 sh """
@@ -104,6 +104,9 @@ def waitForRollout(String namespace, int minutes) {
                 throw error
             }
         }
+    }
+    if (postRollOutSleep) {
+        sleep postRollOutSleep
     }
 }
 
@@ -138,17 +141,15 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
     try {
         clusterSetup()
 
-        waitForRollout("kube-system", 30)
+        // HACK: We have been experiencing the following error while executing "kubeprod install"
+        //       "Error: unable to retrieve the complete list of server APIs: metrics.k8s.io/v1beta1: the server is currently unable to handle the request"
+        //       To workaround this issue a 60 sec sleep is added to allow the api server to become READY before performing the installation.
+        waitForRollout("kube-system", 1800, 60)
 
         container('kubectl') {
             sh "kubectl version"
             sh "kubectl cluster-info"
         }
-
-        // HACK: We have been experiencing the following error while executing "kubeprod install"
-        //       "Error: unable to retrieve the complete list of server APIs: metrics.k8s.io/v1beta1: the server is currently unable to handle the request"
-        //       To workaround this issue a 60 sec sleep is added to allow the api server to become READY before performing the installation.
-        sleep 60
 
         try {
             sh "kubeprod install ${kubeprodArgs} --manifests=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests"
@@ -157,7 +158,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 // creates the DNS hosted zone in the underlying cloud platform
                 dnsSetup()
 
-                waitForRollout("kubeprod", 30)
+                waitForRollout("kubeprod", 1800, 120)
 
                 withGo() {
                     dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests") {
@@ -216,7 +217,7 @@ kind: Pod
 spec:
   containers:
   - name: 'go'
-    image: 'golang:1.12.11-stretch'
+    image: 'golang:1.12.14-stretch'
     tty: true
     command:
     - 'cat'
@@ -231,7 +232,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'gcloud'
-    image: 'google/cloud-sdk:268.0.0'
+    image: 'google/cloud-sdk:275.0.0'
     tty: true
     command:
     - 'cat'
@@ -242,7 +243,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'az'
-    image: 'microsoft/azure-cli:2.0.61'
+    image: 'mcr.microsoft.com/azure-cli:2.0.79'
     tty: true
     command:
     - 'cat'
@@ -258,7 +259,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'kubectl'
-    image: 'lachlanevenson/k8s-kubectl:v1.16.2'
+    image: 'lachlanevenson/k8s-kubectl:v1.16.4'
     tty: true
     command:
     - 'cat'
