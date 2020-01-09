@@ -32,6 +32,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
 
   config: kube.ConfigMap($.p + "nginx-ingress") + $.metadata {
     data+: {
+      "proxy-buffer-size": "16k",
       "proxy-connect-timeout": "15",
       "disable-ipv6": "false",
 
