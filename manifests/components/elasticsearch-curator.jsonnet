@@ -34,7 +34,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
   port:: error "port must be externally provided ...",
   schedule:: error "schedule must be externally provided ...",
 
-  elasticsearch_curator_config: kube.ConfigMap($.name) {
+  elasticsearch_curator_config: utils.HashedConfigMap($.name) {
     metadata+: {namespace: $.namespace},
     data+: {
       "action_file.yml": std.format(action_file_yml_tmpl, [$.retention]),

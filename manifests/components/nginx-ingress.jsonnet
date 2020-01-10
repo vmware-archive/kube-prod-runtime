@@ -30,7 +30,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  config: kube.ConfigMap($.p + "nginx-ingress") + $.metadata {
+  config: utils.HashedConfigMap($.p + "nginx-ingress") + $.metadata {
     data+: {
       "proxy-buffer-size": "16k",
       "proxy-connect-timeout": "15",
@@ -47,10 +47,10 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  tcpconf: kube.ConfigMap($.p + "tcp-services") + $.metadata {
+  tcpconf: utils.HashedConfigMap($.p + "tcp-services") + $.metadata {
   },
 
-  udpconf: kube.ConfigMap($.p + "udp-services") + $.metadata {
+  udpconf: utils.HashedConfigMap($.p + "udp-services") + $.metadata {
   },
 
   ingressControllerClusterRole: kube.ClusterRole($.p + "nginx-ingress-controller") {
@@ -68,7 +68,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
       {
         apiGroups: [""],
         resources: ["services"],
-        verbs: ["get", "list", "watch"],
+        verbs: ["get", "list", "update", "watch"],
       },
       {
         apiGroups: ["extensions"],
@@ -102,16 +102,23 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     rules: [
       {
         apiGroups: [""],
-        resources: ["configmaps", "pods", "secrets", "namespaces"],
+        resources: ["namespaces"],
         verbs: ["get"],
       },
       {
         apiGroups: [""],
-        resources: ["configmaps"],
-        local election_id = "ingress-controller-leader",
-        local ingress_class = $.controller.spec.template.spec.containers_.default.args_["ingress-class"],
-        resourceNames: ["%s-%s" % [election_id, ingress_class]],
-        verbs: ["get", "update"],
+        resources: ["configmaps", "endpoints", "pods", "secrets"],
+        verbs: ["get", "list", "watch"],
+      },
+      {
+        apiGroups: [""],
+        resources: ["services"],
+        verbs: ["get", "list", "update", "watch"],
+      },
+      {
+        apiGroups: ["extensions", "networking.k8s.io"],
+        resources: ["ingresses"],
+        verbs: ["get", "list", "watch"],
       },
       {
         apiGroups: [""],
@@ -121,7 +128,25 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
       {
         apiGroups: [""],
         resources: ["endpoints"],
-        verbs: ["get"],  // ["create", "update"],
+        verbs: ["create", "get", "update"],
+      },
+      {
+        apiGroups: [""],
+        resources: ["events"],
+        verbs: ["create", "patch"],
+      },
+      {
+        apiGroups: ["extensions", "networking.k8s.io"],
+        resources: ["ingresses/status"],
+        verbs: ["update"],
+      },
+      {
+        apiGroups: [""],
+        resources: ["configmaps"],
+        local election_id = "ingress-controller-leader",
+        local ingress_class = $.controller.spec.template.spec.containers_.default.args_["ingress-class"],
+        resourceNames: ["%s-%s" % [election_id, ingress_class]],
+        verbs: ["get", "update"],
       },
     ],
   },
