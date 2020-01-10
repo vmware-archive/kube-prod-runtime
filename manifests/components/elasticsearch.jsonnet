@@ -21,7 +21,6 @@ local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local ELASTICSEARCH_IMAGE = (import "images.json").elasticsearch;
-local ELASTICSEARCH_EXPORTER_IMAGE = (import "images.json")["elasticsearch-exporter"];
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
@@ -35,6 +34,9 @@ local elasticsearch_curator = import "elasticsearch-curator.jsonnet";
 
 local ELASTICSEARCH_HTTP_PORT = 9200;
 local ELASTICSEARCH_TRANSPORT_PORT = 9300;
+
+local ELASTICSEARCH_EXPORTER_IMAGE = (import "images.json")["elasticsearch-exporter"];
+local ELASTICSEARCH_EXPORTER_PORT = 9102;
 
 {
   p:: "",
@@ -94,7 +96,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
         metadata+: {
           annotations+: {
             "prometheus.io/scrape": "true",
-            "prometheus.io/port": "9102",
+            "prometheus.io/port": "%s" % ELASTICSEARCH_EXPORTER_PORT,
           },
         },
         spec+: {
@@ -173,13 +175,12 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               command: ["elasticsearch_exporter"],
               args_+: {
                 "es.uri": "http://localhost:%s/" % ELASTICSEARCH_HTTP_PORT,
-                "es.all": "false",
                 "es.timeout": "20s",
-                "web.listen-address": ":9102",
+                "web.listen-address": ":%s" % ELASTICSEARCH_EXPORTER_PORT,
                 "web.telemetry-path": "/metrics",
               },
               ports_+: {
-                metrics: {containerPort: 9102},
+                metrics: {containerPort: ELASTICSEARCH_EXPORTER_PORT},
               },
               livenessProbe: {
                 httpGet: {path: "/", port: "metrics"},
