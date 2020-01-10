@@ -30,7 +30,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  config: kube.ConfigMap($.p + "nginx-ingress") + $.metadata {
+  config: utils.HashedConfigMap($.p + "nginx-ingress") + $.metadata {
     data+: {
       "proxy-buffer-size": "16k",
       "proxy-connect-timeout": "15",
@@ -47,10 +47,10 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  tcpconf: kube.ConfigMap($.p + "tcp-services") + $.metadata {
+  tcpconf: utils.HashedConfigMap($.p + "tcp-services") + $.metadata {
   },
 
-  udpconf: kube.ConfigMap($.p + "udp-services") + $.metadata {
+  udpconf: utils.HashedConfigMap($.p + "udp-services") + $.metadata {
   },
 
   ingressControllerClusterRole: kube.ClusterRole($.p + "nginx-ingress-controller") {

@@ -77,7 +77,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
   },
 
   // ConfigMap for additional Java security properties
-  java_security: kube.ConfigMap($.p + "java-elasticsearch-logging") + $.metadata {
+  java_security: utils.HashedConfigMap($.p + "java-elasticsearch-logging") + $.metadata {
     data+: {
       "java.security": (importstr "elasticsearch-config/java.security"),
     },
