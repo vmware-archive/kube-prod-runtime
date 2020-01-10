@@ -167,12 +167,12 @@ local get_cm_web_hook_url = function(port, path) (
       rules: [
         {
           apiGroups: [""],
-          resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"],
+          resources: ["nodes", "nodes/proxy", "nodes/metrics", "services", "endpoints", "pods", "ingresses", "configmaps"],
           verbs: ["get", "list", "watch"],
         },
         {
           apiGroups: ["extensions"],
-          resources: ["ingresses"],
+          resources: ["ingresses", "ingresses/status"],
           verbs: ["get", "list", "watch"],
         },
         {

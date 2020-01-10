@@ -36,22 +36,22 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
       {
         apiGroups: [""],
         resources: ["services", "pods", "nodes"],
-        verbs: ["get", "watch", "list"],
+        verbs: ["get", "list", "watch"],
       },
       {
-        apiGroups: ["extensions"],
+        apiGroups: ["extensions", "networking.k8s.io"],
         resources: ["ingresses"],
-        verbs: ["get", "watch", "list"],
+        verbs: ["get", "list", "watch"],
       },
       {
-        apiGroups: ["networking.k8s.io"],
-        resources: ["ingresses", "gateways"],
-        verbs: ["get", "watch", "list"],
+        apiGroups: ["networking.istio.io"],
+        resources: ["gateways"],
+        verbs: ["get", "list", "watch"],
       },
       {
         apiGroups: ["externaldns.k8s.io"],
         resources: ["dnsendpoints"],
-        verbs: ["get", "watch", "list"],
+        verbs: ["get", "list", "watch"],
       },
       {
         apiGroups: ["externaldns.k8s.io"],
