@@ -18,6 +18,7 @@
  */
 
 local kube = import "../lib/kube.libsonnet";
+local kubecfg = import "kubecfg.libsonnet";
 local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
 
 {
@@ -28,89 +29,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
     },
   },
 
-  dnsEndpointCRD: kube.CustomResourceDefinition("externaldns.k8s.io", "v1beta1", "DNSEndpoint") {
-    metadata+: {
-      labels+: {
-        api: "externaldns",
-        "kubebuilder.k8s.io": "1.0.0",
-      },
-    },
-    spec+: {
-      subresources+: {
-        status+: {},
-      },
-      validation+: {
-        openAPIV3Schema+: {
-          properties+: {
-            apiVersion: {
-              type: "string",
-            },
-            kind: {
-              type: "string",
-            },
-            metadata: {
-              type: "object",
-            },
-            spec+: {
-              properties+: {
-                endpoints+: {
-                  items+: {
-                    properties: {
-                      dnsName: {
-                        type: "string",
-                      },
-                      labels: {
-                        type: "object",
-                      },
-                      providerSpecific: {
-                        items: {
-                          properties: {
-                            name: {
-                              type: "string",
-                            },
-                            value: {
-                              type: "string",
-                            },
-                          },
-                          type: "object",
-                        },
-                        type: "array",
-                      },
-                      recordTTL: {
-                        format: "int64",
-                        type: "integer",
-                      },
-                      recordType: {
-                        type: "string",
-                      },
-                      targets: {
-                        items: {
-                          type: "string",
-                        },
-                        type: "array",
-                      },
-                    },
-                    type: "object",
-                  },
-                  type: "array",
-                },
-              },
-              type: "object",
-            },
-            status+: {
-              properties+: {
-                observedGeneration: {
-                  format: "int64",
-                  type: "integer",
-                },
-              },
-              type: "object",
-            },
-          },
-        },
-      },
-    },
-  },
+  crds: kubecfg.parseYaml(importstr "crds/external-dns.yaml"),
 
   clusterRole: kube.ClusterRole($.p + "external-dns") {
     rules: [
