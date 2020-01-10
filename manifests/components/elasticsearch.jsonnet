@@ -21,6 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 
 local ELASTICSEARCH_IMAGE = (import "images.json").elasticsearch;
+local ELASTICSEARCH_EXPORTER_IMAGE = (import "images.json")["elasticsearch-exporter"];
 
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
@@ -168,7 +169,7 @@ local ELASTICSEARCH_TRANSPORT_PORT = 9300;
               },
             },
             prom_exporter: kube.Container("prom-exporter") {
-              image: "justwatch/elasticsearch_exporter:1.0.1",
+              image: ELASTICSEARCH_EXPORTER_IMAGE,
               command: ["elasticsearch_exporter"],
               args_+: {
                 "es.uri": "http://localhost:%s/" % ELASTICSEARCH_HTTP_PORT,
