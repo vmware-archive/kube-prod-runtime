@@ -4,7 +4,7 @@
     "cert-manager-acmesolver": "quay.io/jetstack/cert-manager-acmesolver:v0.12.0",
     "configmap-reload": "jimmidyson/configmap-reload:v0.2.2",
     "elasticsearch": "bitnami/elasticsearch:6.7.2-r0",
-    "external-dns": "bitnami/external-dns:0.5.17-r30",
+    "external-dns": "bitnami/external-dns:0.5.18-r0",
     "fluentd": "bitnami/fluentd:1.4.2-r4",
     "grafana": "bitnami/grafana:6.1.6-r3",
     "kibana": "bitnami/kibana:6.7.2-r1",
