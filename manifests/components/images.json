@@ -11,7 +11,7 @@
     "fluentd": "bitnami/fluentd:1.8.1-r8",
     "grafana": "bitnami/grafana:6.5.2-r19",
     "kibana": "bitnami/kibana:7.5.1-r14",
-    "kube-state-metrics": "bitnami/kube-state-metrics:1.9.0-r15",
+    "kube-state-metrics": "bitnami/kube-state-metrics:1.9.2-r0",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.26.2-r4",
     "node-exporter": "bitnami/node-exporter:0.18.1-r205",
     "oauth2_proxy": "bitnami/oauth2-proxy:4.1.0-r21",
