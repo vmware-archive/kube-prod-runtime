@@ -24,15 +24,7 @@ ifndef HAS_JQ
 endif
 	@set -e ; \
 	PREV_VERSION=$$(git -c 'versionsort.suffix=-' tag --list  --sort=-v:refname | grep -m2 "^v[0-9]*\.[0-9]*\.[0-9]*$$" | tail -n1) ; \
-	echo -n > jenkins/Changes.lst ; \
-	for pr in $$(git log $${PREV_VERSION}..$(VERSION) --pretty=format:"%s" | grep '(#[0-9]*)$$' | cut -d"#" -f2 | cut -d')' -f1); do \
-		wget -q --header "Authorization: token $${GITHUB_TOKEN}" "https://api.github.com/repos/$(GITHUB_USER)/$(GITHUB_REPO)/pulls/$${pr}" -O - | \
-			jq -r '[.number,.title,.user.login] | "- \(.[1]) (#\(.[0])) - @\(.[2])"' >> jenkins/Changes.lst ; \
-	done ; \
-	if [ $$(cat jenkins/Changes.lst | wc -l) -eq 0 ]; then \
-		git log $${PREV_VERSION}..$(VERSION) --pretty=format:"- %s" >> jenkins/Changes.lst ; \
-		echo >> jenkins/Changes.lst ; \
-	fi ; \
+	git log $${PREV_VERSION}..$(VERSION) --oneline | grep -v 'Merge' > jenkins/Changes.lst
 	git cat-file -p $(VERSION) | sed '/-----BEGIN PGP SIGNATURE-----/,/-----END PGP SIGNATURE-----/d' | tail -n +6 > Release_Notes.md ; \
 	cat jenkins/Release_Notes.md.tmpl >> Release_Notes.md ; \
 	cat jenkins/Changes.lst >> Release_Notes.md ; \
