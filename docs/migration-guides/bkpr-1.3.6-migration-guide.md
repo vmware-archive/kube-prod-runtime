@@ -25,3 +25,7 @@ kubectl delete crds $(kubectl get crds -l kubecfg.ksonnet.io/garbage-collect-tag
 ## Upgrade to BKPR v1.3.6
 
 Follow the [BKPR upgrade instructions](../workflow.md#upgrading) to upgrade BKPR in your Kubernetes cluster.
+
+## Related Reading
+
+- [Migration Guide: Moving to BKPR v1.2](bkpr-1.2-migration-guide.md)
