@@ -14,5 +14,4 @@ Caveat: contains forward-looking statements that may or may not match reality. [
 
 ## Release 1.4
 
-- Support for AWS/kops platform ([#292](https://github.com/bitnami/kube-prod-runtime/issues/292))
-- Support for Kubernetes 1.13 - 1.14
+- Support for Kubernetes 1.14 - 1.15
