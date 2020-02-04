@@ -16,9 +16,9 @@
 
 ## Migration Guides
 
-* [BKPR 1.3.6 - > 1.4](migration-guides/bkpr-1.4-migration.guide.md)
-* [BKPR 1.2 -> 1.3.6](migration-guides/bkpr-1.3.6-migration.guide.md)
-* [BKPR 1.1 -> BKPR 1.2](migration-guides/bkpr-1.2-migration.guide.md)
+* [BKPR 1.3.6 - > 1.4](migration-guides/bkpr-1.4-migration-guide.md)
+* [BKPR 1.2 -> 1.3.6](migration-guides/bkpr-1.3.6-migration-guide.md)
+* [BKPR 1.1 -> BKPR 1.2](migration-guides/bkpr-1.2-migration-guide.md)
 * [Migration of Prometheus timeseries database](migration-guides/prometheus-migration.md)
 
 ## BKPR Project Internals
