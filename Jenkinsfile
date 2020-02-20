@@ -63,8 +63,10 @@ def scmPostCommitStatus(String state) {
 
         withCredentials([usernamePassword(credentialsId: 'github-bitnami-bot', passwordVariable: 'GITHUB_TOKEN', usernameVariable: '')]) {
             sh """
-            curl -sSf \"https://api.github.com/repos/${repo}/statuses/${sha}?access_token=${GITHUB_TOKEN}\" \
-                -H \"Content-Type: application/json\" -X POST -o /dev/null \
+            curl -sSf \"https://api.github.com/repos/${repo}/statuses/${sha}\" \
+                -H \"Authorization: token ${GITHUB_TOKEN}\" \
+                -H \"Content-Type: application/json\" \
+                -X POST -o /dev/null \
                 -d \"{\\\"state\\\": \\\"${state}\\\",\\\"context\\\": \\\"${context}\\\", \\\"description\\\": \\\"${desc}\\\", \\\"target_url\\\": \\\"${target_url}\\\"}\"
             """
         }
