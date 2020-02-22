@@ -77,6 +77,7 @@ local grafana = import "../components/grafana.jsonnet";
                 args_+: {
                   "email-domain": $.config.oauthProxy.authz_domain,
                   provider: "keycloak",
+                  "keycloak-group": $.config.keycloak.group,
                   "login-url": "https://id.%s/auth/realms/BKPR/protocol/openid-connect/auth" % $.external_dns_zone_name,
                   "redeem-url": "https://id.%s/auth/realms/BKPR/protocol/openid-connect/token" % $.external_dns_zone_name,
                   "validate-url": "https://id.%s/auth/realms/BKPR/protocol/openid-connect/userinfo" % $.external_dns_zone_name,
