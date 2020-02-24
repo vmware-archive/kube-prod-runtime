@@ -162,12 +162,6 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
   ingress: utils.TlsIngress($.p + "keycloak") + $.metadata {
     local this = self,
     host:: error "host is required",
-    metadata+: {
-      annotations: {
-        // force LetsEncrypt production certificate for identity server
-        "cert-manager.io/cluster-issuer": "letsencrypt-prod"
-      },
-    },
     spec+: {
       rules+: [
         {

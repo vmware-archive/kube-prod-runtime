@@ -42,6 +42,7 @@ local grafana = import "../components/grafana.jsonnet";
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
   letsencrypt_environment:: "prod",
+  ssl_skip_verify:: if $.letsencrypt_environment == 'staging' then true else false,
 
   version: version,
 
@@ -81,6 +82,7 @@ local grafana = import "../components/grafana.jsonnet";
                   "login-url": "https://id.%s/auth/realms/BKPR/protocol/openid-connect/auth" % $.external_dns_zone_name,
                   "redeem-url": "https://id.%s/auth/realms/BKPR/protocol/openid-connect/token" % $.external_dns_zone_name,
                   "validate-url": "https://id.%s/auth/realms/BKPR/protocol/openid-connect/userinfo" % $.external_dns_zone_name,
+                  "ssl-insecure-skip-verify": $.ssl_skip_verify,
                 },
               },
             },
