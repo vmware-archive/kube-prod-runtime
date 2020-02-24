@@ -144,9 +144,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
           volumes_+: {
             secret: kube.SecretVolume($.secret),
             scripts: kube.ConfigMapVolume($.scripts) + {
-              configMap+: {
-                defaultMode: 493
-              },
+              configMap+: {defaultMode: kube.parseOctal("0755")},
             },
           },
         },
