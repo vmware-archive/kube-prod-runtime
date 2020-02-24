@@ -345,6 +345,7 @@ var _ = Describe("Ingress", func() {
 				// Verify it redirected to a plausibly-correct login URL.
 				// Expand as necessary
 				Expect(resp.Request.URL.Host).To(Or(
+					Equal("id."+*dnsSuffix),
 					Equal("accounts.google.com"),
 					Equal("login.microsoftonline.com"),
 					MatchRegexp(`^cognito-idp\..*\.amazonaws\.com$`),
