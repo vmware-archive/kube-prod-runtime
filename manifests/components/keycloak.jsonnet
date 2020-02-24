@@ -22,11 +22,15 @@ local utils = import "../lib/utils.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 
 local KEYCLOAK_IMAGE = (import "images.json").keycloak;
-local KEYCLOAK_HTTP_PORT = 80;
-local KEYCLOAK_HTTPS_PORT = 443;
+local KEYCLOAK_HTTP_PORT = 8080;
+local KEYCLOAK_HTTPS_PORT = 8443;
 
+local KEYCLOAK_SCRIPTS_MOUNTPOINT = "/scripts";
+local KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT = "/realm/";
 local KEYCLOAK_DATA_MOUNTPOINT = "/opt/jboss/keycloak/standalone/data";
-local KEYCLOCK_CUSTOM_REALM_PATH = "/realm/";
+local KEYCLOAK_DEPLOYMENTS_MOUNTPOINT = "/opt/jboss/keycloak/standalone/deployments";
+
+local KEYCLOAK_METRICS_PATH = "/auth/realms/master/metrics";
 
 local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
 
@@ -76,7 +80,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
           annotations+: {
             "prometheus.io/scrape": "true",
             "prometheus.io/port": "%s" % KEYCLOAK_HTTP_PORT,
-            "prometheus.io/path": "/auth/realms/master/metrics",
+            "prometheus.io/path": KEYCLOAK_METRICS_PATH,
           },
         },
         spec+: {
@@ -103,19 +107,22 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
                 },
               },
               ports_: {
-                http: {containerPort: 8080},
-                https: {containerPort: 8443},
+                http: {containerPort: KEYCLOAK_HTTP_PORT},
+                https: {containerPort: KEYCLOAK_HTTPS_PORT},
               },
               volumeMounts_+: {
                 data: {
                   mountPath: KEYCLOAK_DATA_MOUNTPOINT
                 },
+                deployments: {
+                  mountPath: KEYCLOAK_DEPLOYMENTS_MOUNTPOINT,
+                },
                 scripts: {
-                  mountPath: "/scripts",
+                  mountPath: KEYCLOAK_SCRIPTS_MOUNTPOINT,
                   readOnly: true
                 },
                 secret: {
-                  mountPath: KEYCLOCK_CUSTOM_REALM_PATH,
+                  mountPath: KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT,
                   readOnly: true
                 },
               },
@@ -140,8 +147,20 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               },
             },
           },
+          initContainers_+: {
+            extensions: kube.Container("extensions") {
+              image: "busybox",
+              command: ["sh", "-c", "wget -O /deployments/keycloak-metrics-spi.jar https://github.com/aerogear/keycloak-metrics-spi/releases/download/1.0.4/keycloak-metrics-spi-1.0.4.jar"],
+              volumeMounts_+: {
+                deployments: {
+                  mountPath: "/deployments"
+                },
+              },
+            },
+          },
           terminationGracePeriodSeconds: 60,
           volumes_+: {
+            deployments: kube.EmptyDirVolume(),
             secret: kube.SecretVolume($.secret),
             scripts: kube.ConfigMapVolume($.scripts) + {
               configMap+: {defaultMode: kube.parseOctal("0755")},
