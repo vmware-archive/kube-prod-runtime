@@ -81,7 +81,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
           affinity: kube.PodZoneAntiAffinityAnnotation(this.spec.template),
           default_container: "keycloak",
           securityContext: {
-            fsGroup: 1000,
+            fsGroup: 1001,
           },
           containers_+: {
             keycloak: kube.Container("keycloak") {
@@ -95,7 +95,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               ],
               securityContext: {
                 runAsNonRoot: true,
-                runAsUser: 1000
+                runAsUser: 1001
               },
               resources: {
                 requests: {cpu: "100m", memory: "1Gi"},
