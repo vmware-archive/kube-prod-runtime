@@ -25,7 +25,6 @@ local KEYCLOAK_IMAGE = (import "images.json").keycloak;
 local KEYCLOAK_HTTP_PORT = 8080;
 local KEYCLOAK_HTTPS_PORT = 8443;
 
-local KEYCLOAK_SCRIPTS_MOUNTPOINT = "/scripts";
 local KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT = "/realm/";
 local KEYCLOAK_DATA_MOUNTPOINT = "/opt/jboss/keycloak/standalone/data";
 local KEYCLOAK_DEPLOYMENTS_MOUNTPOINT = "/opt/jboss/keycloak/standalone/deployments";
@@ -63,12 +62,6 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
     },
   },
 
-  scripts: utils.HashedConfigMap($.p + "keycloak-sh") + $.metadata {
-    data+: {
-      "keycloak.sh": importstr "keycloak/keycloak.sh"
-    },
-  },
-
   sts: kube.StatefulSet($.p + "keycloak") + $.metadata {
     local this = self,
     spec+: {
@@ -94,7 +87,12 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
             keycloak: kube.Container("keycloak") {
               local container = self,
               image: KEYCLOAK_IMAGE,
-              command: ["/scripts/keycloak.sh"],
+              command: ["/opt/jboss/tools/docker-entrypoint.sh"],
+              args+: [
+                "-b=0.0.0.0",
+                "-c=standalone.xml",
+                "-Dkeycloak.import=/realm/bkpr-realm.json",
+              ],
               securityContext: {
                 runAsNonRoot: true,
                 runAsUser: 1000
@@ -116,10 +114,6 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
                 },
                 deployments: {
                   mountPath: KEYCLOAK_DEPLOYMENTS_MOUNTPOINT,
-                },
-                scripts: {
-                  mountPath: KEYCLOAK_SCRIPTS_MOUNTPOINT,
-                  readOnly: true
                 },
                 secret: {
                   mountPath: KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT,
@@ -162,9 +156,6 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
           volumes_+: {
             deployments: kube.EmptyDirVolume(),
             secret: kube.SecretVolume($.secret),
-            scripts: kube.ConfigMapVolume($.scripts) + {
-              configMap+: {defaultMode: kube.parseOctal("0755")},
-            },
           },
         },
       },
