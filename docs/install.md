@@ -69,3 +69,4 @@ You can now use the `kubeprod` installer to deploy BKPR on your Kubernetes clust
 - [Quickstart: BKPR on Azure Kubernetes Service (AKS)](quickstart-aks.md)
 - [Quickstart: BKPR on Google Kubernetes Engine (GKE)](quickstart-gke.md)
 - [Quickstart: BKPR on Amazon Elastic Container Service for Kubernetes (EKS)](quickstart-eks.md)
+- [Quickstart: BKPR on Generic Kubernetes Cluster (Generic)](quickstart-generic.md)

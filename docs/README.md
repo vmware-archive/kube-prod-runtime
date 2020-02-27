@@ -5,6 +5,8 @@
 * [Installation of `kubeprod` binary](install.md)
 * [AKS Quickstart](quickstart-aks.md)
 * [GKE Quickstart](quickstart-gke.md)
+* [EKS Quickstart](quickstart-eks.md)
+* [Generic Quickstart (experimental)](quickstart-generic.md)
 
 ## Cluster Admin Workflow and Advanced Guides
 
