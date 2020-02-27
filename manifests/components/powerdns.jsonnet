@@ -25,10 +25,13 @@ local POWERDNS_IMAGE = (import "images.json").powerdns;
 
 local POWERDNS_CONFIG_FILE = "/etc/pdns/pdns.conf";
 local POWERDNS_DATA_MOUNTPOINT = "/var/lib/pdns";
+local POWERDNS_SCRIPTS_MOUNTPOINT = "/scripts";
 
 local POWERDNS_API_PORT = 8081;
 local POWERDNS_DNS_TCP_PORT = 53;
 local POWERDNS_DNS_UDP_PORT = 53;
+
+local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
 
 {
   p:: "",
@@ -44,6 +47,15 @@ local POWERDNS_DNS_UDP_PORT = 53;
   config: utils.HashedConfigMap($.p + "powerdns") + $.metadata {
     data+: {
       "pdns.conf": importstr "powerdns/pdns.conf",
+    },
+  },
+
+  scripts: utils.HashedConfigMap($.p + "powerdns-sh") + $.metadata {
+    data+: {
+      "powerdns.sh": std.format(powerdns_sh_tpl, [
+        POWERDNS_DATA_MOUNTPOINT,
+        $.zone,
+      ]),
     },
   },
 
@@ -66,12 +78,11 @@ local POWERDNS_DNS_UDP_PORT = 53;
         spec+: {
           securityContext: {
             fsGroup: 1001,
-            runAsUser: 1001,
           },
           containers_+: {
             kibana: kube.Container("pdns") {
               image: POWERDNS_IMAGE,
-              command: ["/usr/sbin/pdns_server"],
+              command: ["/scripts/powerdns.sh"],
               args_+: {
                 api: "true",
                 "api-key": "$(POWERDNS_API_KEY)",
@@ -103,40 +114,9 @@ local POWERDNS_DNS_UDP_PORT = 53;
                 data: {
                   mountPath: POWERDNS_DATA_MOUNTPOINT,
                 },
-                config: {
-                  mountPath: POWERDNS_CONFIG_FILE,
-                  subPath: "pdns.conf",
+                scripts: {
+                  mountPath: POWERDNS_SCRIPTS_MOUNTPOINT,
                   readOnly: true,
-                },
-              },
-            },
-          },
-          initContainers_+: {
-            "init-db": kube.Container("init-db") {
-              image: POWERDNS_IMAGE,
-              command: [
-                "/bin/sh",
-                "-c",
-                |||
-                  set -e
-                  POWERDNS_SQLITE_DB=%s/pdns.db
-                  if [ ! -f $POWERDNS_SQLITE_DB ]; then
-                    cat /config/schema.sql | sqlite3 $POWERDNS_SQLITE_DB
-                  fi
-                  chmod 664 $POWERDNS_SQLITE_DB
-
-                  ZONE=%s
-                  if ! pdnsutil list-zone $ZONE; then
-                    pdnsutil create-zone $ZONE ns1.$ZONE
-                  fi
-                ||| % [
-                  POWERDNS_DATA_MOUNTPOINT,
-                  $.zone,
-                ],
-              ],
-              volumeMounts_+: {
-                data: {
-                  mountPath: POWERDNS_DATA_MOUNTPOINT,
                 },
                 config: {
                   mountPath: POWERDNS_CONFIG_FILE,
@@ -155,6 +135,9 @@ local POWERDNS_DNS_UDP_PORT = 53;
             data: kube.EmptyDirVolume(),
             config: kube.ConfigMapVolume($.config),
             schema: kube.ConfigMapVolume($.schema),
+            scripts: kube.ConfigMapVolume($.scripts) + {
+              configMap+: {defaultMode: kube.parseOctal("0755")},
+            },
           },
         },
       },
