@@ -17,12 +17,11 @@
  * limitations under the License.
  */
 
-// Top-level file for Google GKE
-
 local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
+local pdns = import "../components/powerdns.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
 local nginx_ingress = import "../components/nginx-ingress.jsonnet";
 local prometheus = import "../components/prometheus.jsonnet";
@@ -53,16 +52,73 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
+  pdns: pdns {
+    zone: $.external_dns_zone_name,
+    api_key:: $.config.powerDns.api_key,
+    ingress+: {
+      host: "pdns." + $.external_dns_zone_name,
+    },
+  },
+
+  edns: edns {
+    deploy+: {
+      ownerId: $.external_dns_zone_name,
+      spec+: {
+        template+: {
+          spec+: {
+            containers_+: {
+              edns+: {
+                args_+: {
+                  provider: "pdns",
+                  "pdns-server": "http://%s:%s" % [
+                    $.pdns.svc.host,
+                    $.pdns.svc.port,
+                  ]
+                },
+                env_+: {
+                  EXTERNAL_DNS_PDNS_API_KEY: kube.SecretKeyRef($.pdns.secret, "api_key"),
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+
   cert_manager: cert_manager {
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
-  nginx_ingress: nginx_ingress,
+  nginx_ingress: nginx_ingress {
+    local this = self,
+    udpconf+: {
+      data+: {
+        "53": "%s/%s:53" % [
+          $.pdns.svc.metadata.namespace,
+          $.pdns.svc.metadata.name,
+        ],
+      }
+    },
+    udpsvc: kube.Service(this.p + "nginx-ingress-udp") + this.metadata {
+      target_pod: this.controller.spec.template,
+      spec+: {
+        ports: [
+          {name: "dns-udp", port: 53, protocol: "UDP"},
+        ],
+        type: "LoadBalancer",
+        externalTrafficPolicy: "Cluster",
+      },
+    },
+  },
 
   oauth2_proxy: oauth2_proxy {
     secret+: {
-      data_+: $.config.oauthProxy,
+      data_+: $.config.oauthProxy + {
+        client_id: $.config.keycloak.client_id,
+        client_secret: $.config.keycloak.client_secret,
+      },
     },
 
     ingress+: {
@@ -94,9 +150,9 @@ local grafana = import "../components/grafana.jsonnet";
 
   keycloak: keycloak {
     oauth2_proxy:: $.oauth2_proxy,
-    admin_password:: $.config.keycloak.password,
-    client_id:: $.config.oauthProxy.client_id,
-    client_secret:: $.config.oauthProxy.client_secret,
+    secret+: {
+      data_+: $.config.keycloak,
+    },
     ingress+: {
       host: "id." + $.external_dns_zone_name,
     },

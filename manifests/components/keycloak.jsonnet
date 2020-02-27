@@ -41,24 +41,23 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
     },
   },
 
-  client_id: error "client_id is required",
-  client_secret: error "client_secret is required",
-  admin_password: error "admin_password is required",
-
   oauth2_proxy: error "oauth2_proxy is required",
 
   serviceAccount: kube.ServiceAccount($.p + "keycloak") + $.metadata {
   },
 
   secret: utils.HashedSecret($.p + "keycloak") + $.metadata {
+    local this = self,
     data_+: {
       "bkpr-realm.json": std.format(bkpr_realm_json_tmpl, [
-          $.client_id,
-          $.client_secret,
-          "https://%s/oauth2/callback" % $.oauth2_proxy.ingress.host
+          this.data_.client_id,
+          this.data_.client_secret,
+          "https://%s/oauth2/callback" % $.oauth2_proxy.ingress.host,
         ]
       ),
-      admin_password: $.admin_password,
+      client_id: error "client_id is required",
+      client_secret: error "client_secret is required",
+      admin_password: error "admin_password is required",
     },
   },
 

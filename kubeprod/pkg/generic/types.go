@@ -23,18 +23,23 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+// Config required by external-dns for PowerDNS
+type PowerDNSConfig struct {
+	ApiKey string `json:"api_key"`
+}
+
 // Config options required by oauth2-proxy
 type OauthProxyConfig struct {
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
 	CookieSecret string `json:"cookie_secret"`
 	AuthzDomain  string `json:"authz_domain"`
 }
 
 // Config options required by keycloak
 type KeycloakConfig struct {
-	Password string `json:"password"`
-	Group 	 string `json:"group"`
+	Password     string `json:"admin_password"`
+	ClientID     string `json:"client_id"`
+	ClientSecret string `json:"client_secret"`
+	Group        string `json:"group"`
 }
 
 // Local config required for GKE platforms
@@ -45,5 +50,6 @@ type GenericConfig struct {
 	DnsZone      string           `json:"dnsZone"`
 	ContactEmail string           `json:"contactEmail"`
 	Keycloak     KeycloakConfig   `json:"keycloak"`
+	PowerDNS     PowerDNSConfig   `json:"powerDns"`
 	OauthProxy   OauthProxyConfig `json:"oauthProxy"`
 }

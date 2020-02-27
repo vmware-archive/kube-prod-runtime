@@ -16,5 +16,6 @@
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.27.1-r0",
     "node-exporter": "bitnami/node-exporter:0.18.1-r205",
     "oauth2_proxy": "bitnami/oauth2-proxy:5.0.0-debian-10-r0",
+    "powerdns": "jerheij/powerdns:2.0.2",
     "prometheus": "bitnami/prometheus:2.16.0-debian-10-r5"
 }

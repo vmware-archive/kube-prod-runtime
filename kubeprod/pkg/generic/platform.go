@@ -59,18 +59,25 @@ func (conf *GenericConfig) Generate(ctx context.Context) error {
 		conf.Keycloak.Password = password
 	}
 
+	if conf.Keycloak.ClientID == "" {
+		conf.Keycloak.ClientID = "bkpr"
+	}
+
+	if conf.Keycloak.ClientSecret == "" {
+		conf.Keycloak.ClientSecret = uuid.New().String()
+	}
+
+	//
+	// powerdns setup
+	//
+	if conf.PowerDNS.ApiKey == "" {
+		conf.PowerDNS.ApiKey = uuid.New().String()
+	}
+
 	//
 	// oauth2-proxy setup
 	//
 	log.Debug("Starting oauth2-proxy setup")
-
-	if conf.OauthProxy.ClientID == "" {
-		conf.OauthProxy.ClientID = "bkpr"
-	}
-
-	if conf.OauthProxy.ClientSecret == "" {
-		conf.OauthProxy.ClientSecret = uuid.New().String()
-	}
 
 	if conf.OauthProxy.CookieSecret == "" {
 		// I Quote: cookie_secret must be 16, 24, or 32 bytes
