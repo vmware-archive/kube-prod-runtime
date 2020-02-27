@@ -123,7 +123,7 @@ local POWERDNS_DNS_UDP_PORT = 53;
                   if [ ! -f $POWERDNS_SQLITE_DB ]; then
                     cat /config/schema.sql | sqlite3 $POWERDNS_SQLITE_DB
                   fi
-                  chown %s $POWERDNS_SQLITE_DB
+                  chmod 664 $POWERDNS_SQLITE_DB
 
                   ZONE=%s
                   if ! pdnsutil list-zone $ZONE; then
@@ -131,7 +131,6 @@ local POWERDNS_DNS_UDP_PORT = 53;
                   fi
                 ||| % [
                   POWERDNS_DATA_MOUNTPOINT,
-                  this.spec.template.spec.securityContext.runAsUser,
                   $.zone,
                 ],
               ],
