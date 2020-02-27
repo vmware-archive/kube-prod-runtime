@@ -49,7 +49,8 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
   secret: utils.HashedSecret($.p + "keycloak") + $.metadata {
     local this = self,
     data_+: {
-      "bkpr-realm.json": std.format(bkpr_realm_json_tmpl, [
+      "bkpr-realm.json": std.format(
+        bkpr_realm_json_tmpl, [
           this.data_.client_id,
           this.data_.client_secret,
           "https://%s/oauth2/callback" % $.oauth2_proxy.ingress.host,
@@ -94,7 +95,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               ],
               securityContext: {
                 runAsNonRoot: true,
-                runAsUser: 1001
+                runAsUser: 1001,
               },
               resources: {
                 requests: {cpu: "100m", memory: "1Gi"},
@@ -109,14 +110,14 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               },
               volumeMounts_+: {
                 data: {
-                  mountPath: KEYCLOAK_DATA_MOUNTPOINT
+                  mountPath: KEYCLOAK_DATA_MOUNTPOINT,
                 },
                 deployments: {
                   mountPath: KEYCLOAK_DEPLOYMENTS_MOUNTPOINT,
                 },
                 secret: {
                   mountPath: KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT,
-                  readOnly: true
+                  readOnly: true,
                 },
               },
               env_+: {
@@ -146,7 +147,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               command: ["sh", "-c", "wget -O /deployments/keycloak-metrics-spi.jar https://github.com/aerogear/keycloak-metrics-spi/releases/download/1.0.4/keycloak-metrics-spi-1.0.4.jar"],
               volumeMounts_+: {
                 deployments: {
-                  mountPath: "/deployments"
+                  mountPath: "/deployments",
                 },
               },
             },

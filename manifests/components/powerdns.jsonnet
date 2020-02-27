@@ -21,7 +21,7 @@ local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 
-local POWERDNS_IMAGE = (import "images.json")["powerdns"];
+local POWERDNS_IMAGE = (import "images.json").powerdns;
 
 local POWERDNS_CONFIG_FILE = "/etc/pdns/pdns.conf";
 local POWERDNS_DATA_MOUNTPOINT = "/var/lib/pdns";
@@ -73,14 +73,14 @@ local POWERDNS_DNS_UDP_PORT = 53;
               image: POWERDNS_IMAGE,
               command: ["/usr/sbin/pdns_server"],
               args_+: {
-                "api": "true",
+                api: "true",
                 "api-key": "$(POWERDNS_API_KEY)",
-                "webserver": "yes",
+                webserver: "yes",
                 "webserver-port": "%s" % POWERDNS_API_PORT,
                 "webserver-address": "0.0.0.0",
                 "webserver-allow-from": "0.0.0.0/0",
-                "slave": "yes",
-                "dnsupdate": "false",
+                slave: "yes",
+                dnsupdate: "false",
               },
               securityContext: {
                 runAsUser: 0,
@@ -89,7 +89,7 @@ local POWERDNS_DNS_UDP_PORT = 53;
                 POWERDNS_API_KEY: kube.SecretKeyRef($.secret, "api_key"),
               },
               ports_+: {
-                "api": {containerPort: POWERDNS_API_PORT, protocol: "TCP"},
+                api: {containerPort: POWERDNS_API_PORT, protocol: "TCP"},
                 "dns-tcp": {containerPort: POWERDNS_DNS_TCP_PORT, protocol: "TCP"},
                 "dns-udp": {containerPort: POWERDNS_DNS_UDP_PORT, protocol: "UDP"},
               },
@@ -133,7 +133,7 @@ local POWERDNS_DNS_UDP_PORT = 53;
                   POWERDNS_DATA_MOUNTPOINT,
                   this.spec.template.spec.securityContext.runAsUser,
                   $.zone,
-                ]
+                ],
               ],
               volumeMounts_+: {
                 data: {
