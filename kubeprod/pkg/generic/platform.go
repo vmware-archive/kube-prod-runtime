@@ -51,6 +51,8 @@ func (conf *GenericConfig) Generate(ctx context.Context) error {
 	}
 
 	// keycloak setup
+	log.Debug("Starting keycloak setup")
+
 	if conf.Keycloak.Password == "" {
 		password, err := flags.GetString(flagKeycloakPassword)
 		if err != nil {
@@ -70,6 +72,8 @@ func (conf *GenericConfig) Generate(ctx context.Context) error {
 	//
 	// powerdns setup
 	//
+	log.Debug("Starting powerdns setup")
+
 	if conf.PowerDNS.ApiKey == "" {
 		conf.PowerDNS.ApiKey = uuid.New().String()
 	}
@@ -97,6 +101,10 @@ func (conf *GenericConfig) Generate(ctx context.Context) error {
 		}
 		conf.OauthProxy.AuthzDomain = domain
 	}
+
+	log.Infof("Execute the following command to get the external IP address for the PowerDNS NS")
+	log.Infof("  kubectl -n kubeprod get svc nginx-ingress-udp -o jsonpath='{.status.loadBalancer.ingress[0].ip}'\"")
+	log.Infof("You will need to ensure glue records exist for %s pointing to the NS", conf.DnsZone)
 
 	return nil
 }
