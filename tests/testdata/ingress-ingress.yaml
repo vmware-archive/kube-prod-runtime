@@ -22,6 +22,7 @@ metadata:
   name: test-ing
   annotations:
     kubernetes.io/ingress.class: nginx
+    external-dns.alpha.kubernetes.io/ttl: "1m"
 spec:
   rules:
     - host: dummy  # filled in by test
