@@ -25,6 +25,7 @@ local pdns = import "../components/powerdns.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
 local nginx_ingress = import "../components/nginx-ingress.jsonnet";
 local prometheus = import "../components/prometheus.jsonnet";
+local galera = import "../components/mariadb-galera.jsonnet";
 local keycloak = import "../components/keycloak.jsonnet";
 local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
 local fluentd_es = import "../components/fluentd-es.jsonnet";
@@ -148,7 +149,14 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
+  galera: galera {
+    secret+: {
+      data_+: $.config.mariadbGalera,
+    },
+  },
+
   keycloak: keycloak {
+    galera: $.galera,
     oauth2_proxy:: $.oauth2_proxy,
     secret+: {
       data_+: $.config.keycloak,

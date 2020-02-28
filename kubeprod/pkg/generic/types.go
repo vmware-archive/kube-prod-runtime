@@ -23,6 +23,12 @@ import (
 	flag "github.com/spf13/pflag"
 )
 
+// Config required by mariadb galera
+type MariaDBGaleraConfig struct {
+	RootPassword        string `json:"root_password"`
+	MariaBackupPassword string `json:"mariabackup_password"`
+}
+
 // Config required by external-dns for PowerDNS
 type PowerDNSConfig struct {
 	ApiKey string `json:"api_key"`
@@ -36,10 +42,11 @@ type OauthProxyConfig struct {
 
 // Config options required by keycloak
 type KeycloakConfig struct {
-	Password     string `json:"admin_password"`
-	ClientID     string `json:"client_id"`
-	ClientSecret string `json:"client_secret"`
-	Group        string `json:"group"`
+	DatabasePassword string `json:"db_password"`
+	Password         string `json:"admin_password"`
+	ClientID         string `json:"client_id"`
+	ClientSecret     string `json:"client_secret"`
+	Group            string `json:"group"`
 }
 
 // Local config required for GKE platforms
@@ -47,9 +54,10 @@ type GenericConfig struct {
 	flags *flag.FlagSet
 
 	// TODO: Promote this to a proper (versioned) k8s Object
-	DnsZone      string           `json:"dnsZone"`
-	ContactEmail string           `json:"contactEmail"`
-	Keycloak     KeycloakConfig   `json:"keycloak"`
-	PowerDNS     PowerDNSConfig   `json:"powerDns"`
-	OauthProxy   OauthProxyConfig `json:"oauthProxy"`
+	DnsZone       string              `json:"dnsZone"`
+	ContactEmail  string              `json:"contactEmail"`
+	Keycloak      KeycloakConfig      `json:"keycloak"`
+	PowerDNS      PowerDNSConfig      `json:"powerDns"`
+	OauthProxy    OauthProxyConfig    `json:"oauthProxy"`
+	MariaDBGalera MariaDBGaleraConfig `json:"mariadbGalera"`
 }

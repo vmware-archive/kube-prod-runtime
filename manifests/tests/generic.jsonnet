@@ -27,6 +27,7 @@
       api_key: "powerdns_api_key",
     },
     keycloak: {
+      db_password: "mydbpassword",
       admin_password: "myadminpassword",
       client_id: "myclientid",
       client_secret: "mysecret",
@@ -35,6 +36,10 @@
     oauthProxy: {
       cookie_secret: "cookiesecret",
       authz_domain: "test.invalid",
+    },
+    mariadbGalera: {
+      root_password: "myrootpassword",
+      mariabackup_password: "mymariabackuppassword",
     },
   },
 }

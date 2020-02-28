@@ -21,12 +21,14 @@ local kube = import "../lib/kube.libsonnet";
 local utils = import "../lib/utils.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 
+local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
 local KEYCLOAK_IMAGE = (import "images.json").keycloak;
 local KEYCLOAK_HTTP_PORT = 8080;
 local KEYCLOAK_HTTPS_PORT = 8443;
+local KEYCLOAK_DB_USER = "keycloak";
+local KEYCLOAK_DB_DATABASE = "keycloak";
 
 local KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT = "/realm/";
-local KEYCLOAK_DATA_MOUNTPOINT = "/opt/jboss/keycloak/standalone/data";
 local KEYCLOAK_DEPLOYMENTS_MOUNTPOINT = "/opt/jboss/keycloak/standalone/deployments";
 
 local KEYCLOAK_METRICS_PATH = "/auth/realms/master/metrics";
@@ -41,6 +43,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
     },
   },
 
+  galera: error "galera is required",
   oauth2_proxy: error "oauth2_proxy is required",
 
   serviceAccount: kube.ServiceAccount($.p + "keycloak") + $.metadata {
@@ -59,6 +62,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
       client_id: error "client_id is required",
       client_secret: error "client_secret is required",
       admin_password: error "admin_password is required",
+      db_password: error "db_password is required",
     },
   },
 
@@ -109,9 +113,6 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
                 https: {containerPort: KEYCLOAK_HTTPS_PORT},
               },
               volumeMounts_+: {
-                data: {
-                  mountPath: KEYCLOAK_DATA_MOUNTPOINT,
-                },
                 deployments: {
                   mountPath: KEYCLOAK_DEPLOYMENTS_MOUNTPOINT,
                 },
@@ -123,8 +124,12 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               env_+: {
                 KEYCLOAK_USER: "admin",
                 KEYCLOAK_PASSWORD: kube.SecretKeyRef($.secret, "admin_password"),
-                // TODO: use a proper database for keycloak
-                DB_VENDOR: "h2",
+                DB_VENDOR: "mariadb",
+                DB_ADDR: $.galera.svc.host,
+                DB_PORT: "3306",
+                DB_USER: KEYCLOAK_DB_USER,
+                DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
+                DB_DATABASE: KEYCLOAK_DB_DATABASE,
                 PROXY_ADDRESS_FORWARDING: "true",
               },
               readinessProbe: {
@@ -151,6 +156,31 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
                 },
               },
             },
+            "setup-db": kube.Container("setup-db") {
+              image: MARIADB_GALERA_IMAGE,
+              env_+: {
+                DB_ADDR: $.galera.svc.host,
+                DB_ROOT_PASSWORD: kube.SecretKeyRef($.galera.secret, "root_password"),
+                DB_USER: KEYCLOAK_DB_USER,
+                DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
+                DB_NAME: KEYCLOAK_DB_DATABASE,
+              },
+              command: [
+                "/bin/sh",
+                "-ec",
+                |||
+                  # wait for mariadb-galera server
+                  mysqladmin status -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD
+
+                  # create keycloak database
+                  mysql -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET \`utf8\` COLLATE \`utf8_unicode_ci\`;"
+
+                  # create keycloak database user
+                  mysql -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD -e "CREATE USER IF NOT EXISTS '$DB_USER'@'%.%.%.%';"
+                  mysql -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD -e "GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'%.%.%.%' IDENTIFIED BY '$DB_PASSWORD';"
+                |||,
+              ],
+            },
           },
           terminationGracePeriodSeconds: 60,
           volumes_+: {
@@ -158,9 +188,6 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
             secret: kube.SecretVolume($.secret),
           },
         },
-      },
-      volumeClaimTemplates_+: {
-        data: {storage: "10Gi"},
       },
     },
   },

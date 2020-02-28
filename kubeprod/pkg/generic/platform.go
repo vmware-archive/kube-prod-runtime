@@ -22,8 +22,8 @@ package generic
 import (
 	"context"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/google/uuid"
+	log "github.com/sirupsen/logrus"
 
 	"github.com/bitnami/kube-prod-runtime/kubeprod/tools"
 )
@@ -50,8 +50,34 @@ func (conf *GenericConfig) Generate(ctx context.Context) error {
 		conf.DnsZone = domain
 	}
 
+	// mariadb setup
+	log.Debug("Starting mariadb galera setup")
+	if conf.MariaDBGalera.RootPassword == "" {
+		rand, err := tools.Base64RandBytes(24)
+		if err != nil {
+			return err
+		}
+		conf.MariaDBGalera.RootPassword = rand
+	}
+
+	if conf.MariaDBGalera.MariaBackupPassword == "" {
+		rand, err := tools.Base64RandBytes(24)
+		if err != nil {
+			return err
+		}
+		conf.MariaDBGalera.MariaBackupPassword = rand
+	}
+
 	// keycloak setup
 	log.Debug("Starting keycloak setup")
+
+	if conf.Keycloak.DatabasePassword == "" {
+		rand, err := tools.Base64RandBytes(24)
+		if err != nil {
+			return err
+		}
+		conf.Keycloak.DatabasePassword = rand
+	}
 
 	if conf.Keycloak.Password == "" {
 		password, err := flags.GetString(flagKeycloakPassword)

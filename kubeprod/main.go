@@ -33,8 +33,8 @@ import (
 	// Register platform-specific packages
 	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/aks"
 	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/eks"
-	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/gke"
 	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/generic"
+	_ "github.com/bitnami/kube-prod-runtime/kubeprod/pkg/gke"
 )
 
 // Overridden at link time by Makefile.
