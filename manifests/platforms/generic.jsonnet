@@ -54,8 +54,11 @@ local grafana = import "../components/grafana.jsonnet";
   },
 
   pdns: pdns {
+    galera: $.galera,
     zone: $.external_dns_zone_name,
-    api_key:: $.config.powerDns.api_key,
+    secret+: {
+      data_+: $.config.powerDns,
+    },
     ingress+: {
       host: "pdns." + $.external_dns_zone_name,
     },

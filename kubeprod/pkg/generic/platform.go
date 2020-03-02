@@ -104,6 +104,14 @@ func (conf *GenericConfig) Generate(ctx context.Context) error {
 		conf.PowerDNS.ApiKey = uuid.New().String()
 	}
 
+	if conf.PowerDNS.DatabasePassword == "" {
+		rand, err := tools.Base64RandBytes(24)
+		if err != nil {
+			return err
+		}
+		conf.PowerDNS.DatabasePassword = rand
+	}
+
 	//
 	// oauth2-proxy setup
 	//

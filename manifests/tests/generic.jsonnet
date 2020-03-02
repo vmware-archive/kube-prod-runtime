@@ -25,6 +25,7 @@
     dnsZone: "test.example.com",
     powerDns: {
       api_key: "powerdns_api_key",
+      db_password: "mydbpassword",
     },
     keycloak: {
       db_password: "mydbpassword",

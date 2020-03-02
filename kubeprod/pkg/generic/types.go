@@ -31,7 +31,8 @@ type MariaDBGaleraConfig struct {
 
 // Config required by external-dns for PowerDNS
 type PowerDNSConfig struct {
-	ApiKey string `json:"api_key"`
+	ApiKey           string `json:"api_key"`
+	DatabasePassword string `json:"db_password"`
 }
 
 // Config options required by oauth2-proxy

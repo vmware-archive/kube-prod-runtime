@@ -1,13 +1,7 @@
-#!/usr/bin/env bash
+#!/usr/bin/env sh
 
 set -o errexit
 set -o nounset
-
-POWERDNS_SQLITE_DB=%s/pdns.db
-if [ ! -f $POWERDNS_SQLITE_DB ]; then
-  cat /config/schema.sql | sqlite3 $POWERDNS_SQLITE_DB
-fi
-chmod 664 $POWERDNS_SQLITE_DB
 
 ZONE=%s
 if ! pdnsutil list-zone $ZONE; then
