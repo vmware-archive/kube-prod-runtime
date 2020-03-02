@@ -1,0 +1,14 @@
+#!/usr/bin/env sh
+
+set -o errexit
+set -o nounset
+
+# wait for mariadb-galera server
+mysqladmin status -h${KEYCLOAK_DB_HOST} -P${KEYCLOAK_DB_PORT} -u${KEYCLOAK_DB_ROOT_USER} -p${KEYCLOAK_DB_ROOT_PASSWORD}
+
+echo "Creating database for Keycloak..."
+mysql -h${KEYCLOAK_DB_HOST} -P${KEYCLOAK_DB_PORT} -u${KEYCLOAK_DB_ROOT_USER} -p${KEYCLOAK_DB_ROOT_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS \`${KEYCLOAK_DB_DATABASE}\` DEFAULT CHARACTER SET \`utf8\` COLLATE \`utf8_unicode_ci\`;"
+
+echo "Creating user for Keycloak database..."
+mysql -h${KEYCLOAK_DB_HOST} -P${KEYCLOAK_DB_PORT} -u${KEYCLOAK_DB_ROOT_USER} -p${KEYCLOAK_DB_ROOT_PASSWORD} -e "CREATE USER IF NOT EXISTS '${KEYCLOAK_DB_USER}'@'%.%.%.%';"
+mysql -h${KEYCLOAK_DB_HOST} -P${KEYCLOAK_DB_PORT} -u${KEYCLOAK_DB_ROOT_USER} -p${KEYCLOAK_DB_ROOT_PASSWORD} -e "GRANT ALL PRIVILEGES ON \`${KEYCLOAK_DB_DATABASE}\`.* TO '$KEYCLOAK_DB_USER'@'%.%.%.%' IDENTIFIED BY '$KEYCLOAK_DB_PASSWORD';"

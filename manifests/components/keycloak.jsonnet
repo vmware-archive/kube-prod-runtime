@@ -23,11 +23,15 @@ local kubecfg = import "kubecfg.libsonnet";
 
 local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
 local KEYCLOAK_IMAGE = (import "images.json").keycloak;
+
 local KEYCLOAK_HTTP_PORT = 8080;
 local KEYCLOAK_HTTPS_PORT = 8443;
+
+local KEYCLOAK_DB_PORT = 3306;
 local KEYCLOAK_DB_USER = "keycloak";
 local KEYCLOAK_DB_DATABASE = "keycloak";
 
+local KEYCLOAK_SCRIPTS_MOUNTPOINT = "/scripts";
 local KEYCLOCK_CUSTOM_REALMS_MOUNTPOINT = "/realm/";
 local KEYCLOAK_DEPLOYMENTS_MOUNTPOINT = "/opt/jboss/keycloak/standalone/deployments";
 
@@ -63,6 +67,12 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
       client_secret: error "client_secret is required",
       admin_password: error "admin_password is required",
       db_password: error "db_password is required",
+    },
+  },
+
+  scripts: utils.HashedConfigMap($.p + "keycloak-sh") + $.metadata {
+    data+: {
+      "setup-db.sh": importstr "keycloak/setup-db.sh",
     },
   },
 
@@ -159,32 +169,27 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
             "setup-db": kube.Container("setup-db") {
               image: MARIADB_GALERA_IMAGE,
               env_+: {
-                DB_ADDR: $.galera.svc.host,
-                DB_ROOT_PASSWORD: kube.SecretKeyRef($.galera.secret, "root_password"),
-                DB_USER: KEYCLOAK_DB_USER,
-                DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
-                DB_NAME: KEYCLOAK_DB_DATABASE,
+                KEYCLOAK_DB_HOST: $.galera.svc.host,
+                KEYCLOAK_DB_PORT: "%s" % KEYCLOAK_DB_PORT,
+                KEYCLOAK_DB_ROOT_USER: "root",
+                KEYCLOAK_DB_ROOT_PASSWORD: kube.SecretKeyRef($.galera.secret, "root_password"),
+                KEYCLOAK_DB_USER: KEYCLOAK_DB_USER,
+                KEYCLOAK_DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
+                KEYCLOAK_DB_DATABASE: KEYCLOAK_DB_DATABASE,
               },
-              command: [
-                "/bin/sh",
-                "-ec",
-                |||
-                  # wait for mariadb-galera server
-                  mysqladmin status -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD
-
-                  # create keycloak database
-                  mysql -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD -e "CREATE DATABASE IF NOT EXISTS \`$DB_NAME\` DEFAULT CHARACTER SET \`utf8\` COLLATE \`utf8_unicode_ci\`;"
-
-                  # create keycloak database user
-                  mysql -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD -e "CREATE USER IF NOT EXISTS '$DB_USER'@'%.%.%.%';"
-                  mysql -h $DB_ADDR -uroot -p$DB_ROOT_PASSWORD -e "GRANT ALL PRIVILEGES ON \`$DB_NAME\`.* TO '$DB_USER'@'%.%.%.%' IDENTIFIED BY '$DB_PASSWORD';"
-                |||,
-              ],
+              command: ["/scripts/setup-db.sh"],
+              volumeMounts_+: {
+                scripts: {
+                  mountPath: KEYCLOAK_SCRIPTS_MOUNTPOINT,
+                  readOnly: true,
+                },
+              },
             },
           },
           terminationGracePeriodSeconds: 60,
           volumes_+: {
             deployments: kube.EmptyDirVolume(),
+            scripts: kube.ConfigMapVolume($.scripts) + {configMap+: {defaultMode: kube.parseOctal("0755")}},
             secret: kube.SecretVolume($.secret),
           },
         },
