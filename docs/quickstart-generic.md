@@ -148,3 +148,4 @@ You should remove the NS entries configured at the domain registrar.
 
 - [BKPR FAQ](FAQ.md)
 - [Troubleshooting](troubleshooting.md)
+- [Application Developers Reference Guide](application-developers-reference-guide.md)
