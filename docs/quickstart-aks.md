@@ -216,3 +216,4 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
 
 - [BKPR FAQ](FAQ.md)
 - [Troubleshooting](troubleshooting.md)
+- [Application Developers Reference Guide](application-developers-reference-guide.md)
