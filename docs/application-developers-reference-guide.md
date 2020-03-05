@@ -19,7 +19,7 @@ To automate the Let's Encrypt certificate provisioning you should add the annota
 For example, with the following snippet for a Kubernetes Ingress resource, BKPR will automatically update the DNS records for `myapp.mydomain.com` and request Let's Encrypt for a valid TLS certificate for your application, following which you would be able to access the application securely over the Internet.
 
 ```yaml
-apiVersion: extensions/v1beta1
+apiVersion: networking.k8s.io/v1beta1
 kind: Ingress
 metadata:
   name: "myapp-ingress"
