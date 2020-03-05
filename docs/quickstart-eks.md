@@ -278,3 +278,4 @@ Re-run the `kubeprod install` command from the [Deploy BKPR](#step-3-deploy-bkpr
 
 - [BKPR FAQ](FAQ.md)
 - [Troubleshooting](troubleshooting.md)
+- [Application Developers Reference Guide](application-developers-reference-guide.md)
