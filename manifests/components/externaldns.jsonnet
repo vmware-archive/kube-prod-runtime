@@ -87,7 +87,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
             edns: kube.Container("external-dns") {
               image: EXTERNAL_DNS_IMAGE,
               args_+: {
-                sources_:: ["service", "ingress"],
+                sources_:: ["service", "ingress", "crd"],
                 registry: "txt",
                 "txt-prefix": "_externaldns.",
                 "txt-owner-id": this.ownerId,
