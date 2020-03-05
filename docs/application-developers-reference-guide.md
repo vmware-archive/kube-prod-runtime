@@ -43,6 +43,24 @@ spec:
             servicePort: 80
 ```
 
+## Restricting access with OAuth Authentication
+
+BKPR installs a [OAuth2 Proxy](https://github.com/pusher/oauth2_proxy/) for restricting access to the BKPR dashboards.
+
+Externally accessible web applications deployed by users on the cluster are not protected by this OAuth scheme. However you can easily enable this by adding the following annotations to your applications `Ingress` resources.
+
+```yaml
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: my-app
+  annotations:
+    nginx.ingress.kubernetes.io/auth-signin: https://auth.my-bkpr-domain.com/oauth2/start?rd=%2F$server_name$escaped_request_uri
+    nginx.ingress.kubernetes.io/auth-url: https://auth.my-bkpr-domain.com/oauth2/auth
+```
+
+After these changes are applied, users would be required to authenticate themselves with the OAuth server to gaining access to the application interface.
+
 ## Logging
 
 BKPR installs [Elasticsearch](https://elastic.co/products/elasticsearch) in the cluster which provides a RESTful search and analytics engine for processing your application logs. The Elasticsearch stack uses [Fluentd](https://www.fluentd.org/) to capture the standard output of every container running in the cluster and persistent storage to store historical data of the cluster container logs.
