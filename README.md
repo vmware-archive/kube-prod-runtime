@@ -34,6 +34,7 @@ Please use the [installation guide](docs/install.md) to install the `kubeprod` b
 * [AKS Quickstart](docs/quickstart-aks.md)
 * [GKE Quickstart](docs/quickstart-gke.md)
 * [EKS Quickstart](docs/quickstart-eks.md)
+* [Generic Quickstart (experimental)](docs/quickstart-generic.md)
 
 ## Frequently Asked Questions (FAQ)
 

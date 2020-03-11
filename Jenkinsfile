@@ -697,6 +697,103 @@ spec:
                         }
                     }
 
+                    // we use GKE for testing the generic platform
+                    def genericKversions = ["1.14"]
+                    for (x in genericKversions) {
+                        def kversion = x  // local bind required because closures
+                        def project = 'bkprtesting'
+                        def zone = 'us-east1-b'
+                        def platform = "generic-" + kversion
+
+                        platforms[platform] = {
+                            stage(platform) {
+                                def retryNum = 0
+
+                                retry(maxRetries) {
+                                    def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
+                                    def adminEmail = "${clusterName}@${parentZone}"
+                                    def dnsZone = "${clusterName}.${parentZone}"
+
+                                    retryNum++
+                                    dir("${env.WORKSPACE}/${clusterName}") {
+                                        withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
+                                            withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                                                runIntegrationTest(platform, "generic --config=${clusterName}-autogen.json --dns-zone=${dnsZone} --email=${adminEmail} --authz-domain=\"*\" --keycloak-group=\"\" --keycloak-password=" + UUID.randomUUID().toString().take(8), "--dns-suffix ${dnsZone}", (retryNum == maxRetries))
+                                                // clusterSetup
+                                                {
+                                                    container('gcloud') {
+                                                        sh """
+                                                        gcloud container clusters create ${clusterName} \
+                                                            --cluster-version ${kversion}               \
+                                                            --project ${project}                        \
+                                                            --machine-type n1-standard-2                \
+                                                            --num-nodes 3                               \
+                                                            --zone ${zone}                              \
+                                                            --no-enable-autoupgrade                     \
+                                                            --enable-ip-alias                           \
+                                                            --preemptible                               \
+                                                            --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)},team=bkpr,created_by=jenkins-bkpr'
+                                                        """
+                                                        sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
+                                                        sh "kubectl create clusterrolebinding cluster-admin-binding --clusterrole=cluster-admin --user=\$(gcloud info --format='value(config.account)')"
+                                                    }
+
+                                                    writeFile([file: "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json", text: """
+                                                        {
+                                                            "dnsZone": "${dnsZone}"
+                                                        }
+                                                        """]
+                                                    )
+
+                                                    writeFile([file: "${env.WORKSPACE}/${clusterName}/kubeprod-manifest.jsonnet", text: """
+                                                        (import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/manifests/platforms/generic.jsonnet") {
+                                                            config:: import "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json",
+                                                            letsencrypt_environment: "staging",
+                                                            prometheus+: import "${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests/testdata/prometheus-crashloop-alerts.jsonnet",
+                                                        }
+                                                        """]
+                                                    )
+                                                }
+                                                // clusterDestroy
+                                                {
+                                                    container('gcloud') {
+                                                        sh "gcloud container clusters delete ${clusterName} --zone ${zone} --project ${project} --async --quiet || true"
+                                                    }
+                                                }
+                                                // dnsSetup
+                                                {
+                                                    timeout(time: 300, unit: 'SECONDS') {
+                                                        container('az') {
+                                                            def ip = "";
+                                                            container('kubectl') {
+                                                                ip = sh(returnStdout: true, script: """set +x
+                                                                    while [ true ]; do
+                                                                        ip=\$(kubectl -n kubeprod get svc nginx-ingress-udp -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+                                                                        if [ -n "\${ip}" ]; then echo -n "\${ip}"; break; fi
+                                                                        sleep 5
+                                                                    done
+                                                                """)
+                                                            }
+                                                            sh "az network dns record-set a add-record --resource-group ${parentZoneResourceGroup} --zone-name ${parentZone} --record-set-name ns-${clusterName} --ipv4-address ${ip} --ttl 60"
+                                                            insertGlueRecords(clusterName, readJSON(text: "[ \"ns-${clusterName}.${parentZone}.\" ]"), "60", parentZone, parentZoneResourceGroup)
+                                                        }
+                                                    }
+                                                }
+                                                // dnsDestroy
+                                                {
+                                                    container('az') {
+                                                        sh "az network dns record-set a delete --yes --resource-group ${parentZoneResourceGroup} --zone-name ${parentZone} --name ns-${clusterName} || true"
+                                                        deleteGlueRecords(clusterName, parentZone, parentZoneResourceGroup)
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     parallel platforms
 
                     stage('Release') {

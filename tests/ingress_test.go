@@ -2,7 +2,7 @@
  * Bitnami Kubernetes Production Runtime - A collection of services that makes it
  * easy to run production workloads in Kubernetes.
  *
- * Copyright 2018-2019 Bitnami
+ * Copyright 2018-2020 Bitnami
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -345,6 +345,7 @@ var _ = Describe("Ingress", func() {
 				// Verify it redirected to a plausibly-correct login URL.
 				// Expand as necessary
 				Expect(resp.Request.URL.Host).To(Or(
+					Equal("id."+*dnsSuffix),
 					Equal("accounts.google.com"),
 					Equal("login.microsoftonline.com"),
 					MatchRegexp(`^cognito-idp\..*\.amazonaws\.com$`),

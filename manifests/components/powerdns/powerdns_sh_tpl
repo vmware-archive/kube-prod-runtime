@@ -1,0 +1,11 @@
+#!/usr/bin/env sh
+
+set -o errexit
+set -o nounset
+
+ZONE=%s
+if ! pdnsutil list-zone $ZONE; then
+  pdnsutil create-zone $ZONE ns1.$ZONE
+fi
+
+/usr/sbin/pdns_server "$@"
