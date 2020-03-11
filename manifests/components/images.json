@@ -7,7 +7,7 @@
     "elasticsearch": "bitnami/elasticsearch:7.6.1-debian-10-r1",
     "elasticsearch-curator": "bitnami/elasticsearch-curator:5.8.1-r64",
     "elasticsearch-exporter": "bitnami/elasticsearch-exporter:1.1.0-r128",
-    "external-dns": "bitnami/external-dns:0.6.0-debian-10-r7",
+    "external-dns": "bitnami/external-dns:0.7.0-debian-10-r0",
     "fluentd": "bitnami/fluentd:1.9.3-debian-10-r0",
     "grafana": "bitnami/grafana:6.6.2-debian-10-r1",
     "kibana": "bitnami/kibana:7.6.1-debian-10-r1",
