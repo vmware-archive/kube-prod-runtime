@@ -79,7 +79,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
       template+: {
         spec+: {
           serviceAccountName: $.sa.metadata.name,
-          affinity: kube.PodZoneAntiAffinityAnnotation(this.spec.template),
+          affinity+: utils.weakNodeDiversity(this.spec.selector),
           default_container: "mariadb-galera",
           volumes_+: {
             config: kube.ConfigMapVolume($.config),

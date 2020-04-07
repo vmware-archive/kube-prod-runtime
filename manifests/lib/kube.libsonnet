@@ -43,7 +43,7 @@
   ),
 
   // Convert {foo: {a: b}} to [{name: foo, a: b}]
-  mapToNamedList(o):: [{name: $.hyphenate(n)} + o[n] for n in std.objectFields(o)],
+  mapToNamedList(o):: [{ name: $.hyphenate(n) } + o[n] for n in std.objectFields(o)],
 
   // Convert from SI unit suffixes to regular number
   siToNum(n):: (
@@ -85,7 +85,7 @@
     kind: kind,
     metadata: {
       name: name,
-      labels: {name: std.join("-", std.split(this.metadata.name, ":"))},
+      labels: { name: std.join("-", std.split(this.metadata.name, ":")) },
     },
   },
 
@@ -100,8 +100,8 @@
   },
 
   Endpoints(name): $._Object("v1", "Endpoints", name) {
-    Ip(addr):: {ip: addr},
-    Port(p):: {port: p},
+    Ip(addr):: { ip: addr },
+    Port(p):: { port: p },
 
     subsets: [],
   },
@@ -145,7 +145,7 @@
 
   // TODO: This is a terrible name
   PersistentVolumeClaimVolume(pvc): {
-    persistentVolumeClaim: {claimName: pvc.metadata.name},
+    persistentVolumeClaim: { claimName: pvc.metadata.name },
   },
 
   StorageClass(name): $._Object("storage.k8s.io/v1beta1", "StorageClass", name) {
@@ -180,7 +180,7 @@
     imagePullPolicy: if std.endsWith(self.image, ":latest") then "Always" else "IfNotPresent",
 
     envList(map):: [
-      if std.type(map[x]) == "object" then {name: x, valueFrom: map[x]} else {name: x, value: std.toString(map[x])}
+      if std.type(map[x]) == "object" then { name: x, valueFrom: map[x] } else { name: x, value: std.toString(map[x]) }
       for x in std.objectFields(map)
     ],
 
@@ -223,10 +223,15 @@
     containers_:: {},
 
     local container_names_ordered = [self.default_container] + [n for n in container_names if n != self.default_container],
-    containers: [{name: $.hyphenate(name)} + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
+    containers: [{ name: $.hyphenate(name) } + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
 
+    // Note initContainers are inherently ordered, and using this
+    // named object will lose that ordering.  If order matters, then
+    // manipulate `initContainers` directly (perhaps
+    // appending/prepending to `super.initContainers` to mix+match
+    // both approaches)
     initContainers_:: {},
-    initContainers: [{name: $.hyphenate(name)} + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
+    initContainers: [{ name: $.hyphenate(name) } + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
 
     volumes_:: {},
     volumes: $.mapToNamedList(self.volumes_),
@@ -243,7 +248,7 @@
   },
 
   HostPathVolume(path, type=""): {
-    hostPath: {path: path, type: type},
+    hostPath: { path: path, type: type },
   },
 
   GitRepoVolume(repository, revision): {
@@ -256,11 +261,11 @@
   },
 
   SecretVolume(secret): {
-    secret: {secretName: secret.metadata.name},
+    secret: { secretName: secret.metadata.name },
   },
 
   ConfigMapVolume(configmap): {
-    configMap: {name: configmap.metadata.name},
+    configMap: { name: configmap.metadata.name },
   },
 
   ConfigMap(name): $._Object("v1", "ConfigMap", name) {
@@ -290,7 +295,7 @@
 
     type: "Opaque",
     data_:: {},
-    data: {[k]: std.base64(secret.data_[k]) for k in std.objectFields(secret.data_)},
+    data: { [k]: std.base64(secret.data_[k]) for k in std.objectFields(secret.data_) },
   },
 
   // subtype of EnvVarSource
@@ -318,7 +323,7 @@
     },
   },
 
-  Deployment(name): $._Object("apps/v1beta1", "Deployment", name) {
+  Deployment(name): $._Object("apps/v1", "Deployment", name) {
     local deployment = self,
 
     spec: {
@@ -359,6 +364,9 @@
       // NB: Upstream default is 0
       minReadySeconds: 30,
 
+      // NB: Regular k8s default is to keep all revisions
+      revisionHistoryLimit: 10,
+
       replicas: 1,
       assert self.replicas >= 1,
     },
@@ -385,7 +393,7 @@
     },
   },
 
-  StatefulSet(name): $._Object("apps/v1beta2", "StatefulSet", name) {
+  StatefulSet(name): $._Object("apps/v1", "StatefulSet", name) {
     local sset = self,
 
     spec: {
@@ -393,6 +401,9 @@
 
       updateStrategy: {
         type: "RollingUpdate",
+        rollingUpdate: {
+          partition: 0,
+        },
       },
 
       template: {
@@ -412,7 +423,7 @@
         // they're no-ops).
         // In particular annotations={} is apparently a "change",
         // since the comparison is ignorant of defaults.
-        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + {apiVersion:: null, kind:: null} + kv[1])
+        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + { apiVersion:: null, kind:: null } + kv[1])
         for kv in $.objectItems(self.volumeClaimTemplates_)
       ],
 
@@ -449,6 +460,7 @@
       schedule: error "Need to provide spec.schedule",
       successfulJobsHistoryLimit: 10,
       failedJobsHistoryLimit: 20,
+      // NB: upstream concurrencyPolicy default is "Allow"
       concurrencyPolicy: "Forbid",
     },
   },
@@ -465,7 +477,7 @@
     parallelism: 1,
   },
 
-  DaemonSet(name): $._Object("extensions/v1beta1", "DaemonSet", name) {
+  DaemonSet(name): $._Object("apps/v1", "DaemonSet", name) {
     local ds = self,
     spec: {
       updateStrategy: {
@@ -487,7 +499,7 @@
     },
   },
 
-  Ingress(name): $._Object("extensions/v1beta1", "Ingress", name) {
+  Ingress(name): $._Object("networking.k8s.io/v1beta1", "Ingress", name) {
     spec: {},
 
     local rel_paths = [
@@ -501,7 +513,7 @@
 
   ThirdPartyResource(name): $._Object("extensions/v1beta1", "ThirdPartyResource", name) {
     versions_:: [],
-    versions: [{name: n} for n in self.versions_],
+    versions: [{ name: n } for n in self.versions_],
   },
 
   CustomResourceDefinition(group, version, kind): {
@@ -567,28 +579,8 @@
     local this = self,
     target:: error "target is required",
     spec+: {
-      podSelector: {matchLabels: this.target.metadata.labels},
+      podSelector: { matchLabels: this.target.metadata.labels },
     },
   },
 
-  PodZoneAntiAffinityAnnotation(pod): {
-    podAntiAffinity: {
-      preferredDuringSchedulingIgnoredDuringExecution: [
-        {
-          weight: 50,
-          podAffinityTerm: {
-            labelSelector: {matchLabels: pod.metadata.labels},
-            topologyKey: "failure-domain.beta.kubernetes.io/zone",
-          },
-        },
-        {
-          weight: 100,
-          podAffinityTerm: {
-            labelSelector: {matchLabels: pod.metadata.labels},
-            topologyKey: "kubernetes.io/hostname",
-          },
-        },
-      ],
-    },
-  },
 }

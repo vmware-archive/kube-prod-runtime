@@ -92,7 +92,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
         },
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
-          affinity: kube.PodZoneAntiAffinityAnnotation(this.spec.template),
+          affinity+: utils.weakNodeDiversity(this.spec.selector),
           default_container: "keycloak",
           securityContext: {
             fsGroup: 1001,
