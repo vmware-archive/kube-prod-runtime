@@ -619,7 +619,7 @@ spec:
                                                     wget -nv https://github.com/weaveworks/eksctl/releases/download/0.16.0/eksctl_Linux_amd64.tar.gz
                                                     tar -zxf eksctl_Linux_amd64.tar.gz
                                                     chmod +x eksctl
-                                                    mv eksctl $(which eksctl)
+                                                    mv eksctl `which eksctl`
 
                                                     eksctl create cluster \
                                                         --name ${clusterName} \
@@ -686,7 +686,7 @@ spec:
                                                         wget -nv https://github.com/weaveworks/eksctl/releases/download/0.16.0/eksctl_Linux_amd64.tar.gz
                                                         tar -zxf eksctl_Linux_amd64.tar.gz
                                                         chmod +x eksctl
-                                                        mv eksctl $(which eksctl)
+                                                        mv eksctl `which eksctl`
 
                                                         eksctl delete cluster --name ${clusterName} --timeout 10m0s || true"
                                                         """
