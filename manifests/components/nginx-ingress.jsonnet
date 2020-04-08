@@ -207,6 +207,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
           serviceAccountName: $.serviceAccount.metadata.name,
           //hostNetwork: true, // access real source IPs, IPv6, etc
           terminationGracePeriodSeconds: 60,
+          // add AZ and node antiaffinity
           affinity+: utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
             default: kube.Container("nginx") {

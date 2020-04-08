@@ -79,6 +79,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
       template+: {
         spec+: {
           serviceAccountName: $.sa.metadata.name,
+          // add AZ and node antiaffinity
           affinity+: utils.weakNodeDiversity(this.spec.selector),
           default_container: "mariadb-galera",
           volumes_+: {

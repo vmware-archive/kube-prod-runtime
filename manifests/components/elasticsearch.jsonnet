@@ -101,6 +101,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
         },
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
+          // add AZ and node antiaffinity
           affinity+: utils.weakNodeDiversity(this.spec.selector),
           default_container: "elasticsearch_logging",
           volumes_+: {
