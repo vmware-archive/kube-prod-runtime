@@ -1,6 +1,7 @@
 package registry
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 
@@ -9,7 +10,7 @@ import (
 )
 
 // Digest returns the digest for an image.
-func (r *Registry) Digest(image Image) (digest.Digest, error) {
+func (r *Registry) Digest(ctx context.Context, image Image) (digest.Digest, error) {
 	if len(image.Digest) > 1 {
 		// return early if we already have an image digest.
 		return image.Digest, nil
@@ -25,14 +26,14 @@ func (r *Registry) Digest(image Image) (digest.Digest, error) {
 	}
 
 	req.Header.Add("Accept", schema2.MediaTypeManifest)
-	resp, err := r.Client.Do(req)
+	resp, err := r.Client.Do(req.WithContext(ctx))
 	if err != nil {
 		return "", err
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusNotFound {
-		return "", fmt.Errorf("Got status code: %d", resp.StatusCode)
+		return "", fmt.Errorf("got status code: %d", resp.StatusCode)
 	}
 
 	return digest.Parse(resp.Header.Get("Docker-Content-Digest"))

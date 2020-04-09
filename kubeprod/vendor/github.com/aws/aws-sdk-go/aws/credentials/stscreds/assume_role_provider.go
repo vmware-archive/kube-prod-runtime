@@ -80,16 +80,19 @@ package stscreds
 
 import (
 	"fmt"
+	"os"
 	"time"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/aws/client"
 	"github.com/aws/aws-sdk-go/aws/credentials"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/internal/sdkrand"
 	"github.com/aws/aws-sdk-go/service/sts"
 )
 
-// StdinTokenProvider will prompt on stdout and read from stdin for a string value.
+// StdinTokenProvider will prompt on stderr and read from stdin for a string value.
 // An error is returned if reading from stdin fails.
 //
 // Use this function go read MFA tokens from stdin. The function makes no attempt
@@ -102,7 +105,7 @@ import (
 // Will wait forever until something is provided on the stdin.
 func StdinTokenProvider() (string, error) {
 	var v string
-	fmt.Printf("Assume Role MFA token code: ")
+	fmt.Fprintf(os.Stderr, "Assume Role MFA token code: ")
 	_, err := fmt.Scanln(&v)
 
 	return v, err
@@ -114,6 +117,10 @@ const ProviderName = "AssumeRoleProvider"
 // AssumeRoler represents the minimal subset of the STS client API used by this provider.
 type AssumeRoler interface {
 	AssumeRole(input *sts.AssumeRoleInput) (*sts.AssumeRoleOutput, error)
+}
+
+type assumeRolerWithContext interface {
+	AssumeRoleWithContext(aws.Context, *sts.AssumeRoleInput, ...request.Option) (*sts.AssumeRoleOutput, error)
 }
 
 // DefaultDuration is the default amount of time in minutes that the credentials
@@ -141,6 +148,13 @@ type AssumeRoleProvider struct {
 
 	// Session name, if you wish to reuse the credentials elsewhere.
 	RoleSessionName string
+
+	// Optional, you can pass tag key-value pairs to your session. These tags are called session tags.
+	Tags []*sts.Tag
+
+	// A list of keys for session tags that you want to set as transitive.
+	// If you set a tag key as transitive, the corresponding key and value passes to subsequent sessions in a role chain.
+	TransitiveTagKeys []*string
 
 	// Expiry duration of the STS credentials. Defaults to 15 minutes if not set.
 	Duration time.Duration
@@ -193,6 +207,18 @@ type AssumeRoleProvider struct {
 	//
 	// If ExpiryWindow is 0 or less it will be ignored.
 	ExpiryWindow time.Duration
+
+	// MaxJitterFrac reduces the effective Duration of each credential requested
+	// by a random percentage between 0 and MaxJitterFraction. MaxJitterFrac must
+	// have a value between 0 and 1. Any other value may lead to expected behavior.
+	// With a MaxJitterFrac value of 0, default) will no jitter will be used.
+	//
+	// For example, with a Duration of 30m and a MaxJitterFrac of 0.1, the
+	// AssumeRole call will be made with an arbitrary Duration between 27m and
+	// 30m.
+	//
+	// MaxJitterFrac should not be negative.
+	MaxJitterFrac float64
 }
 
 // NewCredentials returns a pointer to a new Credentials object wrapping the
@@ -244,7 +270,11 @@ func NewCredentialsWithClient(svc AssumeRoler, roleARN string, options ...func(*
 
 // Retrieve generates a new set of temporary credentials using STS.
 func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
+	return p.RetrieveWithContext(aws.BackgroundContext())
+}
 
+// RetrieveWithContext generates a new set of temporary credentials using STS.
+func (p *AssumeRoleProvider) RetrieveWithContext(ctx credentials.Context) (credentials.Value, error) {
 	// Apply defaults where parameters are not set.
 	if p.RoleSessionName == "" {
 		// Try to work out a role name that will hopefully end up unique.
@@ -254,11 +284,14 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 		// Expire as often as AWS permits.
 		p.Duration = DefaultDuration
 	}
+	jitter := time.Duration(sdkrand.SeededRand.Float64() * p.MaxJitterFrac * float64(p.Duration))
 	input := &sts.AssumeRoleInput{
-		DurationSeconds: aws.Int64(int64(p.Duration / time.Second)),
-		RoleArn:         aws.String(p.RoleARN),
-		RoleSessionName: aws.String(p.RoleSessionName),
-		ExternalId:      p.ExternalID,
+		DurationSeconds:   aws.Int64(int64((p.Duration - jitter) / time.Second)),
+		RoleArn:           aws.String(p.RoleARN),
+		RoleSessionName:   aws.String(p.RoleSessionName),
+		ExternalId:        p.ExternalID,
+		Tags:              p.Tags,
+		TransitiveTagKeys: p.TransitiveTagKeys,
 	}
 	if p.Policy != nil {
 		input.Policy = p.Policy
@@ -281,7 +314,15 @@ func (p *AssumeRoleProvider) Retrieve() (credentials.Value, error) {
 		}
 	}
 
-	roleOutput, err := p.Client.AssumeRole(input)
+	var roleOutput *sts.AssumeRoleOutput
+	var err error
+
+	if c, ok := p.Client.(assumeRolerWithContext); ok {
+		roleOutput, err = c.AssumeRoleWithContext(ctx, input)
+	} else {
+		roleOutput, err = p.Client.AssumeRole(input)
+	}
+
 	if err != nil {
 		return credentials.Value{ProviderName: ProviderName}, err
 	}
