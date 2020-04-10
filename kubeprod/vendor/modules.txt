@@ -92,7 +92,7 @@ github.com/aws/aws-sdk-go/service/iam
 github.com/aws/aws-sdk-go/service/route53
 github.com/aws/aws-sdk-go/service/sts
 github.com/aws/aws-sdk-go/service/sts/stsiface
-# github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3 => github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3
+# github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487 => github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487
 ## explicit
 github.com/bitnami/kubecfg/pkg/kubecfg
 github.com/bitnami/kubecfg/utils
@@ -617,5 +617,5 @@ k8s.io/utils/pointer
 ## explicit
 sigs.k8s.io/yaml
 # github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.3+incompatible
+# github.com/bitnami/kubecfg => github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487
 # github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.0
-# github.com/bitnami/kubecfg => github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3

@@ -172,12 +172,14 @@ func (c InstallCmd) Update(out io.Writer) error {
 	}
 
 	validate := kubecfg.ValidateCmd{
+		Mapper:        c.Mapper,
 		Discovery:     c.Discovery,
 		IgnoreUnknown: true,
 	}
 
 	update := kubecfg.UpdateCmd{
 		Client:           c.Client,
+		Mapper:           c.Mapper,
 		Discovery:        c.Discovery,
 		DefaultNamespace: metav1.NamespaceSystem,
 		Create:           true,

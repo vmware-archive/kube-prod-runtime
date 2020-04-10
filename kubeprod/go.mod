@@ -15,7 +15,7 @@ require (
 	github.com/Azure/go-autorest/autorest/validation v0.2.0 // indirect
 	github.com/NYTimes/gziphandler v1.1.1 // indirect
 	github.com/aws/aws-sdk-go v1.30.7
-	github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3
+	github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487
 	github.com/blang/semver v3.5.1+incompatible // indirect
 	github.com/coreos/etcd v3.3.20+incompatible // indirect
 	github.com/coreos/go-systemd v0.0.0-20191104093116-d3cd4ed1dbcf // indirect
@@ -88,14 +88,14 @@ require (
 
 replace (
 	github.com/Azure/go-autorest => github.com/Azure/go-autorest v13.3.3+incompatible
+
+	// WIP https://github.com/bitnami/kubecfg/pull/287,
+	// TODO(jjo) move to new tag (v0.15.4) when available
+	github.com/bitnami/kubecfg => github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487
 	// NB: pinning gnostic to v0.4.0 as v0.4.1 renamed s/OpenAPIv2/openapiv2/ at
 	//       https://github.com/googleapis/gnostic/pull/155,
 	//     while k8s.io/client-go/discovery@v0.17 still uses OpenAPIv2,
 	//     even as of 2020/04/09 there's no released k8s.io/client-go/discovery version
 	//     (latest 0.18.1) fixed to use openapiv2
 	github.com/googleapis/gnostic => github.com/googleapis/gnostic v0.4.0
-
-	// WIP https://github.com/bitnami/kubecfg/pull/287,
-	// TODO(jjo) move to new tag (v0.15.4) when available
-	github.com/bitnami/kubecfg => github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3
 )

@@ -90,6 +90,8 @@ github.com/bitnami/kubecfg v0.15.3 h1:AcbsnmyPgNPkwgtl/V8T6AxiVsUrn8ABG3++rqALrD
 github.com/bitnami/kubecfg v0.15.3/go.mod h1:4J66CsE9imcnguLR4ZUnJitQ3AAm/52/fco4zaRDjzw=
 github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3 h1:RaH+pTxECUHtR2zowpRMYZuiDJEzDCOKquBMEG7Vtno=
 github.com/bitnami/kubecfg v0.15.4-0.20200409212135-d89f769ba5a3/go.mod h1:E7At6nad4v1RGx2LIlbFPv5/DFGtDlTOBXRHg7S4cHI=
+github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487 h1:QWAUIMl1CRpPICvUHynpayO+il40ft5e1KUUy5ul1yg=
+github.com/bitnami/kubecfg v0.15.4-0.20200410195441-7ea336416487/go.mod h1:E7At6nad4v1RGx2LIlbFPv5/DFGtDlTOBXRHg7S4cHI=
 github.com/blang/semver v3.5.0+incompatible h1:CGxCgetQ64DKk7rdZ++Vfnb1+ogGNnB17OJKJXD2Cfs=
 github.com/blang/semver v3.5.0+incompatible/go.mod h1:kRBLl5iJ+tD4TcOOxsy/0fnwebNt5EWlYSAyrTnjyyk=
 github.com/blang/semver v3.5.1+incompatible h1:cQNTCjp13qL8KC3Nbxr/y2Bqb63oX6wdnnjpJbkM4JQ=

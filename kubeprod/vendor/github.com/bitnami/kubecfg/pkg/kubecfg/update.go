@@ -332,7 +332,10 @@ func (c UpdateCmd) Run(apiObjects []*unstructured.Unstructured) error {
 		// the same object.
 		seenUids.Insert(string(newobj.GetUID()))
 
-		waitForSchemaChange(c.Discovery, rc, newobj)
+		// Don't wait for CRDs to settle schema under DryRun
+		if !c.DryRun {
+			waitForSchemaChange(c.Discovery, rc, newobj)
+		}
 	}
 
 	if c.GcTag != "" && !c.SkipGc {
