@@ -37,9 +37,9 @@ import (
 	"time"
 
 	"github.com/pusher/oauth2_proxy/cookie"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/api/core/v1"
-	xv1beta1 "k8s.io/api/extensions/v1beta1"
+	nv1beta1 "k8s.io/api/networking/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -144,8 +144,8 @@ func getURL(client *http.Client, url string) (*http.Response, error) {
 // on the slightly odd structure this imposes.
 var _ = Describe("Ingress", func() {
 	var c kubernetes.Interface
-	var ing *xv1beta1.Ingress
-	var deploy *appsv1beta1.Deployment
+	var ing *nv1beta1.Ingress
+	var deploy *appsv1.Deployment
 	var svc *v1.Service
 	var ns string
 
@@ -155,11 +155,11 @@ var _ = Describe("Ingress", func() {
 
 		decoder := scheme.Codecs.UniversalDeserializer()
 
-		deploy = decodeFileOrDie(decoder, "testdata/ingress-deploy.yaml").(*appsv1beta1.Deployment)
+		deploy = decodeFileOrDie(decoder, "testdata/ingress-deploy.yaml").(*appsv1.Deployment)
 
 		svc = decodeFileOrDie(decoder, "testdata/ingress-service.yaml").(*v1.Service)
 
-		ing = decodeFileOrDie(decoder, "testdata/ingress-ingress.yaml").(*xv1beta1.Ingress)
+		ing = decodeFileOrDie(decoder, "testdata/ingress-ingress.yaml").(*nv1beta1.Ingress)
 
 		suffix := *dnsSuffix
 		if suffix == "" {
@@ -174,13 +174,13 @@ var _ = Describe("Ingress", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		deploy, err = c.AppsV1beta1().Deployments(ns).Create(deploy)
+		deploy, err = c.AppsV1().Deployments(ns).Create(deploy)
 		Expect(err).NotTo(HaveOccurred())
 
 		svc, err = c.CoreV1().Services(ns).Create(svc)
 		Expect(err).NotTo(HaveOccurred())
 
-		ing, err = c.ExtensionsV1beta1().Ingresses(ns).Create(ing)
+		ing, err = c.NetworkingV1beta1().Ingresses(ns).Create(ing)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
@@ -280,7 +280,7 @@ var _ = Describe("Ingress", func() {
 
 			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "kubernetes.io/tls-acme", "true")
 			metav1.SetMetaDataAnnotation(&ing.ObjectMeta, "cert-manager.io/cluster-issuer", "letsencrypt-staging")
-			ing.Spec.TLS = []xv1beta1.IngressTLS{{
+			ing.Spec.TLS = []nv1beta1.IngressTLS{{
 				Hosts:      []string{ing.Spec.Rules[0].Host},
 				SecretName: fmt.Sprintf("%s-tls", ing.GetName()),
 			}}

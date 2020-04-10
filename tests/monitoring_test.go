@@ -25,7 +25,7 @@ import (
 	"time"
 
 	"github.com/onsi/gomega/types"
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 
@@ -132,14 +132,14 @@ var _ = Describe("Exporters", func() {
 
 var _ = Describe("Monitoring", func() {
 	var c kubernetes.Interface
-	var deploy *appsv1beta1.Deployment
+	var deploy *appsv1.Deployment
 	var ns string
 
 	BeforeEach(func() {
 		c = kubernetes.NewForConfigOrDie(clusterConfigOrDie())
 		ns = createNsOrDie(c.CoreV1(), "test-monitoring-")
 		decoder := scheme.Codecs.UniversalDeserializer()
-		deploy = decodeFileOrDie(decoder, "testdata/monitoring-deploy.yaml").(*appsv1beta1.Deployment)
+		deploy = decodeFileOrDie(decoder, "testdata/monitoring-deploy.yaml").(*appsv1.Deployment)
 	})
 
 	AfterEach(func() {
@@ -148,7 +148,7 @@ var _ = Describe("Monitoring", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		deploy, err = c.AppsV1beta1().Deployments(ns).Create(deploy)
+		deploy, err = c.AppsV1().Deployments(ns).Create(deploy)
 		Expect(err).NotTo(HaveOccurred())
 	})
 
