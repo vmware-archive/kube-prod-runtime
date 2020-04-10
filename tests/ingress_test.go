@@ -189,7 +189,7 @@ var _ = Describe("Ingress", func() {
 			Eventually(func() (string, error) {
 				var lbAddr string
 				var err error
-				ing2, err := c.ExtensionsV1beta1().Ingresses(ns).Get(ing.Name, metav1.GetOptions{})
+				ing2, err := c.NetworkingV1beta1().Ingresses(ns).Get(ing.Name, metav1.GetOptions{})
 				if err != nil {
 					return "", err
 				}
@@ -222,7 +222,7 @@ var _ = Describe("Ingress", func() {
 
 			Eventually(func() (*http.Response, error) {
 				var err error
-				ing2, err := c.ExtensionsV1beta1().Ingresses(ns).Get(ing.Name, metav1.GetOptions{})
+				ing2, err := c.NetworkingV1beta1().Ingresses(ns).Get(ing.Name, metav1.GetOptions{})
 				if err != nil {
 					return nil, err
 				}
