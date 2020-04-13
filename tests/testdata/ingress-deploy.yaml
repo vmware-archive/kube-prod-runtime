@@ -23,6 +23,9 @@ metadata:
   labels:
     name: echoheaders
 spec:
+  selector:
+    matchLabels:
+      name: echoheaders
   template:
     metadata:
       labels:

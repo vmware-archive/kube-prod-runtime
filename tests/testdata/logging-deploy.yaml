@@ -23,6 +23,9 @@ metadata:
   labels:
     name: echolog
 spec:
+  selector:
+    matchLabels:
+      name: echolog
   template:
     metadata:
       labels:

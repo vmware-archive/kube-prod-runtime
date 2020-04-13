@@ -23,6 +23,9 @@ metadata:
   labels:
     name: echomon
 spec:
+  selector:
+    matchLabels:
+      name: echomon
   template:
     metadata:
       labels:
