@@ -390,7 +390,7 @@ spec:
                     // See:
                     //  gcloud container get-server-config
                     // def gkeKversions = ["1.14", "1.15"]
-                    def gkeKversions = GKE_REL.split(",")
+                    def gkeKversions = params.GKE_REL.split(",")
                     for (x in gkeKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
@@ -484,7 +484,7 @@ spec:
                     // See:
                     //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
                     // def aksKversions = ["1.14", "1.15", "1.16"]
-                    def aksKversions = AKS_REL.split(",")
+                    def aksKversions = params.AKS_REL.split(",")
                     for (x in aksKversions) {
                         def kversion = x  // local bind required because closures
                         def resourceGroup = 'jenkins-bkpr-rg'
@@ -603,7 +603,7 @@ spec:
                     }
 
                     // def eksKversions = ["1.14", "1.15"]
-                    def eksKversions = EKS_REL.split(",")
+                    def eksKversions = params.EKS_REL.split(",")
                     for (x in eksKversions) {
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
@@ -719,7 +719,7 @@ spec:
                     }
 
                     // we use GKE for testing the generic platform
-                    def genericKversions = GEN_REL.split(",")
+                    def genericKversions = params.GEN_REL.split(",")
                     for (x in genericKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
