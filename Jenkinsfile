@@ -179,6 +179,10 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                                 --nodes=8                   \
                                 --skip '${skip}'            \
                                 -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}
+                            rc=\${?}
+                            [ \${rc} -eq 0 ] && RESULT=PASS || RESULT=FAIL
+                            echo "INTEGRATION TEST for platform='${platform}' RESULT=\${RESULT}"
+                            exit \${rc}
                             """
                         } catch (error) {
                             if(pauseForDebugging) {
