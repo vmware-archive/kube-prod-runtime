@@ -372,7 +372,7 @@ spec:
                     // See:
                     //  gcloud container get-server-config
                     // def gkeKversions = ["1.14", "1.15"]
-                    def gkeKversions = []
+                    def gkeKversions = ["1.15"]
                     for (x in gkeKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
@@ -585,7 +585,7 @@ spec:
                     }
 
                     // def eksKversions = ["1.14", "1.15"]
-                    def eksKversions = []
+                    def eksKversions = ["1.15"]
                     for (x in eksKversions) {
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
@@ -701,8 +701,7 @@ spec:
                     }
 
                     // we use GKE for testing the generic platform
-                    // def genericKversions = ["1.15"]
-                    def genericKversions = []
+                    def genericKversions = ["1.15"]
                     for (x in genericKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
