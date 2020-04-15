@@ -10,6 +10,20 @@
 import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+properties([
+  parameters([
+    // stringParam(name: 'AKS_REL', defaultValue: '1.14,1.15,1.16', description: 'AKS releases to test (comma separated)'),
+    // stringParam(name: 'EKS_REL', defaultValue: '1.14,1.15', description: 'EKS releases to test (comma separated)'),
+    // stringParam(name: 'GKE_REL', defaultValue: '1.14,1.15', description: 'GKE releases to test (comma separated)'),
+    // stringParam(name: 'GEN_REL', defaultValue: '1.15', description: 'Generic-cloud releases to test (comma separated)'),
+    stringParam(name: 'AKS_REL', defaultValue: '1.16', description: 'AKS releases to test (comma separated)'),
+    stringParam(name: 'EKS_REL', defaultValue: '', description: 'EKS releases to test (comma separated)'),
+    stringParam(name: 'GKE_REL', defaultValue: '', description: 'GKE releases to test (comma separated)'),
+    stringParam(name: 'GEN_REL', defaultValue: '', description: 'Generic-cloud releases to test (comma separated)'),
+  ])
+])
+
+
 def parentZone = 'tests.bkpr.run'
 def parentZoneResourceGroup = 'jenkins-bkpr-rg'
 
@@ -376,7 +390,7 @@ spec:
                     // See:
                     //  gcloud container get-server-config
                     // def gkeKversions = ["1.14", "1.15"]
-                    def gkeKversions = ["1.15"]
+                    def gkeKversions = GKE_REL.split(",")
                     for (x in gkeKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
@@ -470,7 +484,7 @@ spec:
                     // See:
                     //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
                     // def aksKversions = ["1.14", "1.15", "1.16"]
-                    def aksKversions = ["1.16"]
+                    def aksKversions = AKS_REL.split(",")
                     for (x in aksKversions) {
                         def kversion = x  // local bind required because closures
                         def resourceGroup = 'jenkins-bkpr-rg'
@@ -589,7 +603,7 @@ spec:
                     }
 
                     // def eksKversions = ["1.14", "1.15"]
-                    def eksKversions = ["1.15"]
+                    def eksKversions = EKS_REL.split(",")
                     for (x in eksKversions) {
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
@@ -705,7 +719,7 @@ spec:
                     }
 
                     // we use GKE for testing the generic platform
-                    def genericKversions = ["1.15"]
+                    def genericKversions = GEN_REL.split(",")
                     for (x in genericKversions) {
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
