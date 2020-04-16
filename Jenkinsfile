@@ -32,8 +32,9 @@ def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
 
 // Get array of releases (\d.\d+) from comma separated string
 // `collect` to transform them thru regex, `findAll` to filter-in non-nulls
+@NonCPS
 def releasesFromStr(strRel) {
-  strRel.split(",").collect{ m = (it =~ /(\d\.\d+)/); if (m) m[0][1] }.findAll{ it }
+  strRel.split(",").collect{ def m = (it =~ /(\d\.\d+)/); if (m) m[0][1] }.findAll{ it }
 }
 
 def scmCheckout() {
