@@ -399,7 +399,6 @@ spec:
                     // def gkeKversions = ["1.14", "1.15"]
                     def gkeKversions = releasesFromStr(params.GKE_REL)
                     for (x in gkeKversions) {
-                        if (!x) continue
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
@@ -494,7 +493,6 @@ spec:
                     // def aksKversions = ["1.14", "1.15", "1.16"]
                     def aksKversions = releasesFromStr(params.AKS_REL)
                     for (x in aksKversions) {
-                        if (!x) continue
                         def kversion = x  // local bind required because closures
                         def resourceGroup = 'jenkins-bkpr-rg'
                         def location = "eastus"
@@ -614,7 +612,6 @@ spec:
                     // def eksKversions = ["1.14", "1.15"]
                     def eksKversions = releasesFromStr(params.EKS_REL)
                     for (x in eksKversions) {
-                        if (!x) continue
                         def kversion = x  // local bind required because closures
                         def awsRegion = "us-east-1"
                         def awsUserPoolId = "${awsRegion}_QkFNHuI5g"
@@ -731,7 +728,6 @@ spec:
                     // we use GKE for testing the generic platform
                     def genericKversions = releasesFromStr(params.GEN_REL)
                     for (x in genericKversions) {
-                        if (!x) continue
                         def kversion = x  // local bind required because closures
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
