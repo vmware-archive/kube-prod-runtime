@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-
 local trim = function(str) (
   if std.startsWith(str, " ") || std.startsWith(str, "\n") then
     trim(std.substr(str, 1, std.length(str) - 1))
@@ -31,6 +29,9 @@ local trim = function(str) (
 local VERSION = trim(importstr "../VERSION");
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -41,14 +42,14 @@ local VERSION = trim(importstr "../VERSION");
   // This is intended as a publicly available place to see the details
   // of the BKPR install.  If you ever want to know which version of
   // BKPR is currently installed, this is the place you should look.
-  config: kube.ConfigMap("release") + $.metadata {
+  config: $.lib.kube.ConfigMap("release") + $.metadata {
     data+: {
       release: VERSION,
       // There may be additional fields here in future
     },
   },
 
-  readerRole: kube.Role($.p + "release-reader") + $.metadata {
+  readerRole: $.lib.kube.Role($.p + "release-reader") + $.metadata {
     rules: [
       {
         apiGroups: [""],
@@ -59,7 +60,7 @@ local VERSION = trim(importstr "../VERSION");
     ],
   },
 
-  readerRoleBinding: kube.RoleBinding($.p + "release-read-public") + $.metadata {
+  readerRoleBinding: $.lib.kube.RoleBinding($.p + "release-read-public") + $.metadata {
     roleRef_: $.readerRole,
     subjects: [{
       kind: "Group",

@@ -17,9 +17,6 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
-
 local ELASTICSEARCH_CURATOR_IMAGE = (import "images.json")["elasticsearch-curator"];
 
 local action_file_yml_tmpl = importstr "elasticsearch-config/action_file_yml_tmpl";
@@ -27,6 +24,10 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
 
 // Implement elasticsearch-curator as a Kubernetes CronJob
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   namespace:: "kubeprod",
   name:: "elasticsearch-curator",
   retention:: error "retention must be externally provided ...",
@@ -34,7 +35,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
   port:: error "port must be externally provided ...",
   schedule:: error "schedule must be externally provided ...",
 
-  elasticsearch_curator_config: utils.HashedConfigMap($.name) {
+  elasticsearch_curator_config: $.lib.utils.HashedConfigMap($.name) {
     metadata+: {namespace: $.namespace},
     data+: {
       "action_file.yml": std.format(action_file_yml_tmpl, [$.retention]),
@@ -42,7 +43,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
     },
   },
 
-  elasticsearch_curator_cronjob: kube.CronJob($.name) {
+  elasticsearch_curator_cronjob: $.lib.kube.CronJob($.name) {
     metadata+: {namespace: $.namespace},
     spec+: {
       schedule: $.schedule,
@@ -51,7 +52,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
           template+: {
             spec+: {
               containers_+: {
-                curator: kube.Container("curator") {
+                curator: $.lib.kube.Container("curator") {
                   image: ELASTICSEARCH_CURATOR_IMAGE,
                   args: ["--config", "/etc/config/config.yml", "/etc/config/action_file.yml"],
                   volumeMounts_+: {
@@ -59,7 +60,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
                   },
                 },
               },
-              volumes_+: {config_vol: kube.ConfigMapVolume($.elasticsearch_curator_config)},
+              volumes_+: {config_vol: $.lib.kube.ConfigMapVolume($.elasticsearch_curator_config)},
             },
           },
         },

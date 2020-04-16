@@ -17,12 +17,13 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
-
 local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -30,7 +31,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  config: utils.HashedConfigMap($.p + "nginx-ingress") + $.metadata {
+  config: $.lib.utils.HashedConfigMap($.p + "nginx-ingress") + $.metadata {
     data+: {
       "proxy-buffer-size": "16k",
       "proxy-connect-timeout": "15",
@@ -47,13 +48,13 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  tcpconf: utils.HashedConfigMap($.p + "tcp-services") + $.metadata {
+  tcpconf: $.lib.utils.HashedConfigMap($.p + "tcp-services") + $.metadata {
   },
 
-  udpconf: utils.HashedConfigMap($.p + "udp-services") + $.metadata {
+  udpconf: $.lib.utils.HashedConfigMap($.p + "udp-services") + $.metadata {
   },
 
-  ingressControllerClusterRole: kube.ClusterRole($.p + "nginx-ingress-controller") {
+  ingressControllerClusterRole: $.lib.kube.ClusterRole($.p + "nginx-ingress-controller") {
     rules: [
       {
         apiGroups: [""],
@@ -98,7 +99,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     ],
   },
 
-  ingressControllerRole: kube.Role($.p + "nginx-ingress-controller") + $.metadata {
+  ingressControllerRole: $.lib.kube.Role($.p + "nginx-ingress-controller") + $.metadata {
     rules: [
       {
         apiGroups: [""],
@@ -151,20 +152,20 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     ],
   },
 
-  ingressControllerClusterRoleBinding: kube.ClusterRoleBinding($.p + "nginx-ingress-controller") {
+  ingressControllerClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "nginx-ingress-controller") {
     roleRef_: $.ingressControllerClusterRole,
     subjects_: [$.serviceAccount],
   },
 
-  ingressControllerRoleBinding: kube.RoleBinding($.p + "nginx-ingress-controller") + $.metadata {
+  ingressControllerRoleBinding: $.lib.kube.RoleBinding($.p + "nginx-ingress-controller") + $.metadata {
     roleRef_: $.ingressControllerRole,
     subjects_: [$.serviceAccount],
   },
 
-  serviceAccount: kube.ServiceAccount($.p + "nginx-ingress-controller") + $.metadata {
+  serviceAccount: $.lib.kube.ServiceAccount($.p + "nginx-ingress-controller") + $.metadata {
   },
 
-  svc: kube.Service($.p + "nginx-ingress") + $.metadata {
+  svc: $.lib.kube.Service($.p + "nginx-ingress") + $.metadata {
     target_pod: $.controller.spec.template,
     spec+: {
       ports: [
@@ -176,7 +177,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  hpa: kube.HorizontalPodAutoscaler($.p + "nginx-ingress-controller") + $.metadata {
+  hpa: $.lib.kube.HorizontalPodAutoscaler($.p + "nginx-ingress-controller") + $.metadata {
     target: $.controller,
     spec+: {
       // Put a cap on growth due to (eg) DoS attacks.
@@ -185,12 +186,12 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
     },
   },
 
-  pdb: kube.PodDisruptionBudget($.p + "nginx-ingress-controller") + $.metadata {
+  pdb: $.lib.kube.PodDisruptionBudget($.p + "nginx-ingress-controller") + $.metadata {
     target_pod: $.controller.spec.template,
     spec+: {minAvailable: $.controller.spec.replicas - 1},
   },
 
-  controller: kube.Deployment($.p + "nginx-ingress-controller") + $.metadata {
+  controller: $.lib.kube.Deployment($.p + "nginx-ingress-controller") + $.metadata {
     local this = self,
     spec+: {
       // Ensure at least n+1.  NB: HPA will increase replicas dynamically.
@@ -208,9 +209,9 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
           //hostNetwork: true, // access real source IPs, IPv6, etc
           terminationGracePeriodSeconds: 60,
           // add AZ and node antiaffinity
-          affinity+: utils.weakNodeDiversity(this.spec.selector),
+          affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
-            default: kube.Container("nginx") {
+            default: $.lib.kube.Container("nginx") {
               image: NGNIX_INGRESS_IMAGE,
               securityContext: {
                 runAsUser: 1001,
@@ -220,8 +221,8 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
                 },
               },
               env_+: {
-                POD_NAME: kube.FieldRef("metadata.name"),
-                POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
+                POD_NAME: $.lib.kube.FieldRef("metadata.name"),
+                POD_NAMESPACE: $.lib.kube.FieldRef("metadata.namespace"),
               },
               args_+: {
                 local fqname(o) = "%s/%s" % [o.metadata.namespace, o.metadata.name],

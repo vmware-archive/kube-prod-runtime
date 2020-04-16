@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local PROMETHEUS_IMAGE = (import "images.json").prometheus;
@@ -35,16 +34,20 @@ local ALERTMANAGER_IMAGE = (import "images.json").alertmanager;
 local ALERTMANAGER_PORT = 9093;
 
 local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
-// Builds the `webhook-url` used by a container to trigger a reload
-// after a ConfigMap change
-local get_cm_web_hook_url = function(port, path) (
-  local new_path = utils.trimUrl(path);
-  "http://localhost:%s%s/-/reload" % [port, new_path]
-);
 
 // TODO: add blackbox-exporter
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+    // Builds the `webhook-url` used by a container to trigger a reload
+    // after a ConfigMap change
+    get_cm_web_hook_url:: function(port, path) (
+      local new_path = $.lib.utils.trimUrl(path);
+      "http://localhost:%s%s/-/reload" % [port, new_path]
+    ),
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -103,7 +106,7 @@ local get_cm_web_hook_url = function(port, path) (
     },
   },
 
-  ingress: utils.AuthIngress($.p + "prometheus") + $.metadata {
+  ingress: $.lib.utils.AuthIngress($.p + "prometheus") + $.metadata {
     local this = self,
     host:: error "host is required",
     prom_path:: "/",
@@ -141,7 +144,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "basic.rules",
-          rules: [{alert: kv[0]} + kv[1] for kv in kube.objectItems($.basic_rules)],
+          rules: [{alert: kv[0]} + kv[1] for kv in $.lib.kube.objectItems($.basic_rules)],
         },
       ],
     },
@@ -150,7 +153,7 @@ local get_cm_web_hook_url = function(port, path) (
       groups: [
         {
           name: "monitoring.rules",
-          rules: [{alert: kv[0]} + kv[1] for kv in kube.objectItems($.monitoring_rules)],
+          rules: [{alert: kv[0]} + kv[1] for kv in $.lib.kube.objectItems($.monitoring_rules)],
         },
       ],
     },
@@ -160,10 +163,10 @@ local get_cm_web_hook_url = function(port, path) (
   prometheus: {
     local prom = self,
 
-    serviceAccount: kube.ServiceAccount($.p + "prometheus") + $.metadata {
+    serviceAccount: $.lib.kube.ServiceAccount($.p + "prometheus") + $.metadata {
     },
 
-    prometheusRole: kube.ClusterRole($.p + "prometheus") {
+    prometheusRole: $.lib.kube.ClusterRole($.p + "prometheus") {
       rules: [
         {
           apiGroups: [""],
@@ -182,22 +185,22 @@ local get_cm_web_hook_url = function(port, path) (
       ],
     },
 
-    prometheusBinding: kube.ClusterRoleBinding($.p + "prometheus") {
+    prometheusBinding: $.lib.kube.ClusterRoleBinding($.p + "prometheus") {
       roleRef_: prom.prometheusRole,
       subjects_+: [prom.serviceAccount],
     },
 
-    svc: kube.Service($.p + "prometheus") + $.metadata {
+    svc: $.lib.kube.Service($.p + "prometheus") + $.metadata {
       target_pod: prom.deploy.spec.template,
     },
 
-    config: kube.ConfigMap($.p + "prometheus") + $.metadata {
+    config: $.lib.kube.ConfigMap($.p + "prometheus") + $.metadata {
       data+: $.rules {
         "prometheus.yml": kubecfg.manifestYaml($.config),
       },
     },
 
-    deploy: kube.StatefulSet($.p + "prometheus") + $.metadata {
+    deploy: $.lib.kube.StatefulSet($.p + "prometheus") + $.metadata {
       spec+: {
         volumeClaimTemplates_: {
           data: {
@@ -209,20 +212,20 @@ local get_cm_web_hook_url = function(port, path) (
             annotations+: {
               "prometheus.io/scrape": "true",
               "prometheus.io/port": std.toString(PROMETHEUS_PORT),
-              "prometheus.io/path": utils.path_join($.ingress.prom_path, "metrics"),
+              "prometheus.io/path": $.lib.utils.path_join($.ingress.prom_path, "metrics"),
             },
           },
           spec+: {
             terminationGracePeriodSeconds: 300,
             serviceAccountName: prom.serviceAccount.metadata.name,
             volumes_+: {
-              config: kube.ConfigMapVolume(prom.config),
+              config: $.lib.kube.ConfigMapVolume(prom.config),
             },
             securityContext+: {
               fsGroup: 1001,
             },
             containers_+: {
-              default: kube.Container("prometheus") {
+              default: $.lib.kube.Container("prometheus") {
                 local this = self,
                 image: PROMETHEUS_IMAGE,
                 securityContext+: {
@@ -270,11 +273,11 @@ local get_cm_web_hook_url = function(port, path) (
                   initialDelaySeconds: 5,
                 },
               },
-              config_reload: kube.Container("configmap-reload") {
+              config_reload: $.lib.kube.Container("configmap-reload") {
                 image: CONFIGMAP_RELOAD_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
-                  "webhook-url": get_cm_web_hook_url(PROMETHEUS_PORT, $.ingress.prom_path),
+                  "webhook-url": $.lib.get_cm_web_hook_url(PROMETHEUS_PORT, $.ingress.prom_path),
                   "webhook-method": "POST",
                 },
                 volumeMounts_+: {
@@ -296,17 +299,17 @@ local get_cm_web_hook_url = function(port, path) (
     // Amount of persistent storage required by Alertmanager
     storage:: "5Gi",
 
-    svc: kube.Service($.p + "alertmanager") + $.metadata {
+    svc: $.lib.kube.Service($.p + "alertmanager") + $.metadata {
       target_pod: am.deploy.spec.template,
     },
 
-    config: kube.ConfigMap($.p + "alertmanager") + $.metadata {
+    config: $.lib.kube.ConfigMap($.p + "alertmanager") + $.metadata {
       data+: {
         "config.yml": kubecfg.manifestYaml($.am_config),
       },
     },
 
-    deploy: kube.StatefulSet($.p + "alertmanager") + $.metadata {
+    deploy: $.lib.kube.StatefulSet($.p + "alertmanager") + $.metadata {
       spec+: {
         volumeClaimTemplates_+: {
           storage: {storage: am.storage},
@@ -316,19 +319,19 @@ local get_cm_web_hook_url = function(port, path) (
             annotations+: {
               "prometheus.io/scrape": "true",
               "prometheus.io/port": std.toString(ALERTMANAGER_PORT),
-              "prometheus.io/path": utils.path_join($.ingress.am_path, "metrics"),
+              "prometheus.io/path": $.lib.utils.path_join($.ingress.am_path, "metrics"),
             },
           },
           spec+: {
             volumes_+: {
-              config: kube.ConfigMapVolume(am.config),
+              config: $.lib.kube.ConfigMapVolume(am.config),
             },
             securityContext+: {
               runAsUser: 1001,
               fsGroup: 1001,
             },
             containers_+: {
-              default: kube.Container("alertmanager") {
+              default: $.lib.kube.Container("alertmanager") {
                 local this = self,
                 image: ALERTMANAGER_IMAGE,
                 args_+: {
@@ -344,7 +347,7 @@ local get_cm_web_hook_url = function(port, path) (
                   storage: {mountPath: "/opt/bitnami/alertmanager/data"},
                 },
                 livenessProbe+: {
-                  httpGet: {path: utils.path_join($.ingress.am_path, "-/healthy"), port: ALERTMANAGER_PORT},
+                  httpGet: {path: $.lib.utils.path_join($.ingress.am_path, "-/healthy"), port: ALERTMANAGER_PORT},
                   initialDelaySeconds: 60,
                   failureThreshold: 10,
                 },
@@ -354,11 +357,11 @@ local get_cm_web_hook_url = function(port, path) (
                   periodSeconds: 3,
                 },
               },
-              config_reload: kube.Container("configmap-reload") {
+              config_reload: $.lib.kube.Container("configmap-reload") {
                 image: CONFIGMAP_RELOAD_IMAGE,
                 args_+: {
                   "volume-dir": "/config",
-                  "webhook-url": get_cm_web_hook_url(ALERTMANAGER_PORT, $.ingress.am_path),
+                  "webhook-url": $.lib.get_cm_web_hook_url(ALERTMANAGER_PORT, $.ingress.am_path),
                   "webhook-method": "POST",
                 },
                 volumeMounts_+: {
@@ -373,7 +376,7 @@ local get_cm_web_hook_url = function(port, path) (
   },
 
   nodeExporter: {
-    daemonset: kube.DaemonSet($.p + "node-exporter") + $.metadata {
+    daemonset: $.lib.kube.DaemonSet($.p + "node-exporter") + $.metadata {
       local this = self,
       spec+: {
         template+: {
@@ -388,16 +391,16 @@ local get_cm_web_hook_url = function(port, path) (
             hostNetwork: true,
             hostPID: true,
             volumes_+: {
-              root: kube.HostPathVolume("/"),
-              procfs: kube.HostPathVolume("/proc"),
-              sysfs: kube.HostPathVolume("/sys"),
+              root: $.lib.kube.HostPathVolume("/"),
+              procfs: $.lib.kube.HostPathVolume("/proc"),
+              sysfs: $.lib.kube.HostPathVolume("/sys"),
             },
             tolerations: [{
               effect: "NoSchedule",
               key: "node-role.kubernetes.io/master",
             }],
             containers_+: {
-              default: kube.Container("node-exporter") {
+              default: $.lib.kube.Container("node-exporter") {
                 image: NODE_EXPORTER_IMAGE,
                 local v = self.volumeMounts_,
                 args_+: {
@@ -438,10 +441,10 @@ local get_cm_web_hook_url = function(port, path) (
   },
 
   ksm: {
-    serviceAccount: kube.ServiceAccount($.p + "kube-state-metrics") + $.metadata {
+    serviceAccount: $.lib.kube.ServiceAccount($.p + "kube-state-metrics") + $.metadata {
     },
 
-    clusterRole: kube.ClusterRole($.p + "kube-state-metrics") {
+    clusterRole: $.lib.kube.ClusterRole($.p + "kube-state-metrics") {
       local core = "",  // workaround empty-string-key bug in `jsonnet fmt`
       local listwatch = {
         [core]: ["configmaps", "endpoints", "limitranges", "namespaces", "nodes", "persistentvolumeclaims", "persistentvolumes", "pods", "replicationcontrollers", "resourcequotas", "secrets", "services"],
@@ -457,7 +460,7 @@ local get_cm_web_hook_url = function(port, path) (
         "storage.k8s.io": ["storageclasses", "volumeattachments"],
         "storageclasses.k8s.io": ["storageclasses"],
       },
-      all_resources:: std.set(std.flattenArrays(kube.objectValues(listwatch))),
+      all_resources:: std.set(std.flattenArrays($.lib.kube.objectValues(listwatch))),
       rules: [{
         apiGroups: [k],
         resources: listwatch[k],
@@ -465,12 +468,12 @@ local get_cm_web_hook_url = function(port, path) (
       } for k in std.objectFields(listwatch)],
     },
 
-    clusterRoleBinding: kube.ClusterRoleBinding($.p + "kube-state-metrics") {
+    clusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "kube-state-metrics") {
       roleRef_: $.ksm.clusterRole,
       subjects_: [$.ksm.serviceAccount],
     },
 
-    role: kube.Role($.p + "kube-state-metrics-resizer") + $.metadata {
+    role: $.lib.kube.Role($.p + "kube-state-metrics-resizer") + $.metadata {
       rules: [
         {
           apiGroups: [""],
@@ -486,12 +489,12 @@ local get_cm_web_hook_url = function(port, path) (
       ],
     },
 
-    roleBinding: kube.RoleBinding($.p + "kube-state-metrics") + $.metadata {
+    roleBinding: $.lib.kube.RoleBinding($.p + "kube-state-metrics") + $.metadata {
       roleRef_: $.ksm.role,
       subjects_: [$.ksm.serviceAccount],
     },
 
-    deploy: kube.Deployment($.p + "kube-state-metrics") + $.metadata {
+    deploy: $.lib.kube.Deployment($.p + "kube-state-metrics") + $.metadata {
       local deploy = self,
       spec+: {
         template+: {
@@ -505,7 +508,7 @@ local get_cm_web_hook_url = function(port, path) (
             local spec = self,
             serviceAccountName: $.ksm.serviceAccount.metadata.name,
             containers_+: {
-              default+: kube.Container("ksm") {
+              default+: $.lib.kube.Container("ksm") {
                 image: KUBE_STATE_METRICS_IMAGE,
                 ports_: {
                   metrics: {containerPort: 8080},
@@ -551,7 +554,7 @@ local get_cm_web_hook_url = function(port, path) (
                   timeoutSeconds: 5,
                 },
               },
-              resizer: kube.Container("addon-resizer") {
+              resizer: $.lib.kube.Container("addon-resizer") {
                 image: ADDON_RESIZER_IMAGE,
                 command: ["/pod_nanny"],
                 args_+: {
@@ -564,8 +567,8 @@ local get_cm_web_hook_url = function(port, path) (
                   deployment: deploy.metadata.name,
                 },
                 env_+: {
-                  MY_POD_NAME: kube.FieldRef("metadata.name"),
-                  MY_POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
+                  MY_POD_NAME: $.lib.kube.FieldRef("metadata.name"),
+                  MY_POD_NAMESPACE: $.lib.kube.FieldRef("metadata.namespace"),
                 },
                 resources: {
                   limits: {cpu: "100m", memory: "30Mi"},

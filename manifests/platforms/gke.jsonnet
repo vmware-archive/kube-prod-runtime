@@ -19,24 +19,28 @@
 
 // Top-level file for Google GKE
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
-local cert_manager = import "../components/cert-manager.jsonnet";
-local edns = import "../components/externaldns.jsonnet";
-local nginx_ingress = import "../components/nginx-ingress.jsonnet";
-local prometheus = import "../components/prometheus.jsonnet";
-local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
-local fluentd_es = import "../components/fluentd-es.jsonnet";
-local elasticsearch = import "../components/elasticsearch.jsonnet";
-local kibana = import "../components/kibana.jsonnet";
-local grafana = import "../components/grafana.jsonnet";
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
+  components:: {
+    cert_manager: (import "../components/cert-manager.jsonnet") { lib+: $.lib },
+    edns: (import "../components/externaldns.jsonnet") { lib+: $.lib },
+    nginx_ingress: (import "../components/nginx-ingress.jsonnet") { lib+: $.lib },
+    oauth2_proxy: (import "../components/oauth2-proxy.jsonnet") { lib+: $.lib },
+    fluentd_es: (import "../components/fluentd-es.jsonnet") { lib+: $.lib },
+    elasticsearch: (import "../components/elasticsearch.jsonnet") { lib+: $.lib },
+    kibana: (import "../components/kibana.jsonnet") { lib+: $.lib },
+    grafana: (import "../components/grafana.jsonnet") { lib+: $.lib },
+    prometheus: (import "../components/prometheus.jsonnet") { lib+: $.lib },
+  },
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: kube.Namespace("kubeprod"),
+  kubeprod: $.lib.kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -44,15 +48,15 @@ local grafana = import "../components/grafana.jsonnet";
 
   version: version,
 
-  grafana: grafana {
+  grafana: $.components.grafana {
     prometheus:: $.prometheus.prometheus.svc,
     ingress+: {
       host: "grafana." + $.external_dns_zone_name,
     },
   },
 
-  edns: edns {
-    gcreds: utils.HashedSecret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
+  edns: $.components.edns {
+    gcreds: $.lib.utils.HashedSecret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
       data_+: {
         "credentials.json": $.config.externalDns.credentials,
       },
@@ -64,7 +68,7 @@ local grafana = import "../components/grafana.jsonnet";
         template+: {
           spec+: {
             volumes_+: {
-              gcreds: kube.SecretVolume($.edns.gcreds),
+              gcreds: $.lib.kube.SecretVolume($.edns.gcreds),
             },
             containers_+: {
               edns+: {
@@ -86,14 +90,14 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  cert_manager: cert_manager {
+  cert_manager: $.components.cert_manager {
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
-  nginx_ingress: nginx_ingress,
+  nginx_ingress: $.components.nginx_ingress,
 
-  oauth2_proxy: oauth2_proxy {
+  oauth2_proxy: $.components.oauth2_proxy {
     local oauth2 = self,
 
     secret+: {
@@ -104,7 +108,7 @@ local grafana = import "../components/grafana.jsonnet";
       host: "auth." + $.external_dns_zone_name,
     },
 
-    gcreds: utils.HashedSecret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
+    gcreds: $.lib.utils.HashedSecret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
       data_+: {
         "credentials.json": $.config.oauthProxy.google_service_account_json,
       },
@@ -115,7 +119,7 @@ local grafana = import "../components/grafana.jsonnet";
         template+: {
           spec+: {
             volumes_+: {
-              gcreds: kube.SecretVolume(oauth2.gcreds),
+              gcreds: $.lib.kube.SecretVolume(oauth2.gcreds),
             },
             containers_+: {
               proxy+: {
@@ -138,19 +142,19 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  prometheus: prometheus {
+  prometheus: $.components.prometheus {
     ingress+: {
       host: "prometheus." + $.external_dns_zone_name,
     },
   },
 
-  fluentd_es: fluentd_es {
+  fluentd_es: $.components.fluentd_es {
     es:: $.elasticsearch,
   },
 
-  elasticsearch: elasticsearch,
+  elasticsearch: $.components.elasticsearch,
 
-  kibana: kibana {
+  kibana: $.components.kibana {
     es:: $.elasticsearch,
 
     ingress+: {

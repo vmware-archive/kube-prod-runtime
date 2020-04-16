@@ -17,9 +17,6 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
-
 local ELASTICSEARCH_IMAGE = (import "images.json").elasticsearch;
 
 // Mount point for the data volume (used by multiple containers, like the
@@ -39,6 +36,10 @@ local ELASTICSEARCH_EXPORTER_IMAGE = (import "images.json")["elasticsearch-expor
 local ELASTICSEARCH_EXPORTER_PORT = 9102;
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   min_master_nodes:: 2,
 
@@ -56,10 +57,10 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
     },
   },
 
-  serviceAccount: kube.ServiceAccount($.p + "elasticsearch-logging") + $.metadata {
+  serviceAccount: $.lib.kube.ServiceAccount($.p + "elasticsearch-logging") + $.metadata {
   },
 
-  elasticsearchRole: kube.ClusterRole($.p + "elasticsearch-logging") + $.labels {
+  elasticsearchRole: $.lib.kube.ClusterRole($.p + "elasticsearch-logging") + $.labels {
     rules: [
       {
         apiGroups: [""],
@@ -69,24 +70,24 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
     ],
   },
 
-  elasticsearchBinding: kube.ClusterRoleBinding($.p + "elasticsearch-logging") + $.labels {
+  elasticsearchBinding: $.lib.kube.ClusterRoleBinding($.p + "elasticsearch-logging") + $.labels {
     roleRef_: $.elasticsearchRole,
     subjects_+: [$.serviceAccount],
   },
 
-  disruptionBudget: kube.PodDisruptionBudget($.p + "elasticsearch-logging") + $.metadata {
+  disruptionBudget: $.lib.kube.PodDisruptionBudget($.p + "elasticsearch-logging") + $.metadata {
     target_pod: $.sts.spec.template,
     spec+: {maxUnavailable: 1},
   },
 
   // ConfigMap for additional Java security properties
-  java_security: utils.HashedConfigMap($.p + "java-elasticsearch-logging") + $.metadata {
+  java_security: $.lib.utils.HashedConfigMap($.p + "java-elasticsearch-logging") + $.metadata {
     data+: {
       "java.security": (importstr "elasticsearch-config/java.security"),
     },
   },
 
-  sts: kube.StatefulSet($.p + "elasticsearch-logging") + $.metadata {
+  sts: $.lib.kube.StatefulSet($.p + "elasticsearch-logging") + $.metadata {
     local this = self,
     spec+: {
       podManagementPolicy: "Parallel",
@@ -102,16 +103,16 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
           // add AZ and node antiaffinity
-          affinity+: utils.weakNodeDiversity(this.spec.selector),
+          affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           default_container: "elasticsearch_logging",
           volumes_+: {
-            java_security: kube.ConfigMapVolume($.java_security),
+            java_security: $.lib.kube.ConfigMapVolume($.java_security),
           },
           securityContext: {
             fsGroup: 1001,
           },
           containers_+: {
-            elasticsearch_logging: kube.Container("elasticsearch-logging") {
+            elasticsearch_logging: $.lib.kube.Container("elasticsearch-logging") {
               local container = self,
               image: ELASTICSEARCH_IMAGE,
               // This can massively vary depending on the logging volume
@@ -148,7 +149,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
                 ELASTICSEARCH_NODE_PORT_NUMBER: ELASTICSEARCH_TRANSPORT_PORT,
                 ELASTICSEARCH_CLUSTER_HOSTS: $.svc.metadata.name,
                 ELASTICSEARCH_CLUSTER_MASTER_HOSTS: "%s-0" % $.sts.metadata.name,
-                local heapsize = kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
+                local heapsize = $.lib.kube.siToNum(container.resources.requests.memory) / std.pow(2, 20),
                 ES_JAVA_OPTS: std.join(" ", [
                   "-Djava.security.properties=%s" % JAVA_SECURITY_MOUNTPOINT,
                   "-Xms%dm" % heapsize,  // ES asserts that these are equal
@@ -171,7 +172,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
                 successThreshold: 1,  // Minimum consecutive successes for the probe to be considered successful after having failed.
               },
             },
-            prom_exporter: kube.Container("prom-exporter") {
+            prom_exporter: $.lib.kube.Container("prom-exporter") {
               image: ELASTICSEARCH_EXPORTER_IMAGE,
               command: ["elasticsearch_exporter"],
               args_+: {
@@ -189,7 +190,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
             },
           },
           initContainers_+: {
-            elasticsearch_logging_init: kube.Container("elasticsearch-logging-init") {
+            elasticsearch_logging_init: $.lib.kube.Container("elasticsearch-logging-init") {
               image: "bitnami/minideb:stretch",
               // TODO: investigate feasibility of switching to https://kubernetes.io/docs/tasks/administer-cluster/sysctl-cluster/#setting-sysctls-for-a-pod
               // NOTE: copied verbatim from https://www.elastic.co/guide/en/elasticsearch/reference/5.6/vm-max-map-count.html
@@ -209,7 +210,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
     },
   },
 
-  svc: kube.Service($.p + "elasticsearch-logging") + $.metadata {
+  svc: $.lib.kube.Service($.p + "elasticsearch-logging") + $.metadata {
     target_pod: $.sts.spec.template,
     metadata+: {
       labels+: {

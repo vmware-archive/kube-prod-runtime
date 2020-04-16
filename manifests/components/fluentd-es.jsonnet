@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local FLUENTD_ES_IMAGE = (import "images.json").fluentd;
@@ -29,6 +28,10 @@ local FLUENTD_ES_LOG_POS_PATH = "/var/log/fluentd-pos";
 local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -40,13 +43,13 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
 
   es: error "elasticsearch is required",
 
-  fluentd_es_conf: utils.HashedConfigMap($.p + "fluentd-es") + $.metadata {
+  fluentd_es_conf: $.lib.utils.HashedConfigMap($.p + "fluentd-es") + $.metadata {
     data+: {
       "fluentd.conf": (importstr "fluentd-es-config/fluentd.conf"),
     },
   },
 
-  fluentd_es_configd: utils.HashedConfigMap($.p + "fluentd-es-configd") + $.metadata {
+  fluentd_es_configd: $.lib.utils.HashedConfigMap($.p + "fluentd-es-configd") + $.metadata {
     data+: {
       // Verbatim from upstream:
       "containers.input.conf": (importstr "fluentd-es-config/containers.input.conf"),
@@ -58,10 +61,10 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     },
   },
 
-  serviceAccount: kube.ServiceAccount($.p + "fluentd-es") + $.metadata {
+  serviceAccount: $.lib.kube.ServiceAccount($.p + "fluentd-es") + $.metadata {
   },
 
-  fluentdRole: kube.ClusterRole($.p + "fluentd-es") {
+  fluentdRole: $.lib.kube.ClusterRole($.p + "fluentd-es") {
     rules: [
       {
         apiGroups: [""],
@@ -71,12 +74,12 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     ],
   },
 
-  fluentdBinding: kube.ClusterRoleBinding($.p + "fluentd-es") {
+  fluentdBinding: $.lib.kube.ClusterRoleBinding($.p + "fluentd-es") {
     roleRef_: $.fluentdRole,
     subjects_+: [$.serviceAccount],
   },
 
-  daemonset: kube.DaemonSet($.p + "fluentd-es") + $.metadata {
+  daemonset: $.lib.kube.DaemonSet($.p + "fluentd-es") + $.metadata {
     spec+: {
       template+: $.criticalPod {
         metadata+: {
@@ -88,7 +91,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
         },
         spec+: {
           containers_+: {
-            fluentd_es: kube.Container("fluentd-es") {
+            fluentd_es: $.lib.kube.Container("fluentd-es") {
               image: FLUENTD_ES_IMAGE,
               command: ["fluentd"],
               args: [
@@ -136,12 +139,12 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
           serviceAccountName: $.serviceAccount.metadata.name,
           terminationGracePeriodSeconds: 30,
           volumes_+: {
-            varlog: kube.HostPathVolume("/var/log", "Directory"),
-            varlogpos: kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH, "DirectoryOrCreate"),
-            varlogbuffers: kube.HostPathVolume(FLUENTD_ES_LOG_BUFFERS_PATH, "DirectoryOrCreate"),
-            varlibdockercontainers: kube.HostPathVolume("/var/lib/docker/containers", "Directory"),
-            config: kube.ConfigMapVolume($.fluentd_es_conf),
-            configd: kube.ConfigMapVolume($.fluentd_es_configd),
+            varlog: $.lib.kube.HostPathVolume("/var/log", "Directory"),
+            varlogpos: $.lib.kube.HostPathVolume(FLUENTD_ES_LOG_POS_PATH, "DirectoryOrCreate"),
+            varlogbuffers: $.lib.kube.HostPathVolume(FLUENTD_ES_LOG_BUFFERS_PATH, "DirectoryOrCreate"),
+            varlibdockercontainers: $.lib.kube.HostPathVolume("/var/lib/docker/containers", "Directory"),
+            config: $.lib.kube.ConfigMapVolume($.fluentd_es_conf),
+            configd: $.lib.kube.ConfigMapVolume($.fluentd_es_configd),
           },
         },
       },

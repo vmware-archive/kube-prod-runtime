@@ -17,12 +17,15 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
 local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmesolver"];
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -39,17 +42,17 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
   // Letsencrypt environment (defaults to the production one)
   letsencrypt_environment:: "prod",
 
-  Issuer(name):: kube._Object("cert-manager.io/v1alpha2", "Issuer", name) {
+  Issuer(name):: $.lib.kube._Object("cert-manager.io/v1alpha2", "Issuer", name) {
   },
 
-  ClusterIssuer(name):: kube._Object("cert-manager.io/v1alpha2", "ClusterIssuer", name) {
+  ClusterIssuer(name):: $.lib.kube._Object("cert-manager.io/v1alpha2", "ClusterIssuer", name) {
   },
 
   CRDS: kubecfg.parseYaml(importstr "crds/cert-manager.yaml"),
 
-  sa: kube.ServiceAccount($.p + "cert-manager") + $.metadata,
+  sa: $.lib.kube.ServiceAccount($.p + "cert-manager") + $.metadata,
 
-  certificatesClusterRole: kube.ClusterRole($.p + "cert-manager-certificates") {
+  certificatesClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-certificates") {
     rules: [
       {
         apiGroups: ["cert-manager.io"],
@@ -87,12 +90,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  certificatesClusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager-certificates") {
+  certificatesClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "cert-manager-certificates") {
     roleRef_: $.certificatesClusterRole,
     subjects_+: [$.sa],
   },
 
-  ingressShimClusterRole: kube.ClusterRole($.p + "cert-manager-ingress-shim") {
+  ingressShimClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-ingress-shim") {
     rules: [
       {
         apiGroups: ["cert-manager.io"],
@@ -125,12 +128,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  ingressShimClusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager-ingress-shim") {
+  ingressShimClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "cert-manager-ingress-shim") {
     roleRef_: $.ingressShimClusterRole,
     subjects_+: [$.sa],
   },
 
-  challengesClusterRole: kube.ClusterRole($.p + "cert-manager-challenges") {
+  challengesClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-challenges") {
     rules: [
       // Use to update challenge resource status
       {
@@ -190,12 +193,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  challengesClusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager-challenges") {
+  challengesClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "cert-manager-challenges") {
     roleRef_: $.challengesClusterRole,
     subjects_+: [$.sa],
   },
 
-  issuersClusterRole: kube.ClusterRole($.p + "cert-manager-issuers") {
+  issuersClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-issuers") {
     rules: [
       {
         apiGroups: ["cert-manager.io"],
@@ -220,12 +223,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  issuersClusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager-issuers") {
+  issuersClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "cert-manager-issuers") {
     roleRef_: $.issuersClusterRole,
     subjects_+: [$.sa],
   },
 
-  clusterissuersClusterRole: kube.ClusterRole($.p + "cert-manager-clusterissuers") {
+  clusterissuersClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-clusterissuers") {
     rules: [
       {
         apiGroups: ["cert-manager.io"],
@@ -250,12 +253,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  clusterissuersClusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager-clusterissuers") {
+  clusterissuersClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "cert-manager-clusterissuers") {
     roleRef_: $.clusterissuersClusterRole,
     subjects_+: [$.sa],
   },
 
-  ordersClusterRole: kube.ClusterRole($.p + "cert-manager-orders") {
+  ordersClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-orders") {
     rules: [
       {
         apiGroups: ["acme.cert-manager.io"],
@@ -298,12 +301,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  ordersClusterRoleBinding: kube.ClusterRoleBinding($.p + "cert-manager-orders") {
+  ordersClusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "cert-manager-orders") {
     roleRef_: $.ordersClusterRole,
     subjects_+: [$.sa],
   },
 
-  editClusterRole: kube.ClusterRole($.p + "cert-manager-edit") {
+  editClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-edit") {
     rules: [
       {
         apiGroups: ["cert-manager.io"],
@@ -313,7 +316,7 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  viewClusterRole: kube.ClusterRole($.p + "cert-manager-view") {
+  viewClusterRole: $.lib.kube.ClusterRole($.p + "cert-manager-view") {
     rules: [
       {
         apiGroups: ["cert-manager.io"],
@@ -323,7 +326,7 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  leaderelectionRole: kube.Role($.p + "cert-manager:leaderelection") + $.metadata {
+  leaderelectionRole: $.lib.kube.Role($.p + "cert-manager:leaderelection") + $.metadata {
     rules: [
       {
         apiGroups: [""],
@@ -333,12 +336,12 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
     ],
   },
 
-  leaderelectionRoleBinding: kube.RoleBinding($.p + "cert-manager:leaderelection") + $.metadata {
+  leaderelectionRoleBinding: $.lib.kube.RoleBinding($.p + "cert-manager:leaderelection") + $.metadata {
     roleRef_: $.leaderelectionRole,
     subjects_+: [$.sa],
   },
 
-  deploy: kube.Deployment($.p + "cert-manager") + $.metadata {
+  deploy: $.lib.kube.Deployment($.p + "cert-manager") + $.metadata {
     spec+: {
       template+: {
         metadata+: {
@@ -351,7 +354,7 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
         spec+: {
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
-            default: kube.Container("cert-manager") {
+            default: $.lib.kube.Container("cert-manager") {
               image: CERT_MANAGER_IMAGE,
               args_+: {
                 v: "2",
@@ -363,7 +366,7 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
                 "webhook-namespace": "$(POD_NAMESPACE)",
               },
               env_+: {
-                POD_NAMESPACE: kube.FieldRef("metadata.namespace"),
+                POD_NAMESPACE: $.lib.kube.FieldRef("metadata.namespace"),
               },
               ports_+: {
                 prometheus: {containerPort: 9402},

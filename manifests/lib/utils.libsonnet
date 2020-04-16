@@ -19,9 +19,11 @@
 
 // Various opinionated helper functions, that might not be generally
 // useful in other deployments.
-local kube = import "kube.libsonnet";
 
 {
+  lib:: {
+    kube: import "kube.libsonnet",
+  },
   path_join(prefix, suffix):: (
     if std.endsWith(prefix, "/") then prefix + suffix
     else prefix + "/" + suffix
@@ -64,7 +66,7 @@ local kube = import "kube.libsonnet";
     },
   },
 
-  TlsIngress(name):: kube.Ingress(name) {
+  TlsIngress(name):: $.lib.kube.Ingress(name) {
     local this = self,
     metadata+: {
       annotations+: {
@@ -103,6 +105,6 @@ local kube = import "kube.libsonnet";
       labels+: {name: orig_name},
     },
   },
-  HashedConfigMap(name):: kube.ConfigMap(name) + hashed,
-  HashedSecret(name):: kube.Secret(name) + hashed,
+  HashedConfigMap(name):: $.lib.kube.ConfigMap(name) + hashed,
+  HashedSecret(name):: $.lib.kube.Secret(name) + hashed,
 }

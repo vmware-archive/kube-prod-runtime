@@ -17,13 +17,16 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -31,7 +34,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
     },
   },
 
-  secret: utils.HashedSecret($.p + "oauth2-proxy") + $.metadata {
+  secret: $.lib.utils.HashedSecret($.p + "oauth2-proxy") + $.metadata {
     data_+: {
       client_id: error "client_id is required",
       client_secret: error "client_secret is required",
@@ -39,12 +42,12 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
     },
   },
 
-  svc: kube.Service($.p + "oauth2-proxy") + $.metadata {
+  svc: $.lib.kube.Service($.p + "oauth2-proxy") + $.metadata {
     target_pod: $.deploy.spec.template,
     port: 4180,
   },
 
-  hpa: kube.HorizontalPodAutoscaler($.p + "oauth2-proxy") + $.metadata {
+  hpa: $.lib.kube.HorizontalPodAutoscaler($.p + "oauth2-proxy") + $.metadata {
     target: $.deploy,
     spec+: {
       // Put a cap on growth due to (eg) DoS attacks.
@@ -53,12 +56,12 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
     },
   },
 
-  pdb: kube.PodDisruptionBudget($.p + "oauth2-proxy") + $.metadata {
+  pdb: $.lib.kube.PodDisruptionBudget($.p + "oauth2-proxy") + $.metadata {
     target_pod: $.deploy.spec.template,
     spec+: {minAvailable: $.deploy.spec.replicas - 1},
   },
 
-  ingress: utils.TlsIngress($.p + "oauth2-ingress") + $.metadata {
+  ingress: $.lib.utils.TlsIngress($.p + "oauth2-ingress") + $.metadata {
     local this = self,
     host:: error "host is required",
 
@@ -67,7 +70,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
         // Restrict/extend this to match known+trusted sites within your oauth2-authenticated control.
         // NB: It is tempting to make this ".*" and just make it work for anything, but don't do this!
         // This will result in an open redirect vulnerability: https://www.owasp.org/index.php/Open_redirect
-        allowedRedirectors:: "[^/]+\\." + kubecfg.escapeStringRegex(utils.parentDomain(this.host)),
+        allowedRedirectors:: "[^/]+\\." + kubecfg.escapeStringRegex($.lib.utils.parentDomain(this.host)),
         "nginx.ingress.kubernetes.io/configuration-snippet": |||
           location "~^/(?<target_host>%s)(?<remaining_uri>.*)$" {
             rewrite ^ $scheme://$target_host$remaining_uri;
@@ -90,7 +93,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
     },
   },
 
-  deploy: kube.Deployment($.p + "oauth2-proxy") + $.metadata {
+  deploy: $.lib.kube.Deployment($.p + "oauth2-proxy") + $.metadata {
     local this = self,
     spec+: {
       // Ensure at least n+1.  NB: HPA will increase replicas dynamically.
@@ -98,9 +101,9 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
       template+: {
         spec+: {
           // add AZ and node antiaffinity
-          affinity+: utils.weakNodeDiversity(this.spec.selector),
+          affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
-            proxy: kube.Container("oauth2-proxy") {
+            proxy: $.lib.kube.Container("oauth2-proxy") {
               image: OAUTH2_PROXY_IMAGE,
               args_+: {
                 "email-domain": "*",
@@ -111,12 +114,12 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
                 "tls-cert-file": "",
                 upstream: "file:///dev/null",
                 "redirect-url": "https://%s/oauth2/callback" % $.ingress.host,
-                "cookie-domain": utils.parentDomain($.ingress.host),
+                "cookie-domain": $.lib.utils.parentDomain($.ingress.host),
               },
               env_+: {
-                OAUTH2_PROXY_CLIENT_ID: kube.SecretKeyRef($.secret, "client_id"),
-                OAUTH2_PROXY_CLIENT_SECRET: kube.SecretKeyRef($.secret, "client_secret"),
-                OAUTH2_PROXY_COOKIE_SECRET: kube.SecretKeyRef($.secret, "cookie_secret"),
+                OAUTH2_PROXY_CLIENT_ID: $.lib.kube.SecretKeyRef($.secret, "client_id"),
+                OAUTH2_PROXY_CLIENT_SECRET: $.lib.kube.SecretKeyRef($.secret, "client_secret"),
+                OAUTH2_PROXY_COOKIE_SECRET: $.lib.kube.SecretKeyRef($.secret, "cookie_secret"),
               },
               ports_+: {
                 http: {containerPort: 4180},

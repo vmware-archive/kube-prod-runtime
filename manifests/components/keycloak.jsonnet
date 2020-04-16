@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
@@ -40,6 +39,10 @@ local KEYCLOAK_METRICS_PATH = "/auth/realms/master/metrics";
 local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -50,10 +53,10 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
   galera: error "galera is required",
   oauth2_proxy: error "oauth2_proxy is required",
 
-  serviceAccount: kube.ServiceAccount($.p + "keycloak") + $.metadata {
+  serviceAccount: $.lib.kube.ServiceAccount($.p + "keycloak") + $.metadata {
   },
 
-  secret: utils.HashedSecret($.p + "keycloak") + $.metadata {
+  secret: $.lib.utils.HashedSecret($.p + "keycloak") + $.metadata {
     local this = self,
     data_+: {
       "bkpr-realm.json": std.format(
@@ -70,13 +73,13 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
     },
   },
 
-  scripts: utils.HashedConfigMap($.p + "keycloak-sh") + $.metadata {
+  scripts: $.lib.utils.HashedConfigMap($.p + "keycloak-sh") + $.metadata {
     data+: {
       "setup-db.sh": importstr "keycloak/setup-db.sh",
     },
   },
 
-  sts: kube.StatefulSet($.p + "keycloak") + $.metadata {
+  sts: $.lib.kube.StatefulSet($.p + "keycloak") + $.metadata {
     local this = self,
     spec+: {
       podManagementPolicy: "Parallel",
@@ -93,13 +96,13 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
           // add AZ and node antiaffinity
-          affinity+: utils.weakNodeDiversity(this.spec.selector),
+          affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           default_container: "keycloak",
           securityContext: {
             fsGroup: 1001,
           },
           containers_+: {
-            keycloak: kube.Container("keycloak") {
+            keycloak: $.lib.kube.Container("keycloak") {
               local container = self,
               image: KEYCLOAK_IMAGE,
               command: ["/opt/jboss/tools/docker-entrypoint.sh"],
@@ -134,12 +137,12 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               },
               env_+: {
                 KEYCLOAK_USER: "admin",
-                KEYCLOAK_PASSWORD: kube.SecretKeyRef($.secret, "admin_password"),
+                KEYCLOAK_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "admin_password"),
                 DB_VENDOR: "mariadb",
                 DB_ADDR: $.galera.svc.host,
                 DB_PORT: "3306",
                 DB_USER: KEYCLOAK_DB_USER,
-                DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
+                DB_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "db_password"),
                 DB_DATABASE: KEYCLOAK_DB_DATABASE,
                 PROXY_ADDRESS_FORWARDING: "true",
               },
@@ -158,7 +161,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
             },
           },
           initContainers_+: {
-            extensions: kube.Container("extensions") {
+            extensions: $.lib.kube.Container("extensions") {
               image: "busybox",
               command: ["sh", "-c", "wget -O /deployments/keycloak-metrics-spi.jar https://github.com/aerogear/keycloak-metrics-spi/releases/download/1.0.4/keycloak-metrics-spi-1.0.4.jar"],
               volumeMounts_+: {
@@ -167,15 +170,15 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
                 },
               },
             },
-            "setup-db": kube.Container("setup-db") {
+            "setup-db": $.lib.kube.Container("setup-db") {
               image: MARIADB_GALERA_IMAGE,
               env_+: {
                 KEYCLOAK_DB_HOST: $.galera.svc.host,
                 KEYCLOAK_DB_PORT: "%s" % KEYCLOAK_DB_PORT,
                 KEYCLOAK_DB_ROOT_USER: "root",
-                KEYCLOAK_DB_ROOT_PASSWORD: kube.SecretKeyRef($.galera.secret, "root_password"),
+                KEYCLOAK_DB_ROOT_PASSWORD: $.lib.kube.SecretKeyRef($.galera.secret, "root_password"),
                 KEYCLOAK_DB_USER: KEYCLOAK_DB_USER,
-                KEYCLOAK_DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
+                KEYCLOAK_DB_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "db_password"),
                 KEYCLOAK_DB_DATABASE: KEYCLOAK_DB_DATABASE,
               },
               command: ["/scripts/setup-db.sh"],
@@ -189,20 +192,20 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
           },
           terminationGracePeriodSeconds: 60,
           volumes_+: {
-            deployments: kube.EmptyDirVolume(),
-            scripts: kube.ConfigMapVolume($.scripts) + {configMap+: {defaultMode: kube.parseOctal("0755")}},
-            secret: kube.SecretVolume($.secret),
+            deployments: $.lib.kube.EmptyDirVolume(),
+            scripts: $.lib.kube.ConfigMapVolume($.scripts) + {configMap+: {defaultMode: $.lib.kube.parseOctal("0755")}},
+            secret: $.lib.kube.SecretVolume($.secret),
           },
         },
       },
     },
   },
 
-  svc: kube.Service($.p + "keycloak") + $.metadata {
+  svc: $.lib.kube.Service($.p + "keycloak") + $.metadata {
     target_pod: $.sts.spec.template,
   },
 
-  ingress: utils.TlsIngress($.p + "keycloak") + $.metadata {
+  ingress: $.lib.utils.TlsIngress($.p + "keycloak") + $.metadata {
     local this = self,
     host:: error "host is required",
     spec+: {

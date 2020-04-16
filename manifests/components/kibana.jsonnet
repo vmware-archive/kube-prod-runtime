@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local KIBANA_IMAGE = (import "images.json").kibana;
@@ -32,6 +31,10 @@ local strip_trailing_slash(s) = (
 );
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -51,14 +54,14 @@ local strip_trailing_slash(s) = (
 
   es: error "elasticsearch is required",
 
-  serviceAccount: kube.ServiceAccount($.p + "kibana") + $.metadata {
+  serviceAccount: $.lib.kube.ServiceAccount($.p + "kibana") + $.metadata {
   },
 
-  pvc: kube.PersistentVolumeClaim($.p + "kibana-plugins") + $.metadata {
+  pvc: $.lib.kube.PersistentVolumeClaim($.p + "kibana-plugins") + $.metadata {
     storage: "2Gi",
   },
 
-  deploy: kube.Deployment($.p + "kibana") + $.metadata {
+  deploy: $.lib.kube.Deployment($.p + "kibana") + $.metadata {
     spec+: {
       template+: {
         spec+: {
@@ -66,10 +69,10 @@ local strip_trailing_slash(s) = (
             fsGroup: 1001,
           },
           volumes_+: {
-            plugins: kube.PersistentVolumeClaimVolume($.pvc),
+            plugins: $.lib.kube.PersistentVolumeClaimVolume($.pvc),
           },
           initContainers_+: {
-            kibana_plugins_install: kube.Container("kibana-plugins-install") {
+            kibana_plugins_install: $.lib.kube.Container("kibana-plugins-install") {
               image: KIBANA_IMAGE,
               securityContext: {
                 allowPrivilegeEscalation: false,
@@ -100,7 +103,7 @@ local strip_trailing_slash(s) = (
             },
           },
           containers_+: {
-            kibana: kube.Container("kibana") {
+            kibana: $.lib.kube.Container("kibana") {
               image: KIBANA_IMAGE,
               securityContext: {
                 runAsUser: 1001,
@@ -136,11 +139,11 @@ local strip_trailing_slash(s) = (
     },
   },
 
-  svc: kube.Service($.p + "kibana-logging") + $.metadata {
+  svc: $.lib.kube.Service($.p + "kibana-logging") + $.metadata {
     target_pod: $.deploy.spec.template,
   },
 
-  ingress: utils.AuthIngress($.p + "kibana-logging") + $.metadata {
+  ingress: $.lib.utils.AuthIngress($.p + "kibana-logging") + $.metadata {
     local this = self,
     host:: error "host is required",
     kibanaPath:: "/",

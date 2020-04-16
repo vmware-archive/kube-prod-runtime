@@ -17,11 +17,14 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -31,7 +34,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
 
   crds: kubecfg.parseYaml(importstr "crds/external-dns.yaml"),
 
-  clusterRole: kube.ClusterRole($.p + "external-dns") {
+  clusterRole: $.lib.kube.ClusterRole($.p + "external-dns") {
     rules: [
       {
         apiGroups: [""],
@@ -61,15 +64,15 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
     ],
   },
 
-  clusterRoleBinding: kube.ClusterRoleBinding($.p + "external-dns-viewer") {
+  clusterRoleBinding: $.lib.kube.ClusterRoleBinding($.p + "external-dns-viewer") {
     roleRef_: $.clusterRole,
     subjects_+: [$.sa],
   },
 
-  sa: kube.ServiceAccount($.p + "external-dns") + $.metadata {
+  sa: $.lib.kube.ServiceAccount($.p + "external-dns") + $.metadata {
   },
 
-  deploy: kube.Deployment($.p + "external-dns") + $.metadata {
+  deploy: $.lib.kube.Deployment($.p + "external-dns") + $.metadata {
     local this = self,
     ownerId:: error "ownerId is required",
     spec+: {
@@ -84,7 +87,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
         spec+: {
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
-            edns: kube.Container("external-dns") {
+            edns: $.lib.kube.Container("external-dns") {
               image: EXTERNAL_DNS_IMAGE,
               args_+: {
                 sources_:: ["service", "ingress", "crd"],

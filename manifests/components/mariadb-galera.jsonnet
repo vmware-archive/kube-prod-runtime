@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
@@ -33,6 +32,10 @@ local MYSQLD_EXPORTER_IMAGE = (import "images.json")["mysqld-exporter"];
 local MYSQLD_EXPORTER_PORT = 9104;
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -40,10 +43,10 @@ local MYSQLD_EXPORTER_PORT = 9104;
     },
   },
 
-  sa: kube.ServiceAccount($.p + "mariadb-galera") + $.metadata {
+  sa: $.lib.kube.ServiceAccount($.p + "mariadb-galera") + $.metadata {
   },
 
-  role: kube.Role($.p + "mariadb-galera") + $.metadata {
+  role: $.lib.kube.Role($.p + "mariadb-galera") + $.metadata {
     rules: [
       {
         apiGroups: [""],
@@ -53,25 +56,25 @@ local MYSQLD_EXPORTER_PORT = 9104;
     ],
   },
 
-  roleBinding: kube.RoleBinding($.p + "mariadb-galera") + $.metadata {
+  roleBinding: $.lib.kube.RoleBinding($.p + "mariadb-galera") + $.metadata {
     roleRef_: $.role,
     subjects_+: [$.sa],
   },
 
-  config: utils.HashedConfigMap($.p + "mariadb-galera") + $.metadata {
+  config: $.lib.utils.HashedConfigMap($.p + "mariadb-galera") + $.metadata {
     data+: {
       "my.cnf": (importstr "mariadb-galera/my.cnf"),
     },
   },
 
-  secret: utils.HashedSecret($.p + "mariadb-galera") + $.metadata {
+  secret: $.lib.utils.HashedSecret($.p + "mariadb-galera") + $.metadata {
     data_+: {
       root_password: error "root_password is required",
       mariabackup_password: error "mariabackup_password is required",
     },
   },
 
-  sts: kube.StatefulSet($.p + "mariadb-galera") + $.metadata {
+  sts: $.lib.kube.StatefulSet($.p + "mariadb-galera") + $.metadata {
     local this = self,
     spec+: {
       replicas: 3,
@@ -80,24 +83,24 @@ local MYSQLD_EXPORTER_PORT = 9104;
         spec+: {
           serviceAccountName: $.sa.metadata.name,
           // add AZ and node antiaffinity
-          affinity+: utils.weakNodeDiversity(this.spec.selector),
+          affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           default_container: "mariadb-galera",
           volumes_+: {
-            config: kube.ConfigMapVolume($.config),
+            config: $.lib.kube.ConfigMapVolume($.config),
           },
           securityContext: {
             fsGroup: 1001,
             runAsUser: 1001,
           },
           containers_+: {
-            "mariadb-galera": kube.Container("mariadb-galera") {
+            "mariadb-galera": $.lib.kube.Container("mariadb-galera") {
               image: MARIADB_GALERA_IMAGE,
               env_+: {
                 MARIADB_GALERA_CLUSTER_NAME: "galera",
                 MARIADB_GALERA_CLUSTER_ADDRESS: "gcomm://%s" % $.headless.host,
-                MARIADB_ROOT_PASSWORD: kube.SecretKeyRef($.secret, "root_password"),
+                MARIADB_ROOT_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "root_password"),
                 MARIADB_GALERA_MARIABACKUP_USER: "mariabackup",
-                MARIADB_GALERA_MARIABACKUP_PASSWORD: kube.SecretKeyRef($.secret, "mariabackup_password"),
+                MARIADB_GALERA_MARIABACKUP_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "mariabackup_password"),
               },
               ports_+: {
                 mysql: {containerPort: MARIADB_GALERA_MYSQL_PORT},
@@ -136,7 +139,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
                 successThreshold: 1,
               },
             },
-            metrics: kube.Container("metrics") {
+            metrics: $.lib.kube.Container("metrics") {
               image: MYSQLD_EXPORTER_IMAGE,
               command: [
                 "sh",
@@ -146,7 +149,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
                 ||| % MARIADB_GALERA_MYSQL_PORT,
               ],
               env_+: {
-                MARIADB_ROOT_PASSWORD: kube.SecretKeyRef($.secret, "root_password"),
+                MARIADB_ROOT_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "root_password"),
               },
               ports_+: {
                 metrics: {containerPort: MYSQLD_EXPORTER_PORT},
@@ -174,7 +177,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
     },
   },
 
-  svc: kube.Service($.p + "mariadb-galera") + $.metadata {
+  svc: $.lib.kube.Service($.p + "mariadb-galera") + $.metadata {
     target_pod: $.sts.spec.template,
     metadata+: {
       annotations+: {
@@ -190,7 +193,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
     },
   },
 
-  headless: kube.Service($.p + "mariadb-galera-headless") + $.metadata {
+  headless: $.lib.kube.Service($.p + "mariadb-galera-headless") + $.metadata {
     target_pod: $.sts.spec.template,
     spec+: {
       clusterIP: "None",

@@ -17,8 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+// NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
 local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
@@ -39,6 +38,10 @@ local pdns_conf_tpl = importstr "powerdns/pdns_conf_tpl";
 local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -49,20 +52,20 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
   galera: error "galera is required",
   zone:: error "zone is required",
 
-  scripts: utils.HashedConfigMap($.p + "powerdns-sh") + $.metadata {
+  scripts: $.lib.utils.HashedConfigMap($.p + "powerdns-sh") + $.metadata {
     data+: {
       "powerdns.sh": std.format(powerdns_sh_tpl, [$.zone]),
       "setup-db.sh": importstr "powerdns/setup-db.sh",
     },
   },
 
-  schema: utils.HashedConfigMap($.p + "powerdns") + $.metadata {
+  schema: $.lib.utils.HashedConfigMap($.p + "powerdns") + $.metadata {
     data+: {
       "schema.sql": importstr "powerdns/schema.sql",
     },
   },
 
-  secret: utils.HashedSecret($.p + "powerdns") + $.metadata {
+  secret: $.lib.utils.HashedSecret($.p + "powerdns") + $.metadata {
     local this = self,
     data_+: {
       api_key: error "api_key is required",
@@ -78,14 +81,14 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
     },
   },
 
-  deploy: kube.Deployment($.p + "powerdns") + $.metadata {
+  deploy: $.lib.kube.Deployment($.p + "powerdns") + $.metadata {
     local this = self,
     spec+: {
       replicas: 2,
       template+: {
         spec+: {
           containers_+: {
-            kibana: kube.Container("pdns") {
+            kibana: $.lib.kube.Container("pdns") {
               image: POWERDNS_IMAGE,
               command: ["/scripts/powerdns.sh"],
               args_+: {
@@ -96,7 +99,7 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
                 runAsUser: 0,
               },
               env_+: {
-                POWERDNS_API_KEY: kube.SecretKeyRef($.secret, "api_key"),
+                POWERDNS_API_KEY: $.lib.kube.SecretKeyRef($.secret, "api_key"),
               },
               ports_+: {
                 api: {containerPort: POWERDNS_HTTP_PORT, protocol: "TCP"},
@@ -123,15 +126,15 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
             },
           },
           initContainers_+: {
-            "setup-db": kube.Container("setup-db") {
+            "setup-db": $.lib.kube.Container("setup-db") {
               image: MARIADB_GALERA_IMAGE,
               env_+: {
                 POWERDNS_DB_HOST: $.galera.svc.host,
                 POWERDNS_DB_PORT: "%s" % POWERDNS_DB_PORT,
                 POWERDNS_DB_ROOT_USER: "root",
-                POWERDNS_DN_ROOT_PASSWORD: kube.SecretKeyRef($.galera.secret, "root_password"),
+                POWERDNS_DN_ROOT_PASSWORD: $.lib.kube.SecretKeyRef($.galera.secret, "root_password"),
                 POWERDNS_DB_USER: POWERDNS_DB_USER,
-                POWERDNS_DB_PASSWORD: kube.SecretKeyRef($.secret, "db_password"),
+                POWERDNS_DB_PASSWORD: $.lib.kube.SecretKeyRef($.secret, "db_password"),
                 POWERDNS_DB_DATABASE: POWERDNS_DB_DATABASE,
               },
               command: ["/scripts/setup-db.sh"],
@@ -149,16 +152,16 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
             },
           },
           volumes_+: {
-            schema: kube.ConfigMapVolume($.schema),
-            scripts: kube.ConfigMapVolume($.scripts) + {configMap+: {defaultMode: kube.parseOctal("0755")}},
-            secret: kube.SecretVolume($.secret),
+            schema: $.lib.kube.ConfigMapVolume($.schema),
+            scripts: $.lib.kube.ConfigMapVolume($.scripts) + {configMap+: {defaultMode: $.lib.kube.parseOctal("0755")}},
+            secret: $.lib.kube.SecretVolume($.secret),
           },
         },
       },
     },
   },
 
-  svc: kube.Service($.p + "powerdns") + $.metadata {
+  svc: $.lib.kube.Service($.p + "powerdns") + $.metadata {
     target_pod: $.deploy.spec.template,
     spec+: {
       ports: [
@@ -169,7 +172,7 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
     },
   },
 
-  ingress: utils.AuthIngress($.p + "powerdns") + $.metadata {
+  ingress: $.lib.utils.AuthIngress($.p + "powerdns") + $.metadata {
     local this = self,
     host:: error "host is required",
     spec+: {

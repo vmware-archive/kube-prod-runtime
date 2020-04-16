@@ -19,8 +19,6 @@
 
 // Top-level file for Azure AKS
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
@@ -33,10 +31,14 @@ local kibana = import "../components/kibana.jsonnet";
 local grafana = import "../components/grafana.jsonnet";
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: kube.Namespace("kubeprod"),
+  kubeprod: $.lib.kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -52,7 +54,7 @@ local grafana = import "../components/grafana.jsonnet";
   },
 
   edns: edns {
-    azconf: utils.HashedSecret(edns.p + "external-dns-azure-conf") {
+    azconf: $.lib.utils.HashedSecret(edns.p + "external-dns-azure-conf") {
       metadata+: { namespace: "kubeprod" },
       data_+: {
         azure:: $.config.externalDns,
@@ -66,7 +68,7 @@ local grafana = import "../components/grafana.jsonnet";
         template+: {
           spec+: {
             volumes_+: {
-              azconf: kube.SecretVolume($.edns.azconf),
+              azconf: $.lib.kube.SecretVolume($.edns.azconf),
             },
             containers_+: {
               edns+: {
@@ -115,7 +117,7 @@ local grafana = import "../components/grafana.jsonnet";
                   provider: "azure",
                 },
                 env_+: {
-                  OAUTH2_PROXY_AZURE_TENANT: kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
+                  OAUTH2_PROXY_AZURE_TENANT: $.lib.kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
                 },
               },
             },

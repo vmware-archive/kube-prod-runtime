@@ -19,8 +19,6 @@
 
 // Top-level file for AWS EKS
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
@@ -33,10 +31,14 @@ local kibana = import "../components/kibana.jsonnet";
 local grafana = import "../components/grafana.jsonnet";
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: kube.Namespace("kubeprod"),
+  kubeprod: $.lib.kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -57,7 +59,7 @@ local grafana = import "../components/grafana.jsonnet";
     // NOTE: https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/configuring-sdk.html#specifying-credentials
     // for additional information on how to use environment variables to configure a particular user when accessing
     // the AWS API.
-    secret: utils.HashedSecret(this.p + "external-dns-aws-conf") {
+    secret: $.lib.utils.HashedSecret(this.p + "external-dns-aws-conf") {
       metadata+: {
         namespace: "kubeprod",
       },
@@ -72,8 +74,8 @@ local grafana = import "../components/grafana.jsonnet";
             containers_+: {
               edns+: {
                 env_+: {
-                  AWS_ACCESS_KEY_ID: kube.SecretKeyRef(this.secret, "aws_access_key_id"),
-                  AWS_SECRET_ACCESS_KEY: kube.SecretKeyRef(this.secret, "aws_secret_access_key"),
+                  AWS_ACCESS_KEY_ID: $.lib.kube.SecretKeyRef(this.secret, "aws_access_key_id"),
+                  AWS_SECRET_ACCESS_KEY: $.lib.kube.SecretKeyRef(this.secret, "aws_secret_access_key"),
                 },
                 args_+: {
                   provider: "aws",

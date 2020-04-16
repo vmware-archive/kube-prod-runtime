@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 
 local GRAFANA_IMAGE = (import "images.json").grafana;
@@ -29,6 +27,10 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
 // TODO: add blackbox-exporter
 
 {
+  lib:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
   p:: "",
   metadata:: {
     metadata+: {
@@ -55,11 +57,11 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   // to "Editor".
   auto_role:: "Admin",
 
-  svc: kube.Service($.p + "grafana") + $.metadata {
+  svc: $.lib.kube.Service($.p + "grafana") + $.metadata {
     target_pod: $.grafana.spec.template,
   },
 
-  ingress: utils.AuthIngress($.p + "grafana") + $.metadata {
+  ingress: $.lib.utils.AuthIngress($.p + "grafana") + $.metadata {
     local this = self,
     spec+: {
       rules+: [
@@ -76,7 +78,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   },
 
   // Generates YAML configuration under provisioning/datasources/
-  datasources: utils.HashedConfigMap($.p + "grafana-datasource-configuration") + $.metadata {
+  datasources: $.lib.utils.HashedConfigMap($.p + "grafana-datasource-configuration") + $.metadata {
     local this = self,
     datasources:: {
       // Built-in datasource for BKPR's Prometheus
@@ -90,14 +92,14 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     data+: {
       _config:: {
         apiVersion: 1,
-        datasources: [{name: kv[0]} + kv[1] for kv in kube.objectItems(this.datasources)],
+        datasources: [{name: kv[0]} + kv[1] for kv in $.lib.kube.objectItems(this.datasources)],
       },
       "bkpr.yml": kubecfg.manifestYaml(self._config),
     },
   },
 
   // Generates YAML dashboard configuration under provisioning/dashboards/
-  dashboards_provider: utils.HashedConfigMap($.p + "grafana-dashboards-configuration") + $.metadata {
+  dashboards_provider: $.lib.utils.HashedConfigMap($.p + "grafana-dashboards-configuration") + $.metadata {
     local this = self,
     dashboard_provider:: {
       // Grafana dashboards configuration
@@ -107,20 +109,20 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
         disableDeletion: false,
         editable: false,
         options: {
-          path: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
+          path: $.lib.utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
         },
       },
     },
     data+: {
       _config:: {
         apiVersion: 1,
-        providers: kube.mapToNamedList(this.dashboard_provider),
+        providers: $.lib.kube.mapToNamedList(this.dashboard_provider),
       },
       "dashboards_provider.yml": kubecfg.manifestYaml(self._config),
     },
   },
 
-  kubernetes_dashboards: utils.HashedConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
+  kubernetes_dashboards: $.lib.utils.HashedConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
     local this = self,
     data+: {
       "k8s_cluster_capacity.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
@@ -129,7 +131,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     },
   },
 
-  grafana: kube.StatefulSet($.p + "grafana") + $.metadata {
+  grafana: $.lib.kube.StatefulSet($.p + "grafana") + $.metadata {
     spec+: {
       template+: {
         metadata+: {
@@ -141,12 +143,12 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
         },
         spec+: {
           volumes_+: {
-            datasources: kube.ConfigMapVolume($.datasources),
-            dashboards_provider: kube.ConfigMapVolume($.dashboards_provider),
-            kubernetes_dashboards: kube.ConfigMapVolume($.kubernetes_dashboards),
+            datasources: $.lib.kube.ConfigMapVolume($.datasources),
+            dashboards_provider: $.lib.kube.ConfigMapVolume($.dashboards_provider),
+            kubernetes_dashboards: $.lib.kube.ConfigMapVolume($.kubernetes_dashboards),
           },
           containers_+: {
-            grafana: kube.Container("grafana") {
+            grafana: $.lib.kube.Container("grafana") {
               image: GRAFANA_IMAGE,
               resources: {
                 limits: {cpu: "100m", memory: "100Mi"},
@@ -176,17 +178,17 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
               volumeMounts_+: {
                 datadir: {mountPath: GRAFANA_DATA_MOUNTPOINT},
                 datasources: {
-                  mountPath: utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
+                  mountPath: $.lib.utils.path_join(GRAFANA_DATASOURCES_CONFIG, "bkpr.yml"),
                   subPath: "bkpr.yml",
                   readOnly: true,
                 },
                 dashboards_provider: {
-                  mountPath: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "dashboards_provider.yml"),
+                  mountPath: $.lib.utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "dashboards_provider.yml"),
                   subPath: "dashboards_provider.yml",
                   readOnly: true,
                 },
                 kubernetes_dashboards: {
-                  mountPath: utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
+                  mountPath: $.lib.utils.path_join(GRAFANA_DASHBOARDS_CONFIG, "kubernetes"),
                   readOnly: true,
                 },
               },
