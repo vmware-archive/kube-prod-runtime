@@ -244,7 +244,7 @@ kind: Pod
 spec:
   containers:
   - name: 'go'
-    image: 'golang:1.12.14-stretch'
+    image: 'golang:1.14.2-stretch'
     tty: true
     command:
     - 'cat'
