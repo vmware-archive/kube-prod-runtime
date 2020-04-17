@@ -403,10 +403,10 @@ spec:
                         def kversion = x.rel  // local bind required because closures
                         // overload CLI if for release previews
                         def beta = x.pre? "beta" : ""
-                        def cluster_version = x.pre? "--release-channel rapid" : "--cluster-version ${kversion}"
+                        def cluster_version = x.pre? "--release-channel rapid" : "--cluster-version ${kversion} --no-enable-autoupgrade"
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
-                        def platform = "gke-" + kversion + x.pre? "-preview": ""
+                        def platform = "gke-" + kversion + (x.pre? "preview": "")
 
                         platforms[platform] = {
                             stage(platform) {
@@ -433,7 +433,6 @@ spec:
                                                             --machine-type n1-standard-2                \
                                                             --num-nodes 3                               \
                                                             --zone ${zone}                              \
-                                                            --no-enable-autoupgrade                     \
                                                             --enable-ip-alias                           \
                                                             --preemptible                               \
                                                             --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)},team=bkpr,created_by=jenkins-bkpr'
