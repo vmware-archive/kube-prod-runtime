@@ -19,7 +19,7 @@ properties([
     stringParam(name: 'AKS_REL', defaultValue: '1.16', description: 'AKS releases to test (comma separated)'),
     stringParam(name: 'EKS_REL', defaultValue: '1.15', description: 'EKS releases to test (comma separated)'),
     stringParam(name: 'GKE_REL', defaultValue: '1.16-pre', description: 'GKE releases to test (comma separated)'),
-    stringParam(name: 'GEN_REL', defaultValue: '1.15', description: 'Generic-cloud releases to test (comma separated)'),
+    stringParam(name: 'GEN_REL', defaultValue: '', description: 'Generic-cloud releases to test (comma separated)'),
   ])
 ])
 
