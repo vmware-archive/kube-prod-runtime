@@ -403,10 +403,10 @@ spec:
                         def kversion = x.rel  // local bind required because closures
                         // overload CLI if for release previews
                         def beta = x.pre? "beta" : ""
-                        def extraArgs = x.pre? "--release-channel rapid" : ""
+                        def cluster_version = x.pre? "--release-channel rapid" : "--cluster-version ${kversion}"
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
-                        def platform = "gke-" + kversion
+                        def platform = "gke-" + kversion + x.pre? "-preview": ""
 
                         platforms[platform] = {
                             stage(platform) {
@@ -428,15 +428,14 @@ spec:
                                                     container('gcloud') {
                                                         sh """
                                                         gcloud ${beta} container clusters create ${clusterName} \
-                                                            --cluster-version ${kversion}               \
                                                             --project ${project}                        \
+                                                            ${cluster_version}                          \
                                                             --machine-type n1-standard-2                \
                                                             --num-nodes 3                               \
                                                             --zone ${zone}                              \
                                                             --no-enable-autoupgrade                     \
                                                             --enable-ip-alias                           \
                                                             --preemptible                               \
-                                                            ${extraArgs}                                \
                                                             --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)},team=bkpr,created_by=jenkins-bkpr'
                                                         """
                                                         sh "gcloud container clusters get-credentials ${clusterName} --zone ${zone} --project ${project}"
