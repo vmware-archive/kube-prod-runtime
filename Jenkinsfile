@@ -12,13 +12,9 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 properties([
   parameters([
-    // stringParam(name: 'AKS_REL', defaultValue: '1.14,1.15,1.16', description: 'AKS releases to test (comma separated)'),
-    // stringParam(name: 'EKS_REL', defaultValue: '1.14,1.15', description: 'EKS releases to test (comma separated)'),
-    // stringParam(name: 'GKE_REL', defaultValue: '1.14,1.15', description: 'GKE releases to test (comma separated)'),
-    // stringParam(name: 'GEN_REL', defaultValue: '1.15', description: 'Generic-cloud releases to test (comma separated)'),
-    stringParam(name: 'AKS_REL', defaultValue: '1.16', description: 'AKS releases to test (comma separated)'),
-    stringParam(name: 'EKS_REL', defaultValue: '1.15', description: 'EKS releases to test (comma separated)'),
-    stringParam(name: 'GKE_REL', defaultValue: '1.16-pre', description: 'GKE releases to test (comma separated)'),
+    stringParam(name: 'AKS_REL', defaultValue: '1.15,1.16', description: 'AKS releases to test (comma separated)'),
+    stringParam(name: 'EKS_REL', defaultValue: '1.14,1.15', description: 'EKS releases to test (comma separated)'),
+    stringParam(name: 'GKE_REL', defaultValue: '1.15,1.16-pre', description: 'GKE releases to test (comma separated)'),
     stringParam(name: 'GEN_REL', defaultValue: '', description: 'Generic-cloud releases to test (comma separated)'),
   ])
 ])
@@ -406,7 +402,7 @@ spec:
                         def cluster_version = x.pre? "--release-channel rapid" : "--cluster-version ${kversion} --no-enable-autoupgrade"
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
-                        def platform = "gke-" + kversion + (x.pre? "preview": "")
+                        def platform = "gke-" + (x.pre? "rapid" : kversion)
 
                         platforms[platform] = {
                             stage(platform) {
