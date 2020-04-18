@@ -19,5 +19,5 @@
     "node-exporter": "bitnami/node-exporter:0.18.1-r205",
     "oauth2_proxy": "bitnami/oauth2-proxy:5.0.0-debian-10-r0",
     "powerdns": "psitrax/powerdns:v4.2.0",
-    "prometheus": "bitnami/prometheus:2.17.1-debian-10-r21"
+    "prometheus": "bitnami/prometheus:2.17.1-debian-10-r22"
 }
