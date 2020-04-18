@@ -22,27 +22,17 @@
 local version = import "../components/version.jsonnet";
 
 {
-  common:: {
-    lib+:: {
-      kube: import "../lib/kube.libsonnet",
-      utils: import "../lib/utils.libsonnet",
-    },
+  lib+:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
   },
-  components:: {
-    cert_manager: (import "../components/cert-manager.jsonnet") + $.common,
-    edns: (import "../components/externaldns.jsonnet") + $.common,
-    nginx_ingress: (import "../components/nginx-ingress.jsonnet") + $.common,
-    prometheus: (import "../components/prometheus.jsonnet") + $.common,
-    oauth2_proxy: (import "../components/oauth2-proxy.jsonnet") + $.common,
-    fluentd_es: (import "../components/fluentd-es.jsonnet") + $.common,
-    elasticsearch: (import "../components/elasticsearch.jsonnet") + $.common,
-    kibana: (import "../components/kibana.jsonnet") + $.common,
-    grafana: (import "../components/grafana.jsonnet") + $.common,
+  components:: (import "../components/components.jsonnet") {
+    lib:: $.lib,
   },
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: $.common.lib.kube.Namespace("kubeprod"),
+  kubeprod: $.lib.kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -58,7 +48,7 @@ local version = import "../components/version.jsonnet";
   },
 
   edns: $.components.edns {
-    gcreds: $.common.lib.utils.HashedSecret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
+    gcreds: $.lib.utils.HashedSecret($.edns.p+"external-dns-google-credentials") + $.edns.metadata {
       data_+: {
         "credentials.json": $.config.externalDns.credentials,
       },
@@ -70,7 +60,7 @@ local version = import "../components/version.jsonnet";
         template+: {
           spec+: {
             volumes_+: {
-              gcreds: $.common.lib.kube.SecretVolume($.edns.gcreds),
+              gcreds: $.lib.kube.SecretVolume($.edns.gcreds),
             },
             containers_+: {
               edns+: {
@@ -110,7 +100,7 @@ local version = import "../components/version.jsonnet";
       host: "auth." + $.external_dns_zone_name,
     },
 
-    gcreds: $.common.lib.utils.HashedSecret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
+    gcreds: $.lib.utils.HashedSecret(oauth2.p+"oauth2-proxy-google-credentials") + oauth2.metadata {
       data_+: {
         "credentials.json": $.config.oauthProxy.google_service_account_json,
       },
@@ -121,7 +111,7 @@ local version = import "../components/version.jsonnet";
         template+: {
           spec+: {
             volumes_+: {
-              gcreds: $.common.lib.kube.SecretVolume(oauth2.gcreds),
+              gcreds: $.lib.kube.SecretVolume(oauth2.gcreds),
             },
             containers_+: {
               proxy+: {

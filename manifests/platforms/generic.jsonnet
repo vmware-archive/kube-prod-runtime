@@ -17,27 +17,20 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
 local version = import "../components/version.jsonnet";
-local cert_manager = import "../components/cert-manager.jsonnet";
-local pdns = import "../components/powerdns.jsonnet";
-local edns = import "../components/externaldns.jsonnet";
-local nginx_ingress = import "../components/nginx-ingress.jsonnet";
-local prometheus = import "../components/prometheus.jsonnet";
-local galera = import "../components/mariadb-galera.jsonnet";
-local keycloak = import "../components/keycloak.jsonnet";
-local oauth2_proxy = import "../components/oauth2-proxy.jsonnet";
-local fluentd_es = import "../components/fluentd-es.jsonnet";
-local elasticsearch = import "../components/elasticsearch.jsonnet";
-local kibana = import "../components/kibana.jsonnet";
-local grafana = import "../components/grafana.jsonnet";
 
 {
+  lib+:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
+  },
+  components:: (import "../components/components.jsonnet") {
+    lib:: $.lib,
+  },
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: kube.Namespace("kubeprod"),
+  kubeprod: $.lib.kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -46,14 +39,14 @@ local grafana = import "../components/grafana.jsonnet";
 
   version: version,
 
-  grafana: grafana {
+  grafana: $.components.grafana {
     prometheus:: $.prometheus.prometheus.svc,
     ingress+: {
       host: "grafana." + $.external_dns_zone_name,
     },
   },
 
-  pdns: pdns {
+  pdns: $.components.pdns {
     galera: $.galera,
     zone: $.external_dns_zone_name,
     secret+: {
@@ -64,7 +57,7 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  edns: edns {
+  edns: $.components.edns {
     deploy+: {
       ownerId: $.external_dns_zone_name,
       spec+: {
@@ -80,7 +73,7 @@ local grafana = import "../components/grafana.jsonnet";
                   ]
                 },
                 env_+: {
-                  EXTERNAL_DNS_PDNS_API_KEY: kube.SecretKeyRef($.pdns.secret, "api_key"),
+                  EXTERNAL_DNS_PDNS_API_KEY: $.lib.kube.SecretKeyRef($.pdns.secret, "api_key"),
                 },
               },
             },
@@ -90,12 +83,12 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  cert_manager: cert_manager {
+  cert_manager: $.components.cert_manager {
     letsencrypt_contact_email:: $.letsencrypt_contact_email,
     letsencrypt_environment:: $.letsencrypt_environment,
   },
 
-  nginx_ingress: nginx_ingress {
+  nginx_ingress: $.components.nginx_ingress {
     local this = self,
     udpconf+: {
       data+: {
@@ -105,7 +98,7 @@ local grafana = import "../components/grafana.jsonnet";
         ],
       }
     },
-    udpsvc: kube.Service(this.p + "nginx-ingress-udp") + this.metadata {
+    udpsvc: $.lib.kube.Service(this.p + "nginx-ingress-udp") + this.metadata {
       target_pod: this.controller.spec.template,
       spec+: {
         ports: [
@@ -117,7 +110,7 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  oauth2_proxy: oauth2_proxy {
+  oauth2_proxy: $.components.oauth2_proxy {
     secret+: {
       data_+: $.config.oauthProxy + {
         client_id: $.config.keycloak.client_id,
@@ -152,13 +145,13 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  galera: galera {
+  galera: $.components.galera {
     secret+: {
       data_+: $.config.mariadbGalera,
     },
   },
 
-  keycloak: keycloak {
+  keycloak: $.components.keycloak {
     galera: $.galera,
     oauth2_proxy:: $.oauth2_proxy,
     secret+: {
@@ -169,21 +162,20 @@ local grafana = import "../components/grafana.jsonnet";
     },
   },
 
-  prometheus: prometheus {
+  prometheus: $.components.prometheus {
     ingress+: {
       host: "prometheus." + $.external_dns_zone_name,
     },
   },
 
-  fluentd_es: fluentd_es {
+  fluentd_es: $.components.fluentd_es {
     es:: $.elasticsearch,
   },
 
-  elasticsearch: elasticsearch,
+  elasticsearch: $.components.elasticsearch,
 
-  kibana: kibana {
+  kibana: $.components.kibana {
     es:: $.elasticsearch,
-
     ingress+: {
       host: "kibana." + $.external_dns_zone_name,
     },

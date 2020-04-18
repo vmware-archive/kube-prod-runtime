@@ -22,27 +22,17 @@
 local version = import "../components/version.jsonnet";
 
 {
-  common:: {
-    lib+:: {
-      kube: import "../lib/kube.libsonnet",
-      utils: import "../lib/utils.libsonnet",
-    },
+  lib+:: {
+    kube: import "../lib/kube.libsonnet",
+    utils: import "../lib/utils.libsonnet",
   },
-  components:: {
-    cert_manager: (import "../components/cert-manager.jsonnet") + $.common,
-    edns: (import "../components/externaldns.jsonnet") + $.common,
-    nginx_ingress: (import "../components/nginx-ingress.jsonnet") + $.common,
-    prometheus: (import "../components/prometheus.jsonnet") + $.common,
-    oauth2_proxy: (import "../components/oauth2-proxy.jsonnet") + $.common,
-    fluentd_es: (import "../components/fluentd-es.jsonnet") + $.common,
-    elasticsearch: (import "../components/elasticsearch.jsonnet") + $.common,
-    kibana: (import "../components/kibana.jsonnet") + $.common,
-    grafana: (import "../components/grafana.jsonnet") + $.common,
+  components:: (import "../components/components.jsonnet") {
+    lib:: $.lib,
   },
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
-  kubeprod: $.common.lib.kube.Namespace("kubeprod"),
+  kubeprod: $.lib.kube.Namespace("kubeprod"),
 
   external_dns_zone_name:: $.config.dnsZone,
   letsencrypt_contact_email:: $.config.contactEmail,
@@ -58,7 +48,7 @@ local version = import "../components/version.jsonnet";
   },
 
   edns: $.components.edns {
-    azconf: $.common.lib.utils.HashedSecret(edns.p + "external-dns-azure-conf") {
+    azconf: $.lib.utils.HashedSecret(edns.p + "external-dns-azure-conf") {
       metadata+: { namespace: "kubeprod" },
       data_+: {
         azure:: $.config.externalDns,
@@ -120,7 +110,7 @@ local version = import "../components/version.jsonnet";
                   provider: "azure",
                 },
                 env_+: {
-                  OAUTH2_PROXY_AZURE_TENANT: $.common.lib.kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
+                  OAUTH2_PROXY_AZURE_TENANT: $.lib.kube.SecretKeyRef(oauth2.secret, "azure_tenant"),
                 },
               },
             },
