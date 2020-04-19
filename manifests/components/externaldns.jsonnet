@@ -19,12 +19,13 @@
 
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
-local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
 
 {
   lib:: {
     kube: import "../lib/kube.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -88,7 +89,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             edns: $.lib.kube.Container("external-dns") {
-              image: EXTERNAL_DNS_IMAGE,
+              image: $.images["external-dns"],
               args_+: {
                 sources_:: ["service", "ingress", "crd"],
                 registry: "txt",

@@ -17,7 +17,6 @@
  * limitations under the License.
  */
 
-local ELASTICSEARCH_CURATOR_IMAGE = (import "images.json")["elasticsearch-curator"];
 
 local action_file_yml_tmpl = importstr "elasticsearch-config/action_file_yml_tmpl";
 local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
@@ -28,6 +27,8 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   namespace:: "kubeprod",
   name:: "elasticsearch-curator",
   retention:: error "retention must be externally provided ...",
@@ -53,7 +54,7 @@ local config_yml_tmpl = importstr "elasticsearch-config/config_yml_tmpl";
             spec+: {
               containers_+: {
                 curator: $.lib.kube.Container("curator") {
-                  image: ELASTICSEARCH_CURATOR_IMAGE,
+                  image: $.images["elasticsearch-curator"],
                   args: ["--config", "/etc/config/config.yml", "/etc/config/action_file.yml"],
                   volumeMounts_+: {
                     config_vol: {mountPath: "/etc/config", readOnly: true},

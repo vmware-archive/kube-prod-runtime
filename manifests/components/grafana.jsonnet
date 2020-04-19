@@ -19,7 +19,6 @@
 
 local kubecfg = import "kubecfg.libsonnet";
 
-local GRAFANA_IMAGE = (import "images.json").grafana;
 local GRAFANA_DATASOURCES_CONFIG = "/opt/bitnami/grafana/conf/provisioning/datasources";
 local GRAFANA_DASHBOARDS_CONFIG = "/opt/bitnami/grafana/conf/provisioning/dashboards";
 local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
@@ -31,6 +30,8 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -149,7 +150,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
           },
           containers_+: {
             grafana: $.lib.kube.Container("grafana") {
-              image: GRAFANA_IMAGE,
+              image: $.images.grafana,
               resources: {
                 limits: {cpu: "100m", memory: "100Mi"},
                 requests: self.limits,

@@ -26,7 +26,9 @@ local version = import "../components/version.jsonnet";
   },
   components:: (import "../components/components.jsonnet") {
     lib:: $.lib,
+    images:: (import "../components/images.json"),
   },
+
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components

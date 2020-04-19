@@ -20,7 +20,6 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local KIBANA_IMAGE = (import "images.json").kibana;
 local KIBANA_PLUGINS_PATH = "/opt/bitnami/kibana/plugins";
 
 local strip_trailing_slash(s) = (
@@ -35,6 +34,8 @@ local strip_trailing_slash(s) = (
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -73,7 +74,7 @@ local strip_trailing_slash(s) = (
           },
           initContainers_+: {
             kibana_plugins_install: $.lib.kube.Container("kibana-plugins-install") {
-              image: KIBANA_IMAGE,
+              image: $.images.kibana,
               securityContext: {
                 allowPrivilegeEscalation: false,
               },
@@ -104,7 +105,7 @@ local strip_trailing_slash(s) = (
           },
           containers_+: {
             kibana: $.lib.kube.Container("kibana") {
-              image: KIBANA_IMAGE,
+              image: $.images.kibana,
               securityContext: {
                 runAsUser: 1001,
               },

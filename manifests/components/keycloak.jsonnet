@@ -20,8 +20,6 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
-local KEYCLOAK_IMAGE = (import "images.json").keycloak;
 
 local KEYCLOAK_HTTP_PORT = 8080;
 local KEYCLOAK_HTTPS_PORT = 8443;
@@ -43,6 +41,8 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -104,7 +104,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
           containers_+: {
             keycloak: $.lib.kube.Container("keycloak") {
               local container = self,
-              image: KEYCLOAK_IMAGE,
+              image: $.images.keycloak,
               command: ["/opt/jboss/tools/docker-entrypoint.sh"],
               args+: [
                 "-b=0.0.0.0",
@@ -171,7 +171,7 @@ local bkpr_realm_json_tmpl = importstr "keycloak/bkpr_realm_json_tmpl";
               },
             },
             "setup-db": $.lib.kube.Container("setup-db") {
-              image: MARIADB_GALERA_IMAGE,
+              image: $.images["mariadb-galera"],
               env_+: {
                 KEYCLOAK_DB_HOST: $.galera.svc.host,
                 KEYCLOAK_DB_PORT: "%s" % KEYCLOAK_DB_PORT,

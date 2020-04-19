@@ -17,13 +17,13 @@
  * limitations under the License.
  */
 
-local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
-
 {
   lib:: {
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -212,7 +212,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
           affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
             default: $.lib.kube.Container("nginx") {
-              image: NGNIX_INGRESS_IMAGE,
+              image: $.images["nginx-ingress-controller"],
               securityContext: {
                 runAsUser: 1001,
                 capabilities: {

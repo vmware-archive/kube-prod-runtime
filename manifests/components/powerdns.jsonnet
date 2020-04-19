@@ -20,9 +20,6 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
-
-local POWERDNS_IMAGE = (import "images.json").powerdns;
 local POWERDNS_DB_PORT = 3306;
 local POWERDNS_DB_USER = "powerdns";
 local POWERDNS_DB_DATABASE = "powerdns";
@@ -42,6 +39,8 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -89,7 +88,7 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
         spec+: {
           containers_+: {
             kibana: $.lib.kube.Container("pdns") {
-              image: POWERDNS_IMAGE,
+              image: $.images.powerdns,
               command: ["/scripts/powerdns.sh"],
               args_+: {
                 "api-key": "$(POWERDNS_API_KEY)",
@@ -127,7 +126,7 @@ local powerdns_sh_tpl = importstr "powerdns/powerdns_sh_tpl";
           },
           initContainers_+: {
             "setup-db": $.lib.kube.Container("setup-db") {
-              image: MARIADB_GALERA_IMAGE,
+              image: $.images["mariadb-galera"],
               env_+: {
                 POWERDNS_DB_HOST: $.galera.svc.host,
                 POWERDNS_DB_PORT: "%s" % POWERDNS_DB_PORT,

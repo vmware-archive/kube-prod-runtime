@@ -20,7 +20,6 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local FLUENTD_ES_IMAGE = (import "images.json").fluentd;
 local FLUENTD_ES_CONF_PATH = "/opt/bitnami/fluentd/conf";
 local FLUENTD_ES_CONFIGD_PATH = "/opt/bitnami/fluentd/conf/config.d";
 local FLUENTD_ES_LOG_FILE = "/opt/bitnami/fluentd/logs/fluentd.log";
@@ -32,6 +31,8 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -92,7 +93,7 @@ local FLUENTD_ES_LOG_BUFFERS_PATH = "/var/log/fluentd-buffers";
         spec+: {
           containers_+: {
             fluentd_es: $.lib.kube.Container("fluentd-es") {
-              image: FLUENTD_ES_IMAGE,
+              image: $.images.fluentd,
               command: ["fluentd"],
               args: [
                 "--config=/opt/bitnami/fluentd/conf/fluentd.conf",

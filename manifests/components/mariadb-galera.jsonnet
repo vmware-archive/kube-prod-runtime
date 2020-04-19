@@ -20,7 +20,6 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local MARIADB_GALERA_IMAGE = (import "images.json")["mariadb-galera"];
 local MARIADB_GALERA_DATA_MOUNTPOINT = "/bitnami/mariadb";
 local MARIADB_GALERA_CONFIG_DIR = "/opt/bitnami/mariadb/conf";
 local MARIADB_GALERA_MYSQL_PORT = 3306;
@@ -28,7 +27,6 @@ local MARIADB_GALERA_REPLICATION_PORT = 4567;
 local MARIADB_GALERA_IST_PORT = 4568;
 local MARIADB_GALERA_SST_PORT = 4444;
 
-local MYSQLD_EXPORTER_IMAGE = (import "images.json")["mysqld-exporter"];
 local MYSQLD_EXPORTER_PORT = 9104;
 
 {
@@ -36,6 +34,8 @@ local MYSQLD_EXPORTER_PORT = 9104;
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -94,7 +94,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
           },
           containers_+: {
             "mariadb-galera": $.lib.kube.Container("mariadb-galera") {
-              image: MARIADB_GALERA_IMAGE,
+              image: $.images["mariadb-galera"],
               env_+: {
                 MARIADB_GALERA_CLUSTER_NAME: "galera",
                 MARIADB_GALERA_CLUSTER_ADDRESS: "gcomm://%s" % $.headless.host,
@@ -140,7 +140,7 @@ local MYSQLD_EXPORTER_PORT = 9104;
               },
             },
             metrics: $.lib.kube.Container("metrics") {
-              image: MYSQLD_EXPORTER_IMAGE,
+              image: $.images["mysqld-exporter"],
               command: [
                 "sh",
                 "-c",

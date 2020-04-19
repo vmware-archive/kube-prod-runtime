@@ -20,13 +20,12 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
-
 {
   lib:: {
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
   p:: "",
   metadata:: {
     metadata+: {
@@ -104,7 +103,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
           affinity+: $.lib.utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
             proxy: $.lib.kube.Container("oauth2-proxy") {
-              image: OAUTH2_PROXY_IMAGE,
+              image: $.images.oauth2_proxy,
               args_+: {
                 "email-domain": "*",
                 "http-address": "0.0.0.0:4180",

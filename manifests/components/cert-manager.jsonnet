@@ -19,13 +19,13 @@
 
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
-local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
-local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmesolver"];
 
 {
   lib:: {
     kube: import "../lib/kube.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -355,10 +355,10 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
           serviceAccountName: $.sa.metadata.name,
           containers_+: {
             default: $.lib.kube.Container("cert-manager") {
-              image: CERT_MANAGER_IMAGE,
+              image: $.images["cert-manager"],
               args_+: {
                 v: "2",
-                "acme-http01-solver-image": CERT_MANAGER_ACMESOLVER_IMAGE,
+                "acme-http01-solver-image": $.images["cert-manager-acmesolver"],
                 "cluster-resource-namespace": "$(POD_NAMESPACE)",
                 "leader-election-namespace": "$(POD_NAMESPACE)",
                 "default-issuer-name": $.letsencrypt_environments[$.letsencrypt_environment],

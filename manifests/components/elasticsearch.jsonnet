@@ -17,8 +17,6 @@
  * limitations under the License.
  */
 
-local ELASTICSEARCH_IMAGE = (import "images.json").elasticsearch;
-
 // Mount point for the data volume (used by multiple containers, like the
 // elasticsearch container and the elasticsearch-fs init container)
 local ELASTICSEARCH_DATA_MOUNTPOINT = "/bitnami/elasticsearch/data";
@@ -32,7 +30,6 @@ local elasticsearch_curator = import "elasticsearch-curator.jsonnet";
 local ELASTICSEARCH_HTTP_PORT = 9200;
 local ELASTICSEARCH_TRANSPORT_PORT = 9300;
 
-local ELASTICSEARCH_EXPORTER_IMAGE = (import "images.json")["elasticsearch-exporter"];
 local ELASTICSEARCH_EXPORTER_PORT = 9102;
 
 {
@@ -40,6 +37,8 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
     kube: import "../lib/kube.libsonnet",
     utils: import "../lib/utils.libsonnet",
   },
+  images:: import "images.json",
+
   p:: "",
   min_master_nodes:: 2,
 
@@ -114,7 +113,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
           containers_+: {
             elasticsearch_logging: $.lib.kube.Container("elasticsearch-logging") {
               local container = self,
-              image: ELASTICSEARCH_IMAGE,
+              image: $.images.elasticsearch,
               // This can massively vary depending on the logging volume
               securityContext: {
                 runAsUser: 1001,
@@ -173,7 +172,7 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
               },
             },
             prom_exporter: $.lib.kube.Container("prom-exporter") {
-              image: ELASTICSEARCH_EXPORTER_IMAGE,
+              image: $.images["elasticsearch-exporter"],
               command: ["elasticsearch_exporter"],
               args_+: {
                 "es.uri": "http://localhost:%s/" % ELASTICSEARCH_HTTP_PORT,

@@ -28,7 +28,9 @@ local version = import "../components/version.jsonnet";
   },
   components:: (import "../components/components.jsonnet") {
     lib:: $.lib,
+    images:: (import "../components/images.json"),
   },
+
   config:: error "no kubeprod configuration",
 
   // Shared metadata for all components
@@ -48,7 +50,7 @@ local version = import "../components/version.jsonnet";
   },
 
   edns: $.components.edns {
-    azconf: $.lib.utils.HashedSecret(edns.p + "external-dns-azure-conf") {
+    azconf: $.lib.utils.HashedSecret($.components.edns.p + "external-dns-azure-conf") {
       metadata+: { namespace: "kubeprod" },
       data_+: {
         azure:: $.config.externalDns,
@@ -62,7 +64,7 @@ local version = import "../components/version.jsonnet";
         template+: {
           spec+: {
             volumes_+: {
-              azconf: $.common.lib.kube.SecretVolume($.edns.azconf),
+              azconf: $.lib.kube.SecretVolume($.edns.azconf),
             },
             containers_+: {
               edns+: {

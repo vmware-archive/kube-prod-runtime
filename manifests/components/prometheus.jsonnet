@@ -20,20 +20,10 @@
 // NB: kubecfg is builtin
 local kubecfg = import "kubecfg.libsonnet";
 
-local PROMETHEUS_IMAGE = (import "images.json").prometheus;
 local PROMETHEUS_CONF_MOUNTPOINT = "/opt/bitnami/prometheus/conf/custom";
 local PROMETHEUS_PORT = 9090;
 
-local KUBE_STATE_METRICS_IMAGE = (import "images.json")["kube-state-metrics"];
-
-local NODE_EXPORTER_IMAGE = (import "images.json")["node-exporter"];
-
-local ADDON_RESIZER_IMAGE = (import "images.json")["addon-resizer"];
-
-local ALERTMANAGER_IMAGE = (import "images.json").alertmanager;
 local ALERTMANAGER_PORT = 9093;
-
-local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
 
 // TODO: add blackbox-exporter
 
@@ -48,6 +38,8 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
       "http://localhost:%s%s/-/reload" % [port, new_path]
     ),
   },
+  images:: import "images.json",
+
   p:: "",
   metadata:: {
     metadata+: {
@@ -227,7 +219,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
             containers_+: {
               default: $.lib.kube.Container("prometheus") {
                 local this = self,
-                image: PROMETHEUS_IMAGE,
+                image: $.images["prometheus"],
                 securityContext+: {
                   runAsUser: 1001,
                 },
@@ -274,7 +266,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
                 },
               },
               config_reload: $.lib.kube.Container("configmap-reload") {
-                image: CONFIGMAP_RELOAD_IMAGE,
+                image: $.images["configmap-reload"],
                 args_+: {
                   "volume-dir": "/config",
                   "webhook-url": $.lib.get_cm_web_hook_url(PROMETHEUS_PORT, $.ingress.prom_path),
@@ -333,7 +325,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
             containers_+: {
               default: $.lib.kube.Container("alertmanager") {
                 local this = self,
-                image: ALERTMANAGER_IMAGE,
+                image: $.images.alertmanager,
                 args_+: {
                   "config.file": this.volumeMounts_.config.mountPath + "/config.yml",
                   "storage.path": this.volumeMounts_.storage.mountPath,
@@ -358,7 +350,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
                 },
               },
               config_reload: $.lib.kube.Container("configmap-reload") {
-                image: CONFIGMAP_RELOAD_IMAGE,
+                image: $.images["configmap-reload"],
                 args_+: {
                   "volume-dir": "/config",
                   "webhook-url": $.lib.get_cm_web_hook_url(ALERTMANAGER_PORT, $.ingress.am_path),
@@ -401,7 +393,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
             }],
             containers_+: {
               default: $.lib.kube.Container("node-exporter") {
-                image: NODE_EXPORTER_IMAGE,
+                image: $.images["node-exporter"],
                 local v = self.volumeMounts_,
                 args_+: {
                   "path.procfs": v.procfs.mountPath,
@@ -509,7 +501,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
             serviceAccountName: $.ksm.serviceAccount.metadata.name,
             containers_+: {
               default+: $.lib.kube.Container("ksm") {
-                image: KUBE_STATE_METRICS_IMAGE,
+                image: $.images["kube-state-metrics"],
                 ports_: {
                   metrics: {containerPort: 8080},
                 },
@@ -555,7 +547,7 @@ local CONFIGMAP_RELOAD_IMAGE = (import "images.json")["configmap-reload"];
                 },
               },
               resizer: $.lib.kube.Container("addon-resizer") {
-                image: ADDON_RESIZER_IMAGE,
+                image: $.images["addon-resizer"],
                 command: ["/pod_nanny"],
                 args_+: {
                   container: spec.containers[0].name,
