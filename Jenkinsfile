@@ -10,6 +10,10 @@
 import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+// As always with modified properties.parameters below, mind we need a 2nd job
+// run to get them loaded[1], fyi this 2nd run can be triggered by adding a PR
+// comment with a `bors try` line.
+// [1] see: https://issues.jenkins-ci.org/browse/JENKINS-41929
 properties([
   // See releasesFromStr() function below on how we parse the _REL string
   parameters([
