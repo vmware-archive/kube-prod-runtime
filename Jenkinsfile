@@ -11,6 +11,7 @@ import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 properties([
+  // See releasesFromStr() function below on how we parse the _REL string
   parameters([
     stringParam(name: 'AKS_REL', defaultValue: '1.15,1.16', description: 'AKS releases to test (comma separated)'),
     stringParam(name: 'EKS_REL', defaultValue: '1.14,1.15', description: 'EKS releases to test (comma separated)'),
@@ -168,7 +169,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
         waitForRollout("kube-system", 1800, 60)
 
         container('kubectl') {
-            sh "kubectl version"
+            sh "kubectl version --short"
             sh "kubectl cluster-info"
         }
 
@@ -397,12 +398,14 @@ spec:
                     def gkeKversions = releasesFromStr(params.GKE_REL)
                     for (x in gkeKversions) {
                         def kversion = x.rel  // local bind required because closures
-                        // overload CLI if for release previews
+                        // Overload CLI if for release previews:
+                        // Unfortunately GKE doesn't allow choosing the Kubernetes release in the rapid channel,
+                        // effectively making specified kversion a no-op values
                         def beta = x.pre? "beta" : ""
                         def cluster_version = x.pre? "--release-channel rapid" : "--cluster-version ${kversion} --no-enable-autoupgrade"
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
-                        def platform = "gke-" + (x.pre? "rapid" : kversion)
+                        def platform = "gke-" + (x.pre? "(" + kversion + ")-rapid" : kversion)
 
                         platforms[platform] = {
                             stage(platform) {
