@@ -1,5 +1,5 @@
 KUBECFG = kubecfg
-JSONNET_FMT = jsonnet fmt
+JSONNET_FMT = jsonnetfmt
 
 FMTFLAGS = \
 	--indent 2 \

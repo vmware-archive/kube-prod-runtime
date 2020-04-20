@@ -219,7 +219,7 @@ local ALERTMANAGER_PORT = 9093;
             containers_+: {
               default: $.lib.kube.Container("prometheus") {
                 local this = self,
-                image: $.images["prometheus"],
+                image: $.images.prometheus,
                 securityContext+: {
                   runAsUser: 1001,
                 },
