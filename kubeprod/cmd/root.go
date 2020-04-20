@@ -27,14 +27,15 @@ import (
 	"os"
 	"strings"
 
+	"github.com/bitnami/kubecfg/utils"
 	"github.com/golang/glog"
-	"github.com/ksonnet/kubecfg/utils"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"golang.org/x/crypto/ssh/terminal"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
-	restclient "k8s.io/client-go/rest"
+	"k8s.io/client-go/restmapper"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
@@ -140,16 +141,24 @@ func (f *logFormatter) Format(e *log.Entry) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-func restClientPool(conf *restclient.Config) (dynamic.ClientPool, discovery.DiscoveryInterface, error) {
-	disco, err := discovery.NewDiscoveryClientForConfig(conf)
+func getDynamicClients(cmd *cobra.Command) (dynamic.Interface, meta.RESTMapper, discovery.DiscoveryInterface, error) {
+	conf, err := clientConfig.ClientConfig()
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, nil, fmt.Errorf("Unable to read kubectl config: %v", err)
 	}
 
+	disco, err := discovery.NewDiscoveryClientForConfig(conf)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 	discoCache := utils.NewMemcachedDiscoveryClient(disco)
-	mapper := discovery.NewDeferredDiscoveryRESTMapper(discoCache, dynamic.VersionInterfaces)
-	pathresolver := dynamic.LegacyAPIPathResolverFunc
 
-	pool := dynamic.NewClientPool(conf, mapper, pathresolver)
-	return pool, discoCache, nil
+	mapper := restmapper.NewDeferredDiscoveryRESTMapper(discoCache)
+
+	cl, err := dynamic.NewForConfig(conf)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return cl, mapper, discoCache, nil
 }

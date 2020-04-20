@@ -29,10 +29,11 @@ import (
 	"os"
 	"path"
 
+	"github.com/bitnami/kubecfg/pkg/kubecfg"
+	"github.com/bitnami/kubecfg/utils"
 	jsonnet "github.com/google/go-jsonnet"
-	"github.com/ksonnet/kubecfg/pkg/kubecfg"
-	"github.com/ksonnet/kubecfg/utils"
 	log "github.com/sirupsen/logrus"
+	"k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -86,7 +87,8 @@ type PlatformConfig interface {
 // InstallCmd represents the install subcommand
 type InstallCmd struct {
 	Config             *restclient.Config
-	ClientPool         dynamic.ClientPool
+	Client             dynamic.Interface
+	Mapper             meta.RESTMapper
 	Discovery          discovery.DiscoveryInterface
 	OnlyGenerate       bool
 	PlatformConfig     PlatformConfig
@@ -170,12 +172,14 @@ func (c InstallCmd) Update(out io.Writer) error {
 	}
 
 	validate := kubecfg.ValidateCmd{
+		Mapper:        c.Mapper,
 		Discovery:     c.Discovery,
 		IgnoreUnknown: true,
 	}
 
 	update := kubecfg.UpdateCmd{
-		ClientPool:       c.ClientPool,
+		Client:           c.Client,
+		Mapper:           c.Mapper,
 		Discovery:        c.Discovery,
 		DefaultNamespace: metav1.NamespaceSystem,
 		Create:           true,
@@ -211,11 +215,11 @@ func evaluateJsonnet(importer jsonnet.Importer, extvars map[string]string, input
 		vm.ExtVar(k, v)
 	}
 
-	data, err := importer.Import(inputDir.String(), input.String())
+	contents, foundAt, err := importer.Import(inputDir.String(), input.String())
 	if err != nil {
 		return "", err
 	}
-	return vm.EvaluateSnippet(data.FoundHere, data.Content)
+	return vm.EvaluateSnippet(foundAt, contents.String())
 }
 
 func jsonToObjects(jsobjs []interface{}) ([]runtime.Object, error) {

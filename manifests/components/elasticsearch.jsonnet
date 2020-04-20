@@ -101,7 +101,8 @@ local ELASTICSEARCH_EXPORTER_PORT = 9102;
         },
         spec+: {
           serviceAccountName: $.serviceAccount.metadata.name,
-          affinity: kube.PodZoneAntiAffinityAnnotation(this.spec.template),
+          // add AZ and node antiaffinity
+          affinity+: utils.weakNodeDiversity(this.spec.selector),
           default_container: "elasticsearch_logging",
           volumes_+: {
             java_security: kube.ConfigMapVolume($.java_security),

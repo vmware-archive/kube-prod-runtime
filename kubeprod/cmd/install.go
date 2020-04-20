@@ -121,7 +121,7 @@ func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.
 		return nil, err
 	}
 
-	c.ClientPool, c.Discovery, err = restClientPool(c.Config)
+	c.Client, c.Mapper, c.Discovery, err = getDynamicClients(cmd)
 	if err != nil {
 		return nil, err
 	}

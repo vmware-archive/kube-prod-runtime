@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/docker/cli/cli/config"
+	clitypes "github.com/docker/cli/cli/config/types"
 	"github.com/docker/distribution/reference"
-	"github.com/docker/docker-ce/components/cli/cli/config"
 	"github.com/docker/docker/api/types"
 	"github.com/sirupsen/logrus"
 )
@@ -31,7 +32,7 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 
 	dcfg, err := config.Load(config.Dir())
 	if err != nil {
-		return types.AuthConfig{}, fmt.Errorf("Loading config file failed: %v", err)
+		return types.AuthConfig{}, fmt.Errorf("loading config file failed: %v", err)
 	}
 
 	// return error early if there are no auths saved
@@ -49,35 +50,42 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 
 	authConfigs, err := dcfg.GetAllCredentials()
 	if err != nil {
-		return types.AuthConfig{}, fmt.Errorf("Getting credentials failed: %v", err)
+		return types.AuthConfig{}, fmt.Errorf("getting credentials failed: %v", err)
 	}
 
 	// if they passed a specific registry, return those creds _if_ they exist
 	if registry != "" {
 		// try with the user input
 		if creds, ok := authConfigs[registry]; ok {
-			return creds, nil
+			c := fixAuthConfig(creds, registry)
+			return c, nil
 		}
 
 		// remove https:// from user input and try again
 		if strings.HasPrefix(registry, "https://") {
-			if creds, ok := authConfigs[strings.TrimPrefix(registry, "https://")]; ok {
-				return creds, nil
+			registryCleaned := strings.TrimPrefix(registry, "https://")
+			if creds, ok := authConfigs[registryCleaned]; ok {
+				c := fixAuthConfig(creds, registryCleaned)
+				return c, nil
 			}
 		}
 
 		// remove http:// from user input and try again
 		if strings.HasPrefix(registry, "http://") {
-			if creds, ok := authConfigs[strings.TrimPrefix(registry, "http://")]; ok {
-				return creds, nil
+			registryCleaned := strings.TrimPrefix(registry, "http://")
+			if creds, ok := authConfigs[registryCleaned]; ok {
+				c := fixAuthConfig(creds, registryCleaned)
+				return c, nil
 			}
 		}
 
 		// add https:// to user input and try again
 		// see https://github.com/genuinetools/reg/issues/32
 		if !strings.HasPrefix(registry, "https://") && !strings.HasPrefix(registry, "http://") {
-			if creds, ok := authConfigs["https://"+registry]; ok {
-				return creds, nil
+			registryCleaned := "https://" + registry
+			if creds, ok := authConfigs[registryCleaned]; ok {
+				c := fixAuthConfig(creds, registryCleaned)
+				return c, nil
 			}
 		}
 
@@ -93,13 +101,34 @@ func GetAuthConfig(username, password, registry string) (types.AuthConfig, error
 	// found in the auth config.
 	for _, creds := range authConfigs {
 		fmt.Printf("No registry passed. Using registry %q\n", creds.ServerAddress)
-		return creds, nil
+		c := fixAuthConfig(creds, creds.ServerAddress)
+		return c, nil
 	}
 
 	// Don't use any authentication.
 	// We should never get here.
 	fmt.Println("Not using any authentication")
 	return types.AuthConfig{}, nil
+}
+
+// fixAuthConfig overwrites the AuthConfig's ServerAddress field with the
+// registry value if ServerAddress is empty. For example, config.Load() will
+// return AuthConfigs with empty ServerAddresses if the configuration file
+// contains only an "credsHelper" object.
+func fixAuthConfig(creds clitypes.AuthConfig, registry string) (c types.AuthConfig) {
+	c.Username = creds.Username
+	c.Password = creds.Password
+	c.Auth = creds.Auth
+	c.Email = creds.Email
+	c.IdentityToken = creds.IdentityToken
+	c.RegistryToken = creds.RegistryToken
+
+	c.ServerAddress = creds.ServerAddress
+	if creds.ServerAddress == "" {
+		c.ServerAddress = registry
+	}
+
+	return c
 }
 
 // GetRepoAndRef parses the repo name and reference.

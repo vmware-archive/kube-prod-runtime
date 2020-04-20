@@ -97,6 +97,7 @@ local OAUTH2_PROXY_IMAGE = (import "images.json").oauth2_proxy;
       replicas: 2,
       template+: {
         spec+: {
+          // add AZ and node antiaffinity
           affinity+: utils.weakNodeDiversity(this.spec.selector),
           containers_+: {
             proxy: kube.Container("oauth2-proxy") {

@@ -27,7 +27,7 @@ import (
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 
-	appsv1beta1 "k8s.io/api/apps/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/kubernetes/scheme"
 )
@@ -66,7 +66,7 @@ func totalHits(resp *apiResponse) int {
 // on the slightly odd structure this imposes.
 var _ = Describe("Logging", func() {
 	var c kubernetes.Interface
-	var deploy *appsv1beta1.Deployment
+	var deploy *appsv1.Deployment
 	var ns string
 
 	BeforeEach(func() {
@@ -75,7 +75,7 @@ var _ = Describe("Logging", func() {
 
 		decoder := scheme.Codecs.UniversalDeserializer()
 
-		deploy = decodeFileOrDie(decoder, "testdata/logging-deploy.yaml").(*appsv1beta1.Deployment)
+		deploy = decodeFileOrDie(decoder, "testdata/logging-deploy.yaml").(*appsv1.Deployment)
 
 		deploy.Spec.Template.Spec.Containers[0].Env[0].Value = RandString(32)
 	})
@@ -86,7 +86,7 @@ var _ = Describe("Logging", func() {
 
 	JustBeforeEach(func() {
 		var err error
-		deploy, err = c.AppsV1beta1().Deployments(ns).Create(deploy)
+		deploy, err = c.AppsV1().Deployments(ns).Create(deploy)
 		Expect(err).NotTo(HaveOccurred())
 	})
 

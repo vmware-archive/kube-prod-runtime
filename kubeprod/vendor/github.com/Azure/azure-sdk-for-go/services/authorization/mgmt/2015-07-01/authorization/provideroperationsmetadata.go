@@ -21,6 +21,7 @@ import (
 	"context"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/azure"
+	"github.com/Azure/go-autorest/tracing"
 	"net/http"
 )
 
@@ -37,7 +38,9 @@ func NewProviderOperationsMetadataClient(subscriptionID string) ProviderOperatio
 	return NewProviderOperationsMetadataClientWithBaseURI(DefaultBaseURI, subscriptionID)
 }
 
-// NewProviderOperationsMetadataClientWithBaseURI creates an instance of the ProviderOperationsMetadataClient client.
+// NewProviderOperationsMetadataClientWithBaseURI creates an instance of the ProviderOperationsMetadataClient client
+// using a custom endpoint.  Use this when interacting with an Azure cloud that uses a non-standard base URI (sovereign
+// clouds, Azure stack).
 func NewProviderOperationsMetadataClientWithBaseURI(baseURI string, subscriptionID string) ProviderOperationsMetadataClient {
 	return ProviderOperationsMetadataClient{NewWithBaseURI(baseURI, subscriptionID)}
 }
@@ -45,9 +48,20 @@ func NewProviderOperationsMetadataClientWithBaseURI(baseURI string, subscription
 // Get gets provider operations metadata for the specified resource provider.
 // Parameters:
 // resourceProviderNamespace - the namespace of the resource provider.
+// APIVersion - the API version to use for the operation.
 // expand - specifies whether to expand the values.
-func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resourceProviderNamespace string, expand string) (result ProviderOperationsMetadata, err error) {
-	req, err := client.GetPreparer(ctx, resourceProviderNamespace, expand)
+func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resourceProviderNamespace string, APIVersion string, expand string) (result ProviderOperationsMetadata, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ProviderOperationsMetadataClient.Get")
+		defer func() {
+			sc := -1
+			if result.Response.Response != nil {
+				sc = result.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	req, err := client.GetPreparer(ctx, resourceProviderNamespace, APIVersion, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.ProviderOperationsMetadataClient", "Get", nil, "Failure preparing request")
 		return
@@ -69,12 +83,11 @@ func (client ProviderOperationsMetadataClient) Get(ctx context.Context, resource
 }
 
 // GetPreparer prepares the Get request.
-func (client ProviderOperationsMetadataClient) GetPreparer(ctx context.Context, resourceProviderNamespace string, expand string) (*http.Request, error) {
+func (client ProviderOperationsMetadataClient) GetPreparer(ctx context.Context, resourceProviderNamespace string, APIVersion string, expand string) (*http.Request, error) {
 	pathParameters := map[string]interface{}{
 		"resourceProviderNamespace": autorest.Encode("path", resourceProviderNamespace),
 	}
 
-	const APIVersion = "2015-07-01"
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -95,8 +108,8 @@ func (client ProviderOperationsMetadataClient) GetPreparer(ctx context.Context, 
 // GetSender sends the Get request. The method will close the
 // http.Response Body if it receives an error.
 func (client ProviderOperationsMetadataClient) GetSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // GetResponder handles the response to the Get request. The method always
@@ -114,10 +127,21 @@ func (client ProviderOperationsMetadataClient) GetResponder(resp *http.Response)
 
 // List gets provider operations metadata for all resource providers.
 // Parameters:
+// APIVersion - the API version to use for this operation.
 // expand - specifies whether to expand the values.
-func (client ProviderOperationsMetadataClient) List(ctx context.Context, expand string) (result ProviderOperationsMetadataListResultPage, err error) {
+func (client ProviderOperationsMetadataClient) List(ctx context.Context, APIVersion string, expand string) (result ProviderOperationsMetadataListResultPage, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ProviderOperationsMetadataClient.List")
+		defer func() {
+			sc := -1
+			if result.pomlr.Response.Response != nil {
+				sc = result.pomlr.Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
 	result.fn = client.listNextResults
-	req, err := client.ListPreparer(ctx, expand)
+	req, err := client.ListPreparer(ctx, APIVersion, expand)
 	if err != nil {
 		err = autorest.NewErrorWithError(err, "authorization.ProviderOperationsMetadataClient", "List", nil, "Failure preparing request")
 		return
@@ -139,8 +163,7 @@ func (client ProviderOperationsMetadataClient) List(ctx context.Context, expand 
 }
 
 // ListPreparer prepares the List request.
-func (client ProviderOperationsMetadataClient) ListPreparer(ctx context.Context, expand string) (*http.Request, error) {
-	const APIVersion = "2015-07-01"
+func (client ProviderOperationsMetadataClient) ListPreparer(ctx context.Context, APIVersion string, expand string) (*http.Request, error) {
 	queryParameters := map[string]interface{}{
 		"api-version": APIVersion,
 	}
@@ -161,8 +184,8 @@ func (client ProviderOperationsMetadataClient) ListPreparer(ctx context.Context,
 // ListSender sends the List request. The method will close the
 // http.Response Body if it receives an error.
 func (client ProviderOperationsMetadataClient) ListSender(req *http.Request) (*http.Response, error) {
-	return autorest.SendWithSender(client, req,
-		autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	sd := autorest.GetSendDecorators(req.Context(), autorest.DoRetryForStatusCodes(client.RetryAttempts, client.RetryDuration, autorest.StatusCodesForRetry...))
+	return autorest.SendWithSender(client, req, sd...)
 }
 
 // ListResponder handles the response to the List request. The method always
@@ -179,8 +202,8 @@ func (client ProviderOperationsMetadataClient) ListResponder(resp *http.Response
 }
 
 // listNextResults retrieves the next set of results, if any.
-func (client ProviderOperationsMetadataClient) listNextResults(lastResults ProviderOperationsMetadataListResult) (result ProviderOperationsMetadataListResult, err error) {
-	req, err := lastResults.providerOperationsMetadataListResultPreparer()
+func (client ProviderOperationsMetadataClient) listNextResults(ctx context.Context, lastResults ProviderOperationsMetadataListResult) (result ProviderOperationsMetadataListResult, err error) {
+	req, err := lastResults.providerOperationsMetadataListResultPreparer(ctx)
 	if err != nil {
 		return result, autorest.NewErrorWithError(err, "authorization.ProviderOperationsMetadataClient", "listNextResults", nil, "Failure preparing next results request")
 	}
@@ -200,7 +223,17 @@ func (client ProviderOperationsMetadataClient) listNextResults(lastResults Provi
 }
 
 // ListComplete enumerates all values, automatically crossing page boundaries as required.
-func (client ProviderOperationsMetadataClient) ListComplete(ctx context.Context, expand string) (result ProviderOperationsMetadataListResultIterator, err error) {
-	result.page, err = client.List(ctx, expand)
+func (client ProviderOperationsMetadataClient) ListComplete(ctx context.Context, APIVersion string, expand string) (result ProviderOperationsMetadataListResultIterator, err error) {
+	if tracing.IsEnabled() {
+		ctx = tracing.StartSpan(ctx, fqdn+"/ProviderOperationsMetadataClient.List")
+		defer func() {
+			sc := -1
+			if result.Response().Response.Response != nil {
+				sc = result.page.Response().Response.Response.StatusCode
+			}
+			tracing.EndSpan(ctx, sc, err)
+		}()
+	}
+	result.page, err = client.List(ctx, APIVersion, expand)
 	return
 }

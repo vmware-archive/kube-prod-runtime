@@ -10,11 +10,35 @@
 import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
+// As always with modified properties.parameters below, mind we need a 2nd job
+// run to get them loaded[1], fyi this 2nd run can be triggered by adding a PR
+// comment with a `bors try` line.
+// [1] see: https://issues.jenkins-ci.org/browse/JENKINS-41929
+properties([
+  // See releasesFromStr() function below on how we parse the _REL string
+  parameters([
+    stringParam(name: 'AKS_REL', defaultValue: '1.15,1.16', description: 'AKS releases to test (comma separated)'),
+    stringParam(name: 'EKS_REL', defaultValue: '1.14,1.15', description: 'EKS releases to test (comma separated)'),
+    stringParam(name: 'GKE_REL', defaultValue: '1.15,1.16-pre', description: 'GKE releases to test (comma separated)'),
+    stringParam(name: 'GEN_REL', defaultValue: '1.15', description: 'Generic-cloud releases to test (comma separated)'),
+  ])
+])
+
+
 def parentZone = 'tests.bkpr.run'
 def parentZoneResourceGroup = 'jenkins-bkpr-rg'
 
 // Force using our pod
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
+
+// Get array of releases (\d.\d+) from comma separated string in the form of e.g.
+// - "1.15,1.16"     -> [[rel: "1.15", pre: false], [rel: "1.16", pre: false]
+// - "1.15,1.16-pre" -> [[rel: "1.15", pre: false], [rel: "1.16", pre: true]
+// Using `collect` to transform them thru regex, `findAll` to filter-in non-nulls
+@NonCPS
+def releasesFromStr(strRel) {
+  strRel.split(",").collect{ def m = (it =~ /(\d\.\d+)(-pre)?/); if (m) [rel: m[0][1], pre: m[0][2] != null] }.findAll{ it }
+}
 
 def scmCheckout() {
     // PR builds are handled using the github-integration plugin to
@@ -149,7 +173,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
         waitForRollout("kube-system", 1800, 60)
 
         container('kubectl') {
-            sh "kubectl version"
+            sh "kubectl version --short"
             sh "kubectl cluster-info"
         }
 
@@ -179,6 +203,10 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                                 --nodes=8                   \
                                 --skip '${skip}'            \
                                 -- --junit junit --description '${description}' --kubeconfig ${KUBECONFIG} ${ginkgoArgs}
+                            rc=\${?}
+                            [ \${rc} -eq 0 ] && RESULT=PASS || RESULT=FAIL
+                            echo "INTEGRATION TEST for platform='${description}' RESULT=\${RESULT}"
+                            exit \${rc}
                             """
                         } catch (error) {
                             if(pauseForDebugging) {
@@ -219,7 +247,7 @@ kind: Pod
 spec:
   containers:
   - name: 'go'
-    image: 'golang:1.12.14-stretch'
+    image: 'golang:1.14.2-stretch'
     tty: true
     command:
     - 'cat'
@@ -234,7 +262,7 @@ spec:
     - name: workspace-volume
       mountPath: '/home/jenkins'
   - name: 'gcloud'
-    image: 'google/cloud-sdk:275.0.0'
+    image: 'google/cloud-sdk:289.0.0'
     tty: true
     command:
     - 'cat'
@@ -371,12 +399,17 @@ spec:
 
                     // See:
                     //  gcloud container get-server-config
-                    def gkeKversions = ["1.14", "1.15"]
+                    def gkeKversions = releasesFromStr(params.GKE_REL)
                     for (x in gkeKversions) {
-                        def kversion = x  // local bind required because closures
+                        def kversion = x.rel  // local bind required because closures
+                        // Overload CLI if for release previews:
+                        // Unfortunately GKE doesn't allow choosing the Kubernetes release in the rapid channel,
+                        // effectively making specified kversion a no-op values
+                        def beta = x.pre? "beta" : ""
+                        def cluster_version = x.pre? "--release-channel rapid" : "--cluster-version ${kversion} --no-enable-autoupgrade"
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
-                        def platform = "gke-" + kversion
+                        def platform = "gke-" + (x.pre? "(" + kversion + ")-rapid" : kversion)
 
                         platforms[platform] = {
                             stage(platform) {
@@ -397,13 +430,12 @@ spec:
                                                 {
                                                     container('gcloud') {
                                                         sh """
-                                                        gcloud container clusters create ${clusterName} \
-                                                            --cluster-version ${kversion}               \
+                                                        gcloud ${beta} container clusters create ${clusterName} \
                                                             --project ${project}                        \
+                                                            ${cluster_version}                          \
                                                             --machine-type n1-standard-2                \
                                                             --num-nodes 3                               \
                                                             --zone ${zone}                              \
-                                                            --no-enable-autoupgrade                     \
                                                             --enable-ip-alias                           \
                                                             --preemptible                               \
                                                             --labels 'platform=${gcpLabel(platform)},branch=${gcpLabel(BRANCH_NAME)},build=${gcpLabel(BUILD_TAG)},team=bkpr,created_by=jenkins-bkpr'
@@ -464,9 +496,9 @@ spec:
 
                     // See:
                     //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-                    def aksKversions = ["1.14", "1.15"]
+                    def aksKversions = releasesFromStr(params.AKS_REL)
                     for (x in aksKversions) {
-                        def kversion = x  // local bind required because closures
+                        def kversion = x.rel  // local bind required because closures
                         def resourceGroup = 'jenkins-bkpr-rg'
                         def location = "eastus"
                         def platform = "aks-" + kversion
@@ -582,9 +614,9 @@ spec:
                         }
                     }
 
-                    def eksKversions = ["1.14"]
+                    def eksKversions = releasesFromStr(params.EKS_REL)
                     for (x in eksKversions) {
-                        def kversion = x  // local bind required because closures
+                        def kversion = x.rel  // local bind required because closures
                         def awsRegion = "us-east-1"
                         def awsUserPoolId = "${awsRegion}_QkFNHuI5g"
                         def awsZones = ["us-east-1b", "us-east-1f"]
@@ -604,7 +636,7 @@ spec:
                                             "KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}",
                                             "AWS_DEFAULT_REGION=${awsRegion}",
                                             "PATH+AWSIAMAUTHENTICATOR=${tool 'aws-iam-authenticator'}",
-                                            "PATH+JQ=${tool 'eksctl'}",
+                                            "PATH+EKSCTL=${tool 'eksctl'}",
                                         ]) {
                                             // kubeprod requires `GOOGLE_APPLICATION_CREDENTIALS`
                                             withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'AWS_ACCESS_KEY_ID', secretKeyVariable: 'AWS_SECRET_ACCESS_KEY']]) {
@@ -674,7 +706,7 @@ spec:
                                                             """
                                                         }
                                                     }
-                                                    withEnv(["PATH+JQ=${tool 'eksctl'}"]) {
+                                                    withEnv(["PATH+EKSCTL=${tool 'eksctl'}"]) {
                                                         sh "eksctl delete cluster --name ${clusterName} --timeout 10m0s || true"
                                                     }
                                                 }
@@ -698,9 +730,9 @@ spec:
                     }
 
                     // we use GKE for testing the generic platform
-                    def genericKversions = ["1.14"]
+                    def genericKversions = releasesFromStr(params.GEN_REL)
                     for (x in genericKversions) {
-                        def kversion = x  // local bind required because closures
+                        def kversion = x.rel  // local bind required because closures
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
                         def platform = "generic-" + kversion

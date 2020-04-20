@@ -26,7 +26,7 @@ import (
 	"time"
 
 	"github.com/Azure/azure-sdk-for-go/services/authorization/mgmt/2015-07-01/authorization"
-	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-03-01-preview/dns"
+	"github.com/Azure/azure-sdk-for-go/services/dns/mgmt/2018-05-01/dns"
 	"github.com/Azure/azure-sdk-for-go/services/graphrbac/1.6/graphrbac"
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2018-02-01/resources"
 	"github.com/Azure/go-autorest/autorest"
@@ -45,10 +45,7 @@ const (
 )
 
 func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssignmentsClient, scope string, params authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
-	uid, err := uuid.NewV4()
-	if err != nil {
-		return authorization.RoleAssignment{}, err
-	}
+	uid := uuid.NewV4()
 
 	const maxTries = 30
 

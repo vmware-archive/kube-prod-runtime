@@ -225,6 +225,11 @@
     local container_names_ordered = [self.default_container] + [n for n in container_names if n != self.default_container],
     containers: [{name: $.hyphenate(name)} + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
 
+    // Note initContainers are inherently ordered, and using this
+    // named object will lose that ordering.  If order matters, then
+    // manipulate `initContainers` directly (perhaps
+    // appending/prepending to `super.initContainers` to mix+match
+    // both approaches)
     initContainers_:: {},
     initContainers: [{name: $.hyphenate(name)} + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
 
@@ -318,7 +323,7 @@
     },
   },
 
-  Deployment(name): $._Object("apps/v1beta1", "Deployment", name) {
+  Deployment(name): $._Object("apps/v1", "Deployment", name) {
     local deployment = self,
 
     spec: {
@@ -359,6 +364,9 @@
       // NB: Upstream default is 0
       minReadySeconds: 30,
 
+      // NB: Regular k8s default is to keep all revisions
+      revisionHistoryLimit: 10,
+
       replicas: 1,
       assert self.replicas >= 1,
     },
@@ -385,7 +393,7 @@
     },
   },
 
-  StatefulSet(name): $._Object("apps/v1beta2", "StatefulSet", name) {
+  StatefulSet(name): $._Object("apps/v1", "StatefulSet", name) {
     local sset = self,
 
     spec: {
@@ -393,6 +401,9 @@
 
       updateStrategy: {
         type: "RollingUpdate",
+        rollingUpdate: {
+          partition: 0,
+        },
       },
 
       template: {
@@ -449,6 +460,7 @@
       schedule: error "Need to provide spec.schedule",
       successfulJobsHistoryLimit: 10,
       failedJobsHistoryLimit: 20,
+      // NB: upstream concurrencyPolicy default is "Allow"
       concurrencyPolicy: "Forbid",
     },
   },
@@ -465,7 +477,7 @@
     parallelism: 1,
   },
 
-  DaemonSet(name): $._Object("extensions/v1beta1", "DaemonSet", name) {
+  DaemonSet(name): $._Object("apps/v1", "DaemonSet", name) {
     local ds = self,
     spec: {
       updateStrategy: {
@@ -487,7 +499,7 @@
     },
   },
 
-  Ingress(name): $._Object("extensions/v1beta1", "Ingress", name) {
+  Ingress(name): $._Object("networking.k8s.io/v1beta1", "Ingress", name) {
     spec: {},
 
     local rel_paths = [
@@ -571,24 +583,4 @@
     },
   },
 
-  PodZoneAntiAffinityAnnotation(pod): {
-    podAntiAffinity: {
-      preferredDuringSchedulingIgnoredDuringExecution: [
-        {
-          weight: 50,
-          podAffinityTerm: {
-            labelSelector: {matchLabels: pod.metadata.labels},
-            topologyKey: "failure-domain.beta.kubernetes.io/zone",
-          },
-        },
-        {
-          weight: 100,
-          podAffinityTerm: {
-            labelSelector: {matchLabels: pod.metadata.labels},
-            topologyKey: "kubernetes.io/hostname",
-          },
-        },
-      ],
-    },
-  },
 }
