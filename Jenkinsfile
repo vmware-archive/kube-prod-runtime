@@ -412,7 +412,8 @@ spec:
                         def platform = "gke-" + (x.pre? "(" + kversion + ")-rapid" : kversion)
 
                         platforms[platform] = {
-                            stage(platform) {
+                            // single concurrent build per platform ("gke-<version>"), to avoid hitting cloud quota issues
+                            lock(platform) { stage(platform) {
                                 def retryNum = 0
 
                                 retry(maxRetries) {
@@ -490,7 +491,7 @@ spec:
                                         }
                                     }
                                 }
-                            }
+                            }}
                         }
                     }
 
@@ -504,7 +505,8 @@ spec:
                         def platform = "aks-" + kversion
 
                         platforms[platform] = {
-                            stage(platform) {
+                            // single concurrent build per platform ("aks-<version>"), to avoid hitting cloud quota issues
+                            lock(platform) { stage(platform) {
                                 def retryNum = 0
                                 retry(maxRetries) {
                                     def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
@@ -610,7 +612,7 @@ spec:
                                         }
                                     }
                                 }
-                            }
+                            }}
                         }
                     }
 
@@ -623,7 +625,8 @@ spec:
                         def platform = "eks-" + kversion
 
                         platforms[platform] = {
-                            stage(platform) {
+                            // single concurrent build per platform ("eks-<version>"), to avoid hitting cloud quota issues
+                            lock(platform) { stage(platform) {
                                 def retryNum = 0
                                 retry(maxRetries) {
                                     def clusterName = ("${env.BRANCH_NAME}".take(8) + "-${env.BUILD_NUMBER}-" + UUID.randomUUID().toString().take(5) + "-${platform}").replaceAll(/[^a-zA-Z0-9-]/, '-').replaceAll(/--/, '-').toLowerCase()
@@ -725,7 +728,7 @@ spec:
                                         }
                                     }
                                 }
-                            }
+                            }}
                         }
                     }
 
@@ -738,7 +741,8 @@ spec:
                         def platform = "generic-" + kversion
 
                         platforms[platform] = {
-                            stage(platform) {
+                            // single concurrent build per platform ("generic-<version>"), to avoid hitting cloud quota issues
+                            lock(platform) { stage(platform) {
                                 def retryNum = 0
 
                                 retry(maxRetries) {
@@ -822,7 +826,7 @@ spec:
                                         }
                                     }
                                 }
-                            }
+                            }}
                         }
                     }
 
