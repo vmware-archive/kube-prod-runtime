@@ -4,7 +4,7 @@
     "cert-manager": "bitnami/cert-manager:0.13.1-debian-10-r0",
     "cert-manager-acmesolver": "quay.io/jetstack/cert-manager-acmesolver:v0.12.0",
     "configmap-reload": "bitnami/configmap-reload:0.3.0-r69",
-    "elasticsearch": "bitnami/elasticsearch:7.6.2-debian-10-r24",
+    "elasticsearch": "bitnami/elasticsearch:7.6.2-debian-10-r25",
     "elasticsearch-curator": "bitnami/elasticsearch-curator:5.8.1-r64",
     "elasticsearch-exporter": "bitnami/elasticsearch-exporter:1.1.0-r128",
     "external-dns": "bitnami/external-dns:0.7.0-debian-10-r0",
