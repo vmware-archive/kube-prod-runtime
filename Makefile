@@ -80,11 +80,3 @@ awless:
 ifndef HAS_AWLESS
 	$(GO) get github.com/wallix/awless
 endif
-
-# Run if needed as developer, then commit jsonnetfile.* and vendor/ updates
-HAS_JB := $(shell command -v jb;)
-update-vendor:
-ifndef HAS_JB
-	$(error You must install jb from github.com/jsonnet-bundler/jsonnet-bundler)
-endif
-	jb update
