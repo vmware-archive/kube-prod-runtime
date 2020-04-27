@@ -1,8 +1,7 @@
 /*
- * Bitnami Kubernetes Production Runtime - A collection of services that makes it
- * easy to run production workloads in Kubernetes.
+ * kube-libsonnet - A jsonnet helper library for Kubernetes
  *
- * Copyright 2018-2019 Bitnami
+ * Copyright 2018-2020 VMware Inc.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -100,7 +99,7 @@ local kube = import "kube.libsonnet";
       local hash = std.substr(std.md5(std.toString(this.data)), 0, 7),
       local orig_name = super.name,
       name: orig_name + "-" + hash,
-      labels+: {name: orig_name},
+      labels+: { name: orig_name },
     },
   },
   HashedConfigMap(name):: kube.ConfigMap(name) + hashed,
