@@ -15,6 +15,8 @@ local voidKubecfgInternals(obj) = (
   + helpers.setAtPath('prometheus.rules', {})
   + helpers.setAtPath('prometheus.prometheus.config.data', { 'prometheus.yml': '' })
   + helpers.setAtPath('prometheus.alertmanager.config.data', { 'config.yml': '' })
+  + helpers.setAtPath('cert_manager.CRDS', {})
+  + helpers.setAtPath('edns.crds', {})
 );
 
 // Just picking up one of the supported platforms, to get a full
