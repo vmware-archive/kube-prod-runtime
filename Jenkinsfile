@@ -129,7 +129,7 @@ def waitForRollout(String namespace, int rolloutTimeout, int postRollOutSleep) {
                 sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
                 sh """
                   echo -n "\nFurther debugging info for Pods not-Running in '${namespace}' namespace:"
-                  kubectl --namespace ${namespace} get pod -otemplate -ojsonpath='{..metadata.name} {..status..phase}{"\\n"}' | awk '!/Running/{ print \$1 }' | xargs -I@ sh -xc 'kubectl --namespace ${namespace} describe pod @ | tail -10; kubectl --namespace ${namespace} logs @'
+                  kubectl --namespace ${namespace} get pod -otemplate -ojsonpath='{..metadata.name} {..status..phase}{"\\n"}' | grep -v Running | awk '{ print \$1 }' | xargs -tI@ sh -xc 'kubectl --namespace ${namespace} describe pod @ | tail -10; kubectl --namespace ${namespace} logs @'
                 """
                 throw error
             }
