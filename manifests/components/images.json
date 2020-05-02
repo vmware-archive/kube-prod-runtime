@@ -1,7 +1,7 @@
 {
     "addon-resizer": "k8s.gcr.io/addon-resizer:1.8.7",
     "alertmanager": "bitnami/alertmanager:0.20.0-debian-10-r84",
-    "cert-manager": "bitnami/cert-manager:0.14.3-debian-10-r1",
+    "cert-manager": "bitnami/cert-manager:0.14.3-debian-10-r2",
     "cert-manager-acmesolver": "quay.io/jetstack/cert-manager-acmesolver:v0.12.0",
     "configmap-reload": "bitnami/configmap-reload:0.3.0-debian-10-r85",
     "elasticsearch": "bitnami/elasticsearch:7.6.2-debian-10-r23",
