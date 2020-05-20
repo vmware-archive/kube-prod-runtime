@@ -192,7 +192,8 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
 
                 withGo() {
                     dir("${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/tests") {
-                        sh 'go get github.com/onsi/ginkgo/ginkgo'
+                        // NOTE: ginkgo version pinned to the one used in tests/
+                        sh 'env GO111MODULE=on go get github.com/onsi/ginkgo/ginkgo@v1.12.0'
                         try {
                             sh """
                             ginkgo -v \
