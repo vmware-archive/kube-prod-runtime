@@ -18,9 +18,11 @@ properties([
   // See releasesFromStr() function below on how we parse the _REL string
   parameters([
     stringParam(name: 'AKS_REL', defaultValue: '1.15,1.16', description: 'AKS releases to test (comma separated)'),
-    stringParam(name: 'EKS_REL', defaultValue: '1.14,1.15', description: 'EKS releases to test (comma separated)'),
+    stringParam(name: 'EKS_REL', defaultValue: '1.15,1.16', description: 'EKS releases to test (comma separated)'),
     stringParam(name: 'GKE_REL', defaultValue: '1.15,1.16', description: 'GKE releases to test (comma separated)'),
-    stringParam(name: 'GEN_REL', defaultValue: '1.15', description: 'Generic-cloud releases to test (comma separated)'),
+    stringParam(name: 'GEN_REL', defaultValue: '1.16', description: 'Generic-cloud releases to test (comma separated)'),
+    stringParam(name: 'TIMEOUT', defaultValue: '150', description: 'Full e2e tests run timeout in minutes'),
+    stringParam(name: 'PAUSE_TIME', defaultValue: '15', description: 'Time to pause on failure in minutes (before deletion)'),
   ])
 ])
 
@@ -129,7 +131,7 @@ def waitForRollout(String namespace, int rolloutTimeout, int postRollOutSleep) {
                 sh "kubectl --namespace ${namespace} get po,deploy,svc,ing"
                 sh """
                   echo -n "\nFurther debugging info for Pods not-Running in '${namespace}' namespace:"
-                  kubectl --namespace ${namespace} get pod -otemplate -ojsonpath='{..metadata.name} {..status..phase}{"\\n"}' | grep -v Running | awk '{ print \$1 }' | xargs -tI@ sh -xc 'kubectl --namespace ${namespace} describe pod @ | tail -10; kubectl --namespace ${namespace} logs @'
+                  kubectl --namespace ${namespace} get pod --no-headers | grep -v Running | awk '{ print \$1 }' | xargs -tI@ sh -xc 'kubectl --namespace ${namespace} describe pod @ | tail -10; kubectl --namespace ${namespace} logs @'
                 """
                 throw error
             }
@@ -215,7 +217,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                             """
                         } catch (error) {
                             if(pauseForDebugging) {
-                                timeout(time: 15, unit: 'MINUTES') {
+                                timeout(time: params.PAUSE_TIME as Integer, unit: 'MINUTES') {
                                     input 'Paused for manual debugging'
                                 }
                             }
@@ -339,7 +341,7 @@ spec:
     env.GOPATH = "/go"
 
     node(label) {
-        timeout(time: 150, unit: 'MINUTES') {
+        timeout(time: params.TIMEOUT as Integer, unit: 'MINUTES') {
             withEnv([
                 "HOME=${env.WORKSPACE}",
                 "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",
@@ -744,10 +746,11 @@ spec:
                         def project = 'bkprtesting'
                         def zone = 'us-east1-b'
                         def platform = "generic-" + kversion
+                        def platform_lock = "gke-" + kversion
 
                         platforms[platform] = {
                             // single concurrent build per platform ("generic-<version>"), to avoid hitting cloud quota issues
-                            lock(platform) { stage(platform) {
+                            lock(platform_lock) { stage(platform) {
                                 def retryNum = 0
 
                                 retry(maxRetries) {
