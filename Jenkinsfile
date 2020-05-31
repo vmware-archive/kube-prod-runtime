@@ -10,22 +10,35 @@
 import groovy.json.JsonOutput
 import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
-// As always with modified properties.parameters below, mind we need a 2nd job
-// run to get them loaded[1], fyi this 2nd run can be triggered by adding a PR
-// comment with a `bors try` line.
+// Workaround https://issues.jenkins-ci.org/browse/JENKINS-41929 (which forces
+// a 2nd job run to get them loaded[1], this 2nd run can be triggered by
+// adding a PR comment with a `bors try` line): override buildRelDefaults if
+// corresponding parameter is set.
 // [1] see: https://issues.jenkins-ci.org/browse/JENKINS-41929
+
+def buildRelDefaults = [
+  'AKS_REL': '1.15,1.16',
+  'EKS_REL': '1.15,1.16',
+  'GKE_REL': '1.15,1.16',
+  'GEN_REL': '1.16',
+]
+
 properties([
   // See releasesFromStr() function below on how we parse the _REL string
   parameters([
-    stringParam(name: 'AKS_REL', defaultValue: '1.15,1.16', description: 'AKS releases to test (comma separated)'),
-    stringParam(name: 'EKS_REL', defaultValue: '1.15,1.16', description: 'EKS releases to test (comma separated)'),
-    stringParam(name: 'GKE_REL', defaultValue: '1.15,1.16', description: 'GKE releases to test (comma separated)'),
-    stringParam(name: 'GEN_REL', defaultValue: '1.16', description: 'Generic-cloud releases to test (comma separated)'),
+    stringParam(name: 'AKS_REL', defaultValue: '', description: "Override AKS releases to test"),
+    stringParam(name: 'EKS_REL', defaultValue: '', description: "Override EKS releases to test"),
+    stringParam(name: 'GKE_REL', defaultValue: '', description: "Override GKE releases to test"),
+    stringParam(name: 'GEN_REL', defaultValue: '', description: "Override Generic-cloud releases to test"),
     stringParam(name: 'TIMEOUT', defaultValue: '150', description: 'Full e2e tests run timeout in minutes'),
     stringParam(name: 'PAUSE_TIME', defaultValue: '15', description: 'Time to pause on failure in minutes (before deletion)'),
   ])
 ])
 
+// Final map with releases to build, merging `buildRelDefaults` map with `params` (if not ''):
+def buildRel = buildRelDefaults.collectEntries {
+    key, value -> [(key): (params[key] != ""? params[key] : value)]
+}
 
 def parentZone = 'tests.bkpr.run'
 def parentZoneResourceGroup = 'jenkins-bkpr-rg'
@@ -406,7 +419,7 @@ spec:
 
                     // See:
                     //  gcloud container get-server-config
-                    def gkeKversions = releasesFromStr(params.GKE_REL)
+                    def gkeKversions = releasesFromStr(buildRel.GKE_REL)
                     for (x in gkeKversions) {
                         def kversion = x.rel  // local bind required because closures
                         // Overload CLI if for release previews:
@@ -504,7 +517,7 @@ spec:
 
                     // See:
                     //  az aks get-versions -l centralus --query 'sort(orchestrators[?orchestratorType==`Kubernetes`].orchestratorVersion)'
-                    def aksKversions = releasesFromStr(params.AKS_REL)
+                    def aksKversions = releasesFromStr(buildRel.AKS_REL)
                     for (x in aksKversions) {
                         def kversion = x.rel  // local bind required because closures
                         def resourceGroup = 'jenkins-bkpr-rg'
@@ -623,7 +636,7 @@ spec:
                         }
                     }
 
-                    def eksKversions = releasesFromStr(params.EKS_REL)
+                    def eksKversions = releasesFromStr(buildRel.EKS_REL)
                     for (x in eksKversions) {
                         def kversion = x.rel  // local bind required because closures
                         def awsRegion = "us-east-1"
@@ -740,7 +753,7 @@ spec:
                     }
 
                     // we use GKE for testing the generic platform
-                    def genericKversions = releasesFromStr(params.GEN_REL)
+                    def genericKversions = releasesFromStr(buildRel.GEN_REL)
                     for (x in genericKversions) {
                         def kversion = x.rel  // local bind required because closures
                         def project = 'bkprtesting'
