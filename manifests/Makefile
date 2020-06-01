@@ -15,9 +15,17 @@ COMPONENTS := $(wildcard components/*.jsonnet)
 PLATFORMS := $(wildcard tests/*.jsonnet)
 UNITTESTS := $(wildcard contrib/*_test.jsonnet)
 
+# Skipping lib/*.libsonnet as they are vendored
 JFILES := \
-  $(wildcard */*.libsonnet) \
   $(COMPONENTS) $(PLATFORMS)
+
+# Run if needed as developer, then commit jsonnetfile.* and vendor/ updates
+HAS_JB := $(shell command -v jb;)
+update-vendor:
+ifndef HAS_JB
+	$(error You must install jb from github.com/jsonnet-bundler/jsonnet-bundler)
+endif
+	jb update
 
 validate: $(UNITTESTS:%.jsonnet=%.jsonnet-validate)
 validate: $(PLATFORMS:%.jsonnet=%.jsonnet-validate)
