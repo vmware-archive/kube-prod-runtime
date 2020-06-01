@@ -1,23 +1,51 @@
-/*
- * Bitnami Kubernetes Production Runtime - A collection of services that makes it
- * easy to run production workloads in Kubernetes.
- *
- * Copyright 2018-2019 Bitnami
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *   http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
-// Generic library of Kubernetes objects
+// Generic library of Kubernetes objects (https://github.com/bitnami-labs/kube-libsonnet)
+//
+// Objects in this file follow the regular Kubernetes API object
+// schema with two exceptions:
+//
+// ## Optional helpers
+//
+// A few objects have defaults or additional "helper" hidden
+// (double-colon) fields that will help with common situations.  For
+// example, `Service.target_pod` generates suitable `selector` and
+// `ports` blocks for the common case of a single-pod/single-port
+// service.  If for some reason you don't want the helper, just
+// provide explicit values for the regular Kubernetes fields that the
+// helper *would* have generated, and the helper logic will be
+// ignored.
+//
+// ## The Underscore Convention:
+//
+// Various constructs in the Kubernetes API use JSON arrays to
+// represent unordered sets or named key/value maps.  This is
+// particularly annoying with jsonnet since we want to use jsonnet's
+// powerful object merge operation with these constructs.
+//
+// To combat this, this library attempts to provide more "jsonnet
+// native" variants of these arrays in alternative hidden fields that
+// end with an underscore.  For example, the `env_` block in
+// `Container`:
+// ```
+// kube.Container("foo") {
+//   env_: { FOO: "bar" },
+// }
+// ```
+// ... produces the expected `container.env` JSON array:
+// ```
+// {
+//   "env": [
+//     { "name": "FOO", "value": "bar" }
+//   ]
+// }
+// ```
+//
+// If you are confused by the underscore versions, or don't want them
+// in your situation then just ignore them and set the regular
+// non-underscore field as usual.
+//
+//
+// ## TODO
+//
 // TODO: Expand this to include all API objects.
 //
 // Should probably fill out all the defaults here too, so jsonnet can
@@ -25,6 +53,13 @@
 // (client-side, and gives better line information).
 
 {
+  // resource contructors will use kinds/versions/fields compatible at least with version:
+  minKubeVersion: {
+    major: 1,
+    minor: 9,
+    version: "%s.%s" % [self.major, self.minor],
+  },
+
   // Returns array of values from given object.  Does not include hidden fields.
   objectValues(o):: [o[field] for field in std.objectFields(o)],
 
@@ -38,12 +73,16 @@
   parseOctal(s):: (
     local len = std.length(s);
     local leading = std.substr(s, 0, len - 1);
-    local last = std.substr(s, len - 1, 1);
-    std.parseInt(last) + (if len > 1 then 8 * $.parseOctal(leading) else 0)
+    local last = std.parseInt(std.substr(s, len - 1, 1));
+    assert last < 8 : "found '%s' digit >= 8" % [last];
+    last + (if len > 1 then 8 * $.parseOctal(leading) else 0)
   ),
 
   // Convert {foo: {a: b}} to [{name: foo, a: b}]
-  mapToNamedList(o):: [{name: $.hyphenate(n)} + o[n] for n in std.objectFields(o)],
+  mapToNamedList(o):: [{ name: $.hyphenate(n) } + o[n] for n in std.objectFields(o)],
+
+  // Return object containing only these fields elements
+  filterMapByFields(o, fields): { [field]: o[field] for field in std.setInter(std.objectFields(o), fields) },
 
   // Convert from SI unit suffixes to regular number
   siToNum(n):: (
@@ -79,13 +118,16 @@
     std.join("", [remapChar(c, "a", "z", "A") for c in std.stringChars(s)])
   ),
 
+  boolXor(x, y):: ((if x then 1 else 0) + (if y then 1 else 0) == 1),
+
   _Object(apiVersion, kind, name):: {
     local this = self,
     apiVersion: apiVersion,
     kind: kind,
     metadata: {
       name: name,
-      labels: {name: std.join("-", std.split(this.metadata.name, ":"))},
+      labels: { name: std.join("-", std.split(this.metadata.name, ":")) },
+      annotations: {},
     },
   },
 
@@ -100,8 +142,8 @@
   },
 
   Endpoints(name): $._Object("v1", "Endpoints", name) {
-    Ip(addr):: {ip: addr},
-    Port(p):: {port: p},
+    Ip(addr):: { ip: addr },
+    Port(p):: { port: p },
 
     subsets: [],
   },
@@ -145,7 +187,7 @@
 
   // TODO: This is a terrible name
   PersistentVolumeClaimVolume(pvc): {
-    persistentVolumeClaim: {claimName: pvc.metadata.name},
+    persistentVolumeClaim: { claimName: pvc.metadata.name },
   },
 
   StorageClass(name): $._Object("storage.k8s.io/v1beta1", "StorageClass", name) {
@@ -171,6 +213,7 @@
         },
       },
       accessModes: ["ReadWriteOnce"],
+      [if pvc.storageClass != null then "storageClassName"]: pvc.storageClass,
     },
   },
 
@@ -180,7 +223,7 @@
     imagePullPolicy: if std.endsWith(self.image, ":latest") then "Always" else "IfNotPresent",
 
     envList(map):: [
-      if std.type(map[x]) == "object" then {name: x, valueFrom: map[x]} else {name: x, value: std.toString(map[x])}
+      if std.type(map[x]) == "object" then { name: x, valueFrom: map[x] } else { name: x, value: std.toString(map[x]) }
       for x in std.objectFields(map)
     ],
 
@@ -205,7 +248,10 @@
     local this = self,
     target_pod:: error "target_pod required",
     spec: {
-      assert std.objectHas(self, "minAvailable") || std.objectHas(self, "maxUnavailable") : "exactly one of minAvailable/maxUnavailable required",
+      assert $.boolXor(
+        std.objectHas(self, "minAvailable"),
+        std.objectHas(self, "maxUnavailable")
+      ) : "PDB '%s': exactly one of minAvailable/maxUnavailable required" % name,
       selector: {
         matchLabels: this.target_pod.metadata.labels,
       },
@@ -223,7 +269,10 @@
     containers_:: {},
 
     local container_names_ordered = [self.default_container] + [n for n in container_names if n != self.default_container],
-    containers: [{name: $.hyphenate(name)} + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null],
+    containers: (
+      assert std.length(self.containers_) > 0 : "Pod must have at least one container (via containers_ map)";
+      [{ name: $.hyphenate(name) } + self.containers_[name] for name in container_names_ordered if self.containers_[name] != null]
+    ),
 
     // Note initContainers are inherently ordered, and using this
     // named object will lose that ordering.  If order matters, then
@@ -231,7 +280,7 @@
     // appending/prepending to `super.initContainers` to mix+match
     // both approaches)
     initContainers_:: {},
-    initContainers: [{name: $.hyphenate(name)} + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
+    initContainers: [{ name: $.hyphenate(name) } + self.initContainers_[name] for name in std.objectFields(self.initContainers_) if self.initContainers_[name] != null],
 
     volumes_:: {},
     volumes: $.mapToNamedList(self.volumes_),
@@ -240,7 +289,22 @@
 
     terminationGracePeriodSeconds: 30,
 
-    assert std.length(self.containers) > 0 : "must have at least one container",
+    assert std.length(self.containers) > 0 : "Pod must have at least one container (via containers array)",
+
+    // Return an array of pod's ports numbers
+    ports(proto):: [
+      p.containerPort
+      for p in std.flattenArrays([
+        c.ports
+        for c in self.containers
+      ])
+      if (
+        (!(std.objectHas(p, "protocol")) && proto == "TCP")
+        ||
+        ((std.objectHas(p, "protocol")) && p.protocol == proto)
+      )
+    ],
+
   },
 
   EmptyDirVolume(): {
@@ -248,7 +312,7 @@
   },
 
   HostPathVolume(path, type=""): {
-    hostPath: {path: path, type: type},
+    hostPath: { path: path, type: type },
   },
 
   GitRepoVolume(repository, revision): {
@@ -261,11 +325,11 @@
   },
 
   SecretVolume(secret): {
-    secret: {secretName: secret.metadata.name},
+    secret: { secretName: secret.metadata.name },
   },
 
   ConfigMapVolume(configmap): {
-    configMap: {name: configmap.metadata.name},
+    configMap: { name: configmap.metadata.name },
   },
 
   ConfigMap(name): $._Object("v1", "ConfigMap", name) {
@@ -283,7 +347,7 @@
 
   // subtype of EnvVarSource
   ConfigMapRef(configmap, key): {
-    assert std.objectHas(configmap.data, key) : "%s not in configmap.data" % [key],
+    assert std.objectHas(configmap.data, key) : "ConfigMap '%s' doesn't have '%s' field in configmap.data" % [configmap.metadata.name, key],
     configMapKeyRef: {
       name: configmap.metadata.name,
       key: key,
@@ -295,12 +359,12 @@
 
     type: "Opaque",
     data_:: {},
-    data: {[k]: std.base64(secret.data_[k]) for k in std.objectFields(secret.data_)},
+    data: { [k]: std.base64(secret.data_[k]) for k in std.objectFields(secret.data_) },
   },
 
   // subtype of EnvVarSource
   SecretKeyRef(secret, key): {
-    assert std.objectHas(secret.data, key) : "%s not in secret.data" % [key],
+    assert std.objectHas(secret.data, key) : "Secret '%s' doesn't have '%s' field in secret.data" % [secret.metadata.name, key],
     secretKeyRef: {
       name: secret.metadata.name,
       key: key,
@@ -331,6 +395,7 @@
         spec: $.PodSpec,
         metadata: {
           labels: deployment.metadata.labels,
+          annotations: {},
         },
       },
 
@@ -368,7 +433,6 @@
       revisionHistoryLimit: 10,
 
       replicas: 1,
-      assert self.replicas >= 1,
     },
   },
 
@@ -410,6 +474,7 @@
         spec: $.PodSpec,
         metadata: {
           labels: sset.metadata.labels,
+          annotations: {},
         },
       },
 
@@ -423,7 +488,7 @@
         // they're no-ops).
         // In particular annotations={} is apparently a "change",
         // since the comparison is ignorant of defaults.
-        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + {apiVersion:: null, kind:: null} + kv[1])
+        std.prune($.PersistentVolumeClaim($.hyphenate(kv[0])) + { apiVersion:: null, kind:: null } + kv[1])
         for kv in $.objectItems(self.volumeClaimTemplates_)
       ],
 
@@ -489,6 +554,7 @@
       template: {
         metadata: {
           labels: ds.metadata.labels,
+          annotations: {},
         },
         spec: $.PodSpec,
       },
@@ -513,7 +579,7 @@
 
   ThirdPartyResource(name): $._Object("extensions/v1beta1", "ThirdPartyResource", name) {
     versions_:: [],
-    versions: [{name: n} for n in self.versions_],
+    versions: [{ name: n } for n in self.versions_],
   },
 
   CustomResourceDefinition(group, version, kind): {
@@ -553,6 +619,12 @@
     apiGroup: "rbac.authorization.k8s.io",
   },
 
+  User(name): {
+    kind: "User",
+    name: name,
+    apiGroup: "rbac.authorization.k8s.io",
+  },
+
   RoleBinding(name): $._Object("rbac.authorization.k8s.io/v1beta1", "RoleBinding", name) {
     local rb = self,
 
@@ -575,12 +647,94 @@
     kind: "ClusterRoleBinding",
   },
 
+  // NB: encryptedData can be imported into a SealedSecret as follows:
+  // kubectl get secret ... -ojson mysec | kubeseal | jq -r .spec.encryptedData > sealedsecret.json
+  //   encryptedData: std.parseJson(importstr "sealedsecret.json")
+  SealedSecret(name): $._Object("bitnami.com/v1alpha1", "SealedSecret", name) {
+    spec: {
+      encryptedData: {},
+    },
+    assert std.length(std.objectFields(self.spec.encryptedData)) != 0 : "SealedSecret '%s' has empty encryptedData field" % name,
+  },
+
+  // NB: helper method to access several Kubernetes objects podRef,
+  // used below to extract its labels
+  podRef(obj):: ({
+                   Pod: obj,
+                   Deployment: obj.spec.template,
+                   StatefulSet: obj.spec.template,
+                   DaemonSet: obj.spec.template,
+                   Job: obj.spec.template,
+                   CronJob: obj.spec.jobTemplate.spec.template,
+                 }[obj.kind]),
+
+  // NB: return a { podSelector: ... } ready to use for e.g. NSPs (see below)
+  // pod labels can be optionally filtered by their label name 2nd array arg
+  podLabelsSelector(obj, filter=null):: {
+    podSelector: std.prune({
+      matchLabels:
+        if filter != null then $.filterMapByFields($.podRef(obj).metadata.labels, filter)
+        else $.podRef(obj).metadata.labels,
+    }),
+  },
+
+  // NB: Returns an array as [{ port: num, protocol: "PROTO" }, {...}, ... ]
+  // Need to split TCP, UDP logic to be able to dedup each set of protocol ports
+  podsPorts(obj_list):: std.flattenArrays([
+    [
+      { port: port, protocol: protocol }
+      for port in std.set(
+        std.flattenArrays([$.podRef(obj).spec.ports(protocol) for obj in obj_list])
+      )
+    ]
+    for protocol in ["TCP", "UDP"]
+  ]),
+
+  // NB: most of the "helper" stuff comes from above (podLabelsSelector, podsPorts),
+  // NetworkPolicy returned object will have "Ingress", "Egress" policyTypes auto-set
+  // based on populated spec.ingress or spec.egress
+  // See tests/test-simple-validate.jsonnet for example(s).
   NetworkPolicy(name): $._Object("networking.k8s.io/v1", "NetworkPolicy", name) {
-    local this = self,
-    target:: error "target is required",
-    spec+: {
-      podSelector: {matchLabels: this.target.metadata.labels},
+    local networkpolicy = self,
+    spec: {
+      policyTypes: std.prune([
+        if networkpolicy.spec.ingress != [] then "Ingress" else null,
+        if networkpolicy.spec.egress != [] then "Egress" else null,
+      ]),
+      ingress: $.objectValues(self.ingress_),
+      ingress_:: {},
+      egress: $.objectValues(self.egress_),
+      egress_:: {},
+      podSelector: {},
     },
   },
 
+  VerticalPodAutoscaler(name):: $._Object("autoscaling.k8s.io/v1beta2", "VerticalPodAutoscaler", name) {
+    local vpa = self,
+
+    target:: error "target required",
+
+    spec: {
+      targetRef: $.CrossVersionObjectReference(vpa.target),
+
+      updatePolicy: {
+        updateMode: "Auto",
+      },
+    },
+  },
+  // Helper function to ease VPA creation as e.g.:
+  // foo_vpa:: kube.createVPAFor($.foo_deploy)
+  createVPAFor(target, mode="Auto"):: $.VerticalPodAutoscaler(target.metadata.name) {
+    target:: target,
+
+    metadata+: {
+      namespace: target.metadata.namespace,
+      labels+: target.metadata.labels,
+    },
+    spec+: {
+      updatePolicy+: {
+        updateMode: mode,
+      },
+    },
+  },
 }
