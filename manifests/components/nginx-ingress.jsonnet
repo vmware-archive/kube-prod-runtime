@@ -31,6 +31,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
   },
 
   config: utils.HashedConfigMap($.p + "nginx-ingress") + $.metadata {
+    // Fields and default values: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
     data+: {
       "proxy-buffer-size": "16k",
       "proxy-connect-timeout": "15",
@@ -44,6 +45,10 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
       // TODO: move our oauth2-proxy path to something unlikely to clash with application URLs
       noauth:: ["/.well-known/acme-challenge", "/oauth2"],
       "no-auth-locations": std.join(",", std.set(self.noauth)),
+
+      // Address https://github.com/bitnami/kube-prod-runtime/issues/815
+      "http2-max-field-size": "16k",  // default: 4k
+      "http2-max-header-size": "64k",  // default: 16k
     },
   },
 
