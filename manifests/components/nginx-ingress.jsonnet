@@ -47,8 +47,8 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
       "no-auth-locations": std.join(",", std.set(self.noauth)),
 
       // Address https://github.com/bitnami/kube-prod-runtime/issues/815
-      "http2-max-field-size": "16k", // default: 4k
-      "http2-max-header-size": "64k", // default: 16k
+      "http2-max-field-size": "16k",  // default: 4k
+      "http2-max-header-size": "64k",  // default: 16k
     },
   },
 
