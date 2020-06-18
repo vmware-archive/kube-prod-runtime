@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
+local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
 
 local trim = function(str) (
   if std.startsWith(str, " ") || std.startsWith(str, "\n") then

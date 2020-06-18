@@ -17,7 +17,7 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
+local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 local CERT_MANAGER_IMAGE = (import "images.json")["cert-manager"];
 local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmesolver"];

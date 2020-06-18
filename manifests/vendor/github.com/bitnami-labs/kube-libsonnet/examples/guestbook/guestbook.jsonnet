@@ -29,7 +29,7 @@
 // kubecfg delete guestbook.jsonnet
 // ```
 
-local kube = import "lib/kube.libsonnet";
+local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
 
 {
   frontend_deployment: kube.Deployment("frontend") {
