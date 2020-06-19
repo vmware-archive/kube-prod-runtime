@@ -30,8 +30,6 @@ properties([
     stringParam(name: 'EKS_REL', defaultValue: '', description: "Override EKS releases to test"),
     stringParam(name: 'GKE_REL', defaultValue: '', description: "Override GKE releases to test"),
     stringParam(name: 'GEN_REL', defaultValue: '', description: "Override Generic-cloud releases to test"),
-    stringParam(name: 'TIMEOUT', defaultValue: '150', description: 'Full e2e tests run timeout in minutes'),
-    stringParam(name: 'PAUSE_TIME', defaultValue: '15', description: 'Time to pause on failure in minutes (before deletion)'),
   ])
 ])
 
@@ -230,7 +228,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                             """
                         } catch (error) {
                             if(pauseForDebugging) {
-                                timeout(time: params.PAUSE_TIME as Integer, unit: 'MINUTES') {
+                                timeout(time: 15, unit: 'MINUTES') {
                                     input 'Paused for manual debugging'
                                 }
                             }
@@ -354,7 +352,7 @@ spec:
     env.GOPATH = "/go"
 
     node(label) {
-        timeout(time: params.TIMEOUT as Integer, unit: 'MINUTES') {
+        timeout(time: 150, unit: 'MINUTES') {
             withEnv([
                 "HOME=${env.WORKSPACE}",
                 "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",

@@ -1,10 +1,10 @@
-local kube = (import '../lib/kube.libsonnet');
+local kube = (import '../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet');
 local helpers = (import 'helpers.jsonnet');
 
 // Create a (configured) kubeprod stock object
 local kubeprod = (import '../tests/gke.jsonnet');
 
-local PROMETHEUS_DEPLOY = "prometheus.prometheus.deploy";
+local PROMETHEUS_DEPLOY = 'prometheus.prometheus.deploy';
 local do_test = (
   std.assertEqual(
     // jsonnet stock overrides
