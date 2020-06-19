@@ -1,4 +1,4 @@
-local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
+local kube = import "lib/kube.libsonnet";
 local be = import "backend.jsonnet";
 
 local labels = {

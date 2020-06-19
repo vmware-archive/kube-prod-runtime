@@ -18,7 +18,7 @@
 // kubecfg delete wordpress.jsonnet
 // ```
 
-local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
+local kube = import "lib/kube.libsonnet";
 local fe = import "frontend.jsonnet";
 local be = import "backend.jsonnet";
 
