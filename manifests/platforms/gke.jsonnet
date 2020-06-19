@@ -19,8 +19,8 @@
 
 // Top-level file for Google GKE
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
+local utils = import "../vendor/github.com/bitnami-labs/kube-libsonnet/utils.libsonnet";
 local version = import "../components/version.jsonnet";
 local cert_manager = import "../components/cert-manager.jsonnet";
 local edns = import "../components/externaldns.jsonnet";
