@@ -1,4 +1,4 @@
-local kube = (import '../lib/kube.libsonnet');
+local kube = (import '../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet');
 local helpers = (import 'helpers.jsonnet');
 
 local obj_val = {

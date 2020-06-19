@@ -17,8 +17,8 @@
  * limitations under the License.
  */
 
-local kube = import "../lib/kube.libsonnet";
-local utils = import "../lib/utils.libsonnet";
+local kube = import "../vendor/github.com/bitnami-labs/kube-libsonnet/kube.libsonnet";
+local utils = import "../vendor/github.com/bitnami-labs/kube-libsonnet/utils.libsonnet";
 local kubecfg = import "kubecfg.libsonnet";
 
 local FLUENTD_ES_IMAGE = (import "images.json").fluentd;
