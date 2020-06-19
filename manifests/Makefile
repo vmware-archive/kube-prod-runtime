@@ -1,5 +1,6 @@
 KUBECFG = kubecfg
-JSONNET_FMT = jsonnet fmt
+# Support transition from `jsonnet fmt` to `jsonnetfmt` (since v0.13+)
+JSONNET_FMT := $(shell jsonnet --version|grep -q 'v0[.]1[0-2]' && echo jsonnet fmt || echo jsonnetfmt)
 
 FMTFLAGS = \
 	--indent 2 \
