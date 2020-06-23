@@ -18,9 +18,9 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 
 def buildRelDefaults = [
   'AKS_REL': '1.14,1.15',
-  'EKS_REL': '1.14',
+  'EKS_REL': '1.14,1.15',
   'GKE_REL': '1.14,1.15',
-  'GEN_REL': '1.14',
+  'GEN_REL': '1.15',
 ]
 
 properties([
