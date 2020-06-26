@@ -33,9 +33,10 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
   config: utils.HashedConfigMap($.p + "nginx-ingress") + $.metadata {
     // Fields and default values: https://kubernetes.github.io/ingress-nginx/user-guide/nginx-configuration/configmap/
     data+: {
-      "proxy-buffer-size": "16k",
+      "proxy-buffer-size": "32k",
       "proxy-connect-timeout": "15",
       "disable-ipv6": "false",
+      "large-client-header-buffers": "8 32k",
 
       hsts: "true",
       //"hsts-include-subdomains": "false",
