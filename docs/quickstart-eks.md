@@ -43,7 +43,7 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
   export BKPR_DNS_ZONE=my-domain.com
   export AWS_EKS_USER=my-user@example.com
   export AWS_EKS_CLUSTER=my-eks-cluster
-  export AWS_EKS_K8S_VERSION=1.11
+  export AWS_EKS_K8S_VERSION=1.16
   ```
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
@@ -145,6 +145,16 @@ In order to access protected resources which require authentication, such as Pro
 <p align="center"><img src="eks/4-new-user.png" width="400"></p>
 
 At any time, if you are presented with an Amazon AWS authentication form, you can use this user account to authenticate against protected resources in BKPR.
+
+NOTE: if the credentials you configured for the user fail to work, e.g.
+getting into a "loop" being asked for password change after 1st login, while
+consistently not succeeding, you may need to forcebly set its credentials and
+state with:
+
+  ```bash
+  aws --region REGION cognito-idp admin-set-user-password --user-pool-id ID --username USER --password PASS --permanent
+  ```
+
 
 ### Step 3: Deploy BKPR
 
