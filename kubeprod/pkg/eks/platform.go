@@ -252,7 +252,7 @@ func (conf *Config) createAwsUser(ctx context.Context) (*string, *string, error)
 	if err != nil {
 		log.Warning("Re-using existing AWS user for External DNS integration: ", userName)
 	} else {
-		log.Infof("Created AKS user: %s", userName)
+		log.Infof("Created AWS user: %s", userName)
 	}
 
 	conf.attachUserPolicy(ctx)
