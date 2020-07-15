@@ -251,6 +251,11 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                 sh "kubecfg delete kubeprod-manifest.jsonnet || true"
             }
             container('kubectl') {
+                sh """
+                  timeout 60 kubectl get -n kubeprod challenges.acme.cert-manager.io -oname | \
+                    timeout 60 xargs -rtI{} kubectl patch -n kubeprod challenges.acme.cert-manager.io {} \
+                      --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]' || true
+                """
                 sh "kubectl wait --for=delete ns/kubeprod --timeout=300s || true"
             }
         }
