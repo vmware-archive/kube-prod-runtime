@@ -140,7 +140,7 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
   # Specific finalizers cleanup, to avoid kubeprod ns lingering
   # - cert-manager challenges if TLS certs have not been issued
   kubectl get -n kubeprod challenges.acme.cert-manager.io -oname| \
-    xargs -rtI{} kubectl patch -n kubeprod challenges.acme.cert-manager.io {} \
+    xargs -rtI{} kubectl patch -n kubeprod {} \
       --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
   ```
 
