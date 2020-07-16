@@ -233,6 +233,14 @@ Re-run the `kubeprod install` command from the [Deploy BKPR](#step-3-deploy-bkpr
 ### Step 2: Wait for the `kubeprod` namespace to be deleted
 
   ```bash
+  # Specific finalizers cleanup, to avoid kubeprod ns lingering
+  # - cert-manager challenges if TLS certs have not been issued
+  kubectl get -n kubeprod challenges.acme.cert-manager.io -oname| \
+    xargs -rtI{} kubectl patch -n kubeprod {} \
+      --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+  ```
+
+  ```bash
   kubectl wait --for=delete ns/kubeprod --timeout=300s
   ```
 
