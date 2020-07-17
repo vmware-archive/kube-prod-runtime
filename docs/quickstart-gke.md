@@ -60,7 +60,7 @@ In this section, you will deploy a Google Kubernetes Engine (GKE) cluster using 
   export GCLOUD_ZONE="us-east1-d"
   export GCLOUD_AUTHZ_DOMAIN="my-domain.com"
   export GCLOUD_K8S_CLUSTER="my-gke-cluster"
-  export GCLOUD_K8S_VERSION="1.11"
+  export GCLOUD_K8S_VERSION="1.16"
   ```
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster. A TLD or a sub-domain may be used.
@@ -216,6 +216,14 @@ Re-run the `kubeprod install` command, from the [Deploy BKPR](#step-2-deploy-bkp
   ```
 
 ### Step 2: Wait for the `kubeprod` namespace to be deleted
+
+  ```bash
+  # Specific finalizers cleanup, to avoid kubeprod ns lingering
+  # - cert-manager challenges if TLS certs have not been issued
+  kubectl get -n kubeprod challenges.acme.cert-manager.io -oname| \
+    xargs -rtI{} kubectl patch -n kubeprod {} \
+      --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+  ```
 
   ```bash
   kubectl wait --for=delete ns/kubeprod --timeout=300s

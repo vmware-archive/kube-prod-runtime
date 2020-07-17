@@ -43,7 +43,7 @@ In this section, you will deploy an Amazon Elastic Container Service for Kuberne
   export BKPR_DNS_ZONE=my-domain.com
   export AWS_EKS_USER=my-user@example.com
   export AWS_EKS_CLUSTER=my-eks-cluster
-  export AWS_EKS_K8S_VERSION=1.11
+  export AWS_EKS_K8S_VERSION=1.16
   ```
 
   - `BKPR_DNS_ZONE` specifies the DNS suffix for the externally-visible websites and services deployed in the cluster.
@@ -146,6 +146,16 @@ In order to access protected resources which require authentication, such as Pro
 
 At any time, if you are presented with an Amazon AWS authentication form, you can use this user account to authenticate against protected resources in BKPR.
 
+NOTE: if the credentials you configured for the user fail to work, e.g.
+getting into a "loop" being asked for password change after 1st login, while
+consistently not succeeding, you may need to forcebly set its credentials and
+state with:
+
+  ```bash
+  aws --region REGION cognito-idp admin-set-user-password --user-pool-id ID --username USER --password PASS --permanent
+  ```
+
+
 ### Step 3: Deploy BKPR
 
 To bootstrap your Kubernetes cluster with BKPR, use the command below:
@@ -221,6 +231,14 @@ Re-run the `kubeprod install` command from the [Deploy BKPR](#step-3-deploy-bkpr
   ```
 
 ### Step 2: Wait for the `kubeprod` namespace to be deleted
+
+  ```bash
+  # Specific finalizers cleanup, to avoid kubeprod ns lingering
+  # - cert-manager challenges if TLS certs have not been issued
+  kubectl get -n kubeprod challenges.acme.cert-manager.io -oname| \
+    xargs -rtI{} kubectl patch -n kubeprod {} \
+      --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]'
+  ```
 
   ```bash
   kubectl wait --for=delete ns/kubeprod --timeout=300s
