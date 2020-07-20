@@ -360,7 +360,6 @@ local CERT_MANAGER_ACMESOLVER_IMAGE = (import "images.json")["cert-manager-acmes
                 "leader-election-namespace": "$(POD_NAMESPACE)",
                 "default-issuer-name": $.letsencrypt_environments[$.letsencrypt_environment],
                 "default-issuer-kind": "ClusterIssuer",
-                "webhook-namespace": "$(POD_NAMESPACE)",
               },
               env_+: {
                 POD_NAMESPACE: kube.FieldRef("metadata.namespace"),

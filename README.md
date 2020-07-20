@@ -26,7 +26,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 |--------------|---------------|---------------|---------------|
 | `1.3`        | `1.11`-`1.12` | `1.11`-`1.12` | `1.11`        |
 | `1.4`        | `1.14`-`1.15` | `1.14`-`1.15` | `1.14`        |
-| `1.5`        | `1.14`-`1.15` | `1.14`-`1.15` | `1.14`        |
+| `1.5`        | `1.14`-`1.15` | `1.14`-`1.15` | `1.14`-`1.15` |
 | `1.6`        | `1.15`-`1.16` | `1.15`-`1.16` | `1.15`-`1.16` |
 
 Note that the (experimental) `generic` platform is e2e tested on GKE.
@@ -83,23 +83,23 @@ BKPR leverages the following components to achieve its mission. For more in-dept
 
 The following matrix shows which versions of each component are used and supported in the most recent releases of BKPR:
 
-|                                              Component                                               | BKPR 1.3 | BKPR 1.4 |
-|------------------------------------------------------------------------------------------------------|----------|----------|
-| [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/)                                    | `0.16.x` | `0.20.x` |
-| [cert-manager](https://cert-manager.io/docs/)                                                        | `0.7.x`  | `0.12.x` |
-| [configmap-reload](https://github.com/jimmidyson/configmap-reload)                                   | `0.2.2`  | `0.3.x`  |
-| [Elasticsearch](https://www.elastic.co/products/elasticsearch)                                       | `6.7.x`  | `7.5.x`  |
-| [Elasticsearch Curator](https://www.elastic.co/guide/en/elasticsearch/client/curator/5.8/about.html) | `5.7.x`  | `5.8.x`  |
-| [Elasticsearch Exporter](https://github.com/justwatchcom/elasticsearch_exporter)                     | `1.0.1`  | `1.1.x`  |
-| [ExternalDNS](https://github.com/kubernetes-sigs/external-dns)                                       | `0.5.x`  | `0.5.x`  |
-| [Fluentd](https://www.fluentd.org/)                                                                  | `1.4.x`  | `1.8.x`  |
-| [Grafana](https://grafana.com/)                                                                      | `6.5.x`  | `6.5.x`  |
-| [Kibana](https://www.elastic.co/products/kibana)                                                     | `6.7.x`  | `7.5.x`  |
-| [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics)                               | `1.1.0`  | `1.9.x`  |
-| [Node exporter](https://github.com/prometheus/node_exporter)                                         | `0.17.0` | `0.18.x` |
-| [NGINX Ingress Controller](https://github.com/kubernetes/ingress-nginx)                              | `0.24.x` | `0.26.x` |
-| [oauth2_proxy](https://github.com/pusher/oauth2_proxy)                                               | `3.1.x`  | `4.1.x`  |
-| [Prometheus](https://prometheus.io/)                                                                 | `2.8.x`  | `2.15.x` |
+|                                              Component                                               | BKPR 1.3 | BKPR 1.4 | BKPR 1.5 | BKPR 1.6 |
+|------------------------------------------------------------------------------------------------------|----------|----------|----------|----------|
+| [Alertmanager](https://prometheus.io/docs/alerting/alertmanager/)                                    | `0.16.x` | `0.20.x` | `0.20.x` | `0.21.x` |
+| [cert-manager](https://cert-manager.io/docs/)                                                        | `0.7.x`  | `0.12.x` | `0.14.x` | `0.15.x` |
+| [configmap-reload](https://github.com/bitnami/configmap-reload)                                      | `0.2.2`  | `0.3.x`  | `0.3.x`  | `0.3.x`  |
+| [Elasticsearch](https://www.elastic.co/products/elasticsearch)                                       | `6.7.x`  | `7.5.x`  | `7.6.x`  | `7.8.x`  |
+| [Elasticsearch Curator](https://www.elastic.co/guide/en/elasticsearch/client/curator/5.8/about.html) | `5.7.x`  | `5.8.x`  | `5.8.x`  | `5.8.x`  |
+| [Elasticsearch Exporter](https://github.com/justwatchcom/elasticsearch_exporter)                     | `1.0.1`  | `1.1.x`  | `1.1.x`  | `1.1.x`  |
+| [ExternalDNS](https://github.com/kubernetes-sigs/external-dns)                                       | `0.5.x`  | `0.5.x`  | `0.7.x`  | `0.7.x`  |
+| [Fluentd](https://www.fluentd.org/)                                                                  | `1.4.x`  | `1.8.x`  | `1.10.x` | `1.11.x` |
+| [Grafana](https://grafana.com/)                                                                      | `6.5.x`  | `6.5.x`  | `6.7.x`  | `7.0.x`  |
+| [Kibana](https://www.elastic.co/products/kibana)                                                     | `6.7.x`  | `7.5.x`  | `7.6.x`  | `7.8.x`  |
+| [kube-state-metrics](https://github.com/kubernetes/kube-state-metrics)                               | `1.1.0`  | `1.9.x`  | `1.9.x`  | `1.9.x`  |
+| [Node exporter](https://github.com/prometheus/node_exporter)                                         | `0.17.0` | `0.18.x` | `0.18.x` | `1.0.x`  |
+| [NGINX Ingress Controller](https://github.com/kubernetes/ingress-nginx)                              | `0.24.x` | `0.26.x` | `0.30.x` | `0.33.x` |
+| [oauth2_proxy](https://github.com/pusher/oauth2_proxy)                                               | `3.1.x`  | `4.1.x`  | `5.0.x`  | `5.1.x`  |
+| [Prometheus](https://prometheus.io/)                                                                 | `2.8.x`  | `2.15.x` | `2.17.x` | `2.19.x` |
 
 ## Contributing
 
