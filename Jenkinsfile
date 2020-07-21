@@ -247,7 +247,7 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
             container('kubectl') {
                 sh "kubectl get po,deploy,svc,ing --all-namespaces || true"
             }
-            # Below cert-manager cleanup is needed if certs issuing has failed
+            // Below cert-manager cleanup is needed if certs issuing has failed
             container('kubectl') {
                 sh """
                   timeout 60 kubectl get -n kubeprod challenges.acme.cert-manager.io -oname | \
