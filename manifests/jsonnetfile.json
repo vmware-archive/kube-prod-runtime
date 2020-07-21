@@ -10,6 +10,16 @@
       },
       "version": "v1.14.3",
       "name": "kube-libsonnet"
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/bitnami-labs/kubernetes-grafana-dashboards",
+          "subdir": ""
+        }
+      },
+      "version": "jjo-fix-kube-1.16-pod_container-labels",
+      "name": "kubernetes-grafana-dashboards"
     }
   ],
   "legacyImports": true
