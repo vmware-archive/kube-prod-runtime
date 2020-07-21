@@ -247,15 +247,18 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
             container('kubectl') {
                 sh "kubectl get po,deploy,svc,ing --all-namespaces || true"
             }
-            withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
-                sh "kubecfg delete kubeprod-manifest.jsonnet || true"
-            }
+            # Below cert-manager cleanup is needed if certs issuing has failed
             container('kubectl') {
                 sh """
                   timeout 60 kubectl get -n kubeprod challenges.acme.cert-manager.io -oname | \
                     timeout 60 xargs -rtI{} kubectl patch -n kubeprod {} \
                       --type=json -p='[{"op": "remove", "path": "/metadata/finalizers"}]' || true
                 """
+            }
+            withEnv(["PATH+KUBECFG=${tool 'kubecfg'}"]) {
+                sh "kubecfg delete kubeprod-manifest.jsonnet || true"
+            }
+            container('kubectl') {
                 sh "kubectl wait --for=delete ns/kubeprod --timeout=300s || true"
             }
         }
