@@ -10,6 +10,16 @@
       },
       "version": "724b7ae3c3fdc270f6f67f66965eaae3a8fd81d3",
       "sum": "wGkeAgKXnDhZngw09PW8+U2x2GWyI0ZxAZF/Q7i49bE="
+    },
+    {
+      "source": {
+        "git": {
+          "remote": "https://github.com/bitnami-labs/kubernetes-grafana-dashboards",
+          "subdir": ""
+        }
+      },
+      "version": "a2c22c0858ffd6ad1aef5ae344831711456b5b01",
+      "sum": "SPPYXZApI8JiXDKwq2GqwQUZCpud0CLWqrEIxVdlsLE="
     }
   ],
   "legacyImports": false
