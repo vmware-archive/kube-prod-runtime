@@ -1,0 +1,86 @@
+{
+   "groups": [
+      {
+         "name": "kubeapi_rules",
+         "rules": [
+            {
+               "expr": "histogram_quantile ( 0.90, sum by (le, verb)( rate(apiserver_request_latencies_bucket[5m]) ) ) / 1e3 > 0",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes:job_verb:apiserver_latency:pctl90rate5m"
+            },
+            {
+               "expr": "histogram_quantile ( 0.90, sum by (le, job, verb, instance)( rate(apiserver_request_latencies_bucket[5m]) ) ) / 1e3",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes:job_verb_instance:apiserver_latency:pctl90rate5m"
+            },
+            {
+               "expr": "sum by()(probe_success{provider=\"kubernetes\", component=\"apiserver\"})",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes::job:probe_success"
+            },
+            {
+               "expr": "sum without (instance)(kubernetes:job_verb_code_instance:apiserver_requests:rate5m)",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes::job_verb_code:apiserver_requests:rate5m"
+            },
+            {
+               "expr": "sum by (job, verb, code, instance)(rate(apiserver_request_count[5m]))",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes:job_verb_code_instance:apiserver_requests:rate5m"
+            },
+            {
+               "expr": "sum without (instance)(kubernetes:job_verb_code_instance:apiserver_requests:ratio_rate5m)",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes::job_verb_code:apiserver_requests:ratio_rate5m"
+            },
+            {
+               "expr": "kubernetes:job_verb_code_instance:apiserver_requests:rate5m / ignoring(verb, code) group_left sum by (job, instance)(kubernetes:job_verb_code_instance:apiserver_requests:rate5m)",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes:job_verb_code_instance:apiserver_requests:ratio_rate5m"
+            },
+            {
+               "expr": "sum by (job)(kubernetes:job_verb_code_instance:apiserver_requests:ratio_rate5m{verb=~\"GET|POST|DELETE|PATCH\", code=~\"5..\"})",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes:job:apiserver_request_errors:ratio_rate5m"
+            },
+            {
+               "expr": "histogram_quantile ( 0.90, sum by (le, job)( rate(apiserver_request_latencies_bucket{verb=~\"GET|POST|DELETE|PATCH\"}[5m]) ) ) / 1e3",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes::job:apiserver_latency:pctl90rate5m"
+            },
+            {
+               "expr": "kubernetes:job:apiserver_request_errors:ratio_rate5m < bool 0.01 * kubernetes::job:apiserver_latency:pctl90rate5m < bool 200",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes::job:slo_kube_api_ok"
+            },
+            {
+               "expr": "kubernetes:job:apiserver_request_errors:ratio_rate5m < bool Inf * kubernetes::job:apiserver_latency:pctl90rate5m < bool Inf",
+               "labels": {
+                  "job": "kubernetes_api_slo"
+               },
+               "record": "kubernetes::job:slo_kube_api_sample"
+            }
+         ]
+      }
+   ]
+}
