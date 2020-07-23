@@ -123,9 +123,9 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
   kubernetes_dashboards: utils.HashedConfigMap($.p + "grafana-kubernetes-dashboards") + $.metadata {
     local this = self,
     data+: {
-      "k8s_cluster_capacity.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
-      "k8s_cluster_workloads_summary.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_cluster_workloads_summary.json",
-      "k8s_resource_usage_namespace_pods.json": importstr "grafana-dashboards/handcrafted/kubernetes/k8s_resource_usage_namespace_pods.json",
+      "k8s_cluster_capacity.json": importstr "../vendor/kubernetes-grafana-dashboards/handcrafted/kubernetes/k8s_cluster_capacity.json",
+      "k8s_cluster_workloads_summary.json": importstr "../vendor/kubernetes-grafana-dashboards/handcrafted/kubernetes/k8s_cluster_workloads_summary.json",
+      "k8s_resource_usage_namespace_pods.json": importstr "../vendor/kubernetes-grafana-dashboards/handcrafted/kubernetes/k8s_resource_usage_namespace_pods.json",
     },
   },
 

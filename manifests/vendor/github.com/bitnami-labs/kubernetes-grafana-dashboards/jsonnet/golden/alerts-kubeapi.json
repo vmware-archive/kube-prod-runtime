@@ -1,0 +1,79 @@
+{
+   "groups": [
+      {
+         "name": "kubeapi_alerts",
+         "rules": [
+            {
+               "alert": "KubeAPIUnHealthy",
+               "annotations": {
+                  "description": "Issue: Kube API is not responding 200s from blackbox.monitoring\nPlaybook: https://engineering-handbook.nami.run/sre/runbooks/kubeapi#KubeAPIUnHealthy\n",
+                  "summary": "Kube API is unhealthy"
+               },
+               "expr": "probe_success{provider=\"kubernetes\"} == 0",
+               "for": "5m",
+               "labels": {
+                  "notify_to": "slack",
+                  "severity": "critical",
+                  "slack_channel": "#sre-alerts"
+               }
+            },
+            {
+               "alert": "KubeAPIErrorRatioHigh",
+               "annotations": {
+                  "description": "Issue: Kube API Error ratio on {{ $labels.instance }} is above 0.01: {{ $value }}\nPlaybook: https://engineering-handbook.nami.run/sre/runbooks/kubeapi#KubeAPIErrorRatioHigh\n",
+                  "summary": "Kube API 500s ratio is High"
+               },
+               "expr": "sum by (instance)(kubernetes:job_verb_code_instance:apiserver_requests:ratio_rate5m{verb=~\"GET|POST|DELETE|PATCH\", code=~\"5..\"}) > 0.01",
+               "for": "5m",
+               "labels": {
+                  "notify_to": "slack",
+                  "severity": "critical",
+                  "slack_channel": "#sre-alerts"
+               }
+            },
+            {
+               "alert": "KubeAPILatencyHigh",
+               "annotations": {
+                  "description": "Issue: Kube API Latency on {{ $labels.instance }} is above 200 ms: {{ $value }}\nPlaybook: https://engineering-handbook.nami.run/sre/runbooks/kubeapi#KubeAPILatencyHigh\n",
+                  "summary": "Kube API Latency is High"
+               },
+               "expr": "max by (instance)(kubernetes:job_verb_instance:apiserver_latency:pctl90rate5m{verb=~\"GET|POST|DELETE|PATCH\"}) > 200",
+               "for": "5m",
+               "labels": {
+                  "notify_to": "slack",
+                  "severity": "critical",
+                  "slack_channel": "#sre-alerts"
+               }
+            },
+            {
+               "alert": "KubeControllerWorkDurationHigh",
+               "annotations": {
+                  "description": "Issue: Kube Control Manager on {{ $labels.instance }} work duration is above 100: {{ $value }}\nPlaybook: https://engineering-handbook.nami.run/sre/runbooks/kubeapi#KubeControllerWorkDurationHigh\n",
+                  "summary": "Kube Control Manager workqueue processing is slow"
+               },
+               "expr": "sum by (instance)( APIServiceRegistrationController_work_duration{quantile=\"0.9\"} ) > 100",
+               "for": "5m",
+               "labels": {
+                  "notify_to": "slack",
+                  "severity": "critical",
+                  "slack_channel": "#sre-alerts"
+               }
+            },
+            {
+               "alert": "KubeEtcdLatencyHigh",
+               "annotations": {
+                  "description": "Issue: Kube Etcd latency on {{ $labels.instance }} above 2000 ms: {{ $value }}\nPlaybook: https://engineering-handbook.nami.run/sre/runbooks/kubeapi#KubeEtcdLatencyHigh\n",
+                  "summary": "Etcd Latency is High"
+               },
+               "expr": "max by (instance)( etcd_request_latencies_summary{job=\"kubernetes_apiservers\",quantile=\"0.9\"} )/ 1e3 > 2000",
+               "for": "5m",
+               "labels": {
+                  "notify_to": "slack",
+                  "severity": "critical",
+                  "slack_channel": "#sre-alerts"
+               }
+            }
+         ]
+      }
+   ]
+}
