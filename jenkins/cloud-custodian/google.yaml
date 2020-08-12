@@ -1,0 +1,13 @@
+policies:
+- name: bkpr-wipe-gke-clusters
+  resource: gcp.gke-cluster
+  comment: |
+    Clean-up GKE clusters created by Jenkins-BKPR for its
+    CI tests.
+  filters:
+    - type: value
+      key: name
+      op: regex  
+      value: '^(pr-|trying-|staging-)'
+  actions:
+    - type: delete

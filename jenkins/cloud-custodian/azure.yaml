@@ -1,0 +1,41 @@
+policies:
+- name: bkpr-wipe-aks-clusters
+  resource: azure.aks
+  comment: |
+    Clean-up AKS clusters created by Jenkins-BKPR
+    for it's integration tests.
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-dns-zone-mark-for-deletion
+  resource: azure.dnszone
+  description: |
+    Mark for deletion the DNS hosted zones created
+    by BKPR for it's integration tests.
+  filters:
+    - type: value
+      key: name
+      op: regex  
+      value: '^(pr-|trying-|staging-)'
+  actions:
+    - type: mark-for-op
+      tag: bkpr_ci_delete
+      op: delete
+      days: 7
+
+- name: bkpr-dns-zone-clean-up
+  resource: azure.dnszone
+  description: |
+    Delete any marked DNS hosted zones which are 
+    running for 7 days or more.
+  filters:
+    - type: marked-for-op
+      tag: bkpr_ci_delete
+      op: delete
+  actions:
+    - type: delete
