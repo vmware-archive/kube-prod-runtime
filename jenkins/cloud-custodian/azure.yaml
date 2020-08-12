@@ -12,11 +12,14 @@ policies:
   actions:
     - type: delete
 
+# DNS hosted zones are automatically created by the "kubeprod" binary
+# and we don't tag them. In the mean time the clean-up will be made based
+# on the name of the hosted zone.
 - name: bkpr-dns-zone-mark-for-deletion
   resource: azure.dnszone
   description: |
     Mark for deletion the DNS hosted zones created
-    by BKPR for it's integration tests.
+    by BKPR for it's continuous integration tests.
   filters:
     - type: value
       key: name
@@ -31,7 +34,7 @@ policies:
 - name: bkpr-dns-zone-clean-up
   resource: azure.dnszone
   description: |
-    Delete any marked DNS hosted zones which are 
+    Delete any marked DNS hosted zones which have been 
     running for 7 days or more.
   filters:
     - type: marked-for-op

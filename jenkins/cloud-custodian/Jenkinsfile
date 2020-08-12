@@ -50,7 +50,7 @@ def lockBkprPlatforms(platforms, closure) {
 }
 
 
-// Use the JNLP-docker agent, which runs DinD
+// Use the JNLP-docker agent, which runs Docker-in-Docker
 node('jnlp-agent-docker') {
 
   try {
@@ -94,8 +94,10 @@ node('jnlp-agent-docker') {
           runCloudCustodian("-e AWS_ACCESS_KEY_ID=${accessKeyId} \
             -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
         }
-        
-/*         withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
+
+        // This block will be commented until Cloud Custodian has the "delete" operations coded.
+
+        /* withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
           print "Running the Google Cloud Custodian policies"
           runCloudCustodian(" -v ${googleAppCredentials}:/code/key.json \
           -e GOOGLE_APPLICATION_CREDENTIALS=/code/key.json \

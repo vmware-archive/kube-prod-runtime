@@ -3,7 +3,7 @@ policies:
   resource: cfn
   comment: |
     Clean-up Cloud Formation Stacks created by Jenkins-BKPR
-    for it's integration tests
+    for it's continuous integration tests
   filters:
     - type: value
       key: "tag:created_by"
@@ -16,7 +16,7 @@ policies:
   resource: aws.eks
   comment: |
     Clean-up EKS clusters created by Jenkins-BKPR
-    for it's integration tests
+    for it's continuous integration tests
   filters:
     - type: value
       key: "tag:created_by"
@@ -29,7 +29,7 @@ policies:
   resource: aws.iam-user
   comment: |
     Clean-up temporary serviceaccounts created by Jenkins-BKPR
-    for it's integration tests
+    for it's continuous integration tests
   filters:
     - type: value
       key: "tag:created_by"
