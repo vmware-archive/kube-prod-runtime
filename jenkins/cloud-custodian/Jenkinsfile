@@ -17,6 +17,8 @@ properties([
   ])
 ])
 
+// TODO (SRE): Create a common file for shared functions across different
+// BKPR Jenkins pipelines
 def buildRelDefaults = [
   'AKS_REL': '1.15,1.16',
   'EKS_REL': '1.15,1.16',
@@ -41,7 +43,10 @@ Void runCloudCustodian (String envs, String cloud, String region) {
   """)
 }
 
-
+// This method locks all the BKPR platforms.
+//
+// It doesn't deadlock, as the main Jenkins BKPR pipeline 
+// locks the different platforms in a parallel way.
 def lockBkprPlatforms(platforms, closure) {
   if (platforms.size() > 1) {
       lockBkprPlatforms(platforms[1..-1], { lock(platforms[0]) { closure() }})
@@ -61,11 +66,23 @@ node('jnlp-agent-docker') {
         sh "docker pull gcr.io/bitnami-images/sre-cloud-custodian:${env.CUSTODIAN_VERSION}"
       }
     }
-    stage("Download the Custodian policy files") {
-      sh(returnStatus:true, script: "curl -O https://raw.githubusercontent.com/bitnami/kube-prod-runtime/${env.BRANCH}/jenkins/cloud-custodian/aws.yaml").trim()
-      sh(returnStatus:true, script: "curl -O https://raw.githubusercontent.com/bitnami/kube-prod-runtime/${env.BRANCH}/jenkins/cloud-custodian/azure.yaml").trim()
-      sh(returnStatus:true, script: "curl -O https://raw.githubusercontent.com/bitnami/kube-prod-runtime/${env.BRANCH}/jenkins/cloud-custodian/google.yaml").trim()
-    }
+
+    stage("Clone the kube-prod-runtime Github repository") {
+          dir(env.JOB_WORKSPACE) {
+              retry(3) {
+                try {
+                  sh """
+                    git clone --single-branch --branch ${REMOTE_BRANCH} https://github.com/bitnami/kube-prod-runtime
+                  """
+                } catch(e) {
+                  print "Clone operation failed, retrying ..."
+                  sleep 5 + random.nextInt(6)
+                  throw e
+                }
+              }
+          }
+      }
+
 
     // Build the list of platforms to lock.
     // Example: "eks-1.16, aks-1.15, aks-1.14, gen-1.16 . . ."
@@ -81,31 +98,32 @@ node('jnlp-agent-docker') {
     // process is being completed.
     lockBkprPlatforms(platforms, {
       stage('Execute Cloud Custodian policies') {
+        dir("${env.JOB_WORKSPACE}/jenkins/cloud-custodian") {
 
-        withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
-          print "Running the Azure Cloud Custodian policies"
-          runCloudCustodian("-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
-            -e AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID} \
-            -e AZURE_CLIENT_ID=${AZURE_CLIENT_ID} \
-            -e AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}", 'azure', 'eastus')
+          withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+            print "Running the Azure Cloud Custodian policies"
+            runCloudCustodian("-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
+              -e AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID} \
+              -e AZURE_CLIENT_ID=${AZURE_CLIENT_ID} \
+              -e AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}", 'azure', 'eastus')
+          }
+
+          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'accessKeyId', secretKeyVariable: 'secretAccessKey']]) {
+            print "Running the AWS Cloud Custodian policies"
+            runCloudCustodian("-e AWS_ACCESS_KEY_ID=${accessKeyId} \
+              -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
+          }
+
+          // This block will be commented until Cloud Custodian has the "delete" operations coded.
+
+          /* withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
+            print "Running the Google Cloud Custodian policies"
+            runCloudCustodian(" -v ${googleAppCredentials}:/code/key.json \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/code/key.json \
+            -e GOOGLE_CLOUD_PROJECT='bkprtesting'", 'google', 'us-east1')
+
+          } */
         }
-
-        withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'accessKeyId', secretKeyVariable: 'secretAccessKey']]) {
-          print "Running the AWS Cloud Custodian policies"
-          runCloudCustodian("-e AWS_ACCESS_KEY_ID=${accessKeyId} \
-            -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
-        }
-
-        // This block will be commented until Cloud Custodian has the "delete" operations coded.
-
-        /* withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
-          print "Running the Google Cloud Custodian policies"
-          runCloudCustodian(" -v ${googleAppCredentials}:/code/key.json \
-          -e GOOGLE_APPLICATION_CREDENTIALS=/code/key.json \
-          -e GOOGLE_CLOUD_PROJECT='bkprtesting'", 'google', 'us-east1')
-          
-        } */
-
       }
     })
   } catch (e) {

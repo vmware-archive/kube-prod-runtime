@@ -24,7 +24,7 @@ policies:
     - type: value
       key: name
       op: regex  
-      value: '^(pr-|trying-|staging-)'
+      value: '^(pr-|trying-|staging-)*.bkpr'
   actions:
     - type: mark-for-op
       tag: bkpr_ci_delete
