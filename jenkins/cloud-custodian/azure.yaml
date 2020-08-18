@@ -19,7 +19,7 @@ policies:
   resource: azure.dnszone
   description: |
     Mark for deletion the DNS hosted zones created
-    by BKPR for it's continuous integration tests.
+    by BKPR for its continuous integration tests.
   filters:
     - type: value
       key: name

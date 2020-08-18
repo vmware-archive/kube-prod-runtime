@@ -29,7 +29,7 @@ policies:
   resource: aws.iam-user
   comment: |
     Clean-up temporary serviceaccounts created by Jenkins-BKPR
-    for it's continuous integration tests
+    for its continuous integration tests
   filters:
     - type: value
       key: "tag:created_by"
