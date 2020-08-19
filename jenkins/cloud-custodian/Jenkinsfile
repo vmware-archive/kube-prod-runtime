@@ -36,7 +36,7 @@ Void runCloudCustodian (String envs, String cloud, String region) {
       -u \$(id -u):\$(id -g) \
       -e "HOME=/home" \
       ${envs} \
-      -v $WORKSPACE:/code \
+      -v $WORKSPACE/kube-prod-runtime/jenkins/cloud-custodian:/code \
       -v /etc/passwd:/etc/passwd \
       gcr.io/bitnami-images/sre-cloud-custodian:${env.CUSTODIAN_VERSION} \
       run --region ${region} -f /code/cache -s /code/out /code/policies/${cloud}.yaml
@@ -68,24 +68,25 @@ node('jnlp-agent-docker') {
     }
 
     stage("Clone the kube-prod-runtime Github repository") {
-          dir(env.JOB_WORKSPACE) {
-              retry(3) {
-                try {
-                  sh """
-                    git clone --single-branch --branch ${REMOTE_BRANCH} https://github.com/bitnami/kube-prod-runtime
-                  """
-                } catch(e) {
-                  print "Clone operation failed, retrying ..."
-                  sleep 5 + random.nextInt(6)
-                  throw e
-                }
-              }
-          }
+      retry(3) {
+        try {
+          sh """
+            git clone --single-branch --branch ${REMOTE_BRANCH} https://github.com/bitnami/kube-prod-runtime
+          """
+        } catch(e) {
+          print "Clone operation failed, retrying ..."
+          sleep 5 + random.nextInt(6)
+          throw e
+        }
       }
+    }
 
 
     // Build the list of platforms to lock.
     // Example: "eks-1.16, aks-1.15, aks-1.14, gen-1.16 . . ."
+    //
+    // TODO (SRE): Improve the locking system and parallelize the lock
+    // per platform
     List platforms = []
     buildRelDefaults.each {k, v ->
       cloud = k.split('_')[0].toLowerCase()
@@ -98,8 +99,7 @@ node('jnlp-agent-docker') {
     // process is being completed.
     lockBkprPlatforms(platforms, {
       stage('Execute Cloud Custodian policies') {
-        dir("${env.JOB_WORKSPACE}/jenkins/cloud-custodian") {
-
+        dir("kube-prod-runtime/jenkins/cloud-custodian") {
           withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
             print "Running the Azure Cloud Custodian policies"
             runCloudCustodian("-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
