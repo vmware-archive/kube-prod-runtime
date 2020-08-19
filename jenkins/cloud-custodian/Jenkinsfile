@@ -1,0 +1,139 @@
+#!groovy
+
+// This Jenkins pipeline take care of the clean-up process
+// of stale resources that may be left behind in BKPR Jenkins tests
+// (both manual or automated).
+// It uses https://github.com/cloud-custodian/cloud-custodian as the 
+// rules engine to control all of the different cloud resources.
+//
+// This job will lock all of the BKPR platforms prior running the
+// Cloud Custodian policies.
+
+properties([
+  pipelineTriggers([cron('59 23 * * 6')]),
+  parameters([
+    stringParam(name: 'CUSTODIAN_VERSION', defaultValue: '0.8.46.0', description: "Cloud Custodian tool version"),
+    stringParam(name: 'REMOTE_BRANCH', defaultValue: 'master', description: "Remote branch to pull Cloud Custodian policies from"),
+  ])
+])
+
+// TODO (SRE): Create a common file for shared functions across different
+// BKPR Jenkins pipelines
+def buildRelDefaults = [
+  'AKS_REL': '1.15,1.16',
+  'EKS_REL': '1.15,1.16',
+  'GKE_REL': '1.15,1.16',
+  'GEN_REL': '1.16',
+]
+
+Void noLog(String cmd) {
+    sh('#!/bin/sh -e\n' + cmd)
+}
+
+Void runCloudCustodian (String envs, String cloud, String region) {
+  noLog("""
+    docker run \
+      -u \$(id -u):\$(id -g) \
+      -e "HOME=/home" \
+      ${envs} \
+      -v $WORKSPACE/kube-prod-runtime/jenkins/cloud-custodian:/code \
+      -v /etc/passwd:/etc/passwd \
+      gcr.io/bitnami-images/sre-cloud-custodian:${env.CUSTODIAN_VERSION} \
+      run --region ${region} -f /code/cache -s /code/out /code/policies/${cloud}.yaml
+  """)
+}
+
+// This method locks all the BKPR platforms.
+//
+// It doesn't deadlock, as the main Jenkins BKPR pipeline 
+// locks the different platforms in a parallel way.
+def lockBkprPlatforms(platforms, closure) {
+  if (platforms.size() > 1) {
+      lockBkprPlatforms(platforms[1..-1], { lock(platforms[0]) { closure() }})
+  } else {
+      lock(platforms[0]) { closure() }
+    }
+}
+
+
+// Use the JNLP-docker agent, which runs Docker-in-Docker
+node('jnlp-agent-docker') {
+
+  try {
+    stage("Pull the Cloud-Custodian container") {
+      withCredentials([file(credentialsId: 'gcr-bitnami-images-ro', variable: 'secretFilePath')]) {
+        noLog("docker login -u _json_key -p \"\$(cat '${secretFilePath}')\" https://gcr.io")
+        sh "docker pull gcr.io/bitnami-images/sre-cloud-custodian:${env.CUSTODIAN_VERSION}"
+      }
+    }
+
+    stage("Clone the kube-prod-runtime Github repository") {
+      retry(3) {
+        try {
+          sh """
+            git clone --single-branch --branch ${REMOTE_BRANCH} https://github.com/bitnami/kube-prod-runtime
+          """
+        } catch(e) {
+          print "Clone operation failed, retrying ..."
+          sleep 5 + random.nextInt(6)
+          throw e
+        }
+      }
+    }
+
+
+    // Build the list of platforms to lock.
+    // Example: "eks-1.16, aks-1.15, aks-1.14, gen-1.16 . . ."
+    //
+    // TODO (SRE): Improve the locking system and parallelize the lock
+    // per platform
+    List platforms = []
+    buildRelDefaults.each {k, v ->
+      cloud = k.split('_')[0].toLowerCase()
+    
+      for (version in v.split(',')) {
+        platforms.add("${cloud}-${version}")
+      }
+    }
+    // Lock ALL of the BKPR platforms, don't let anything to run while the clean-up
+    // process is being completed.
+    lockBkprPlatforms(platforms, {
+      stage('Execute Cloud Custodian policies') {
+        dir("kube-prod-runtime/jenkins/cloud-custodian") {
+          withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+            print "Running the Azure Cloud Custodian policies"
+            runCloudCustodian("-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
+              -e AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID} \
+              -e AZURE_CLIENT_ID=${AZURE_CLIENT_ID} \
+              -e AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}", 'azure', 'eastus')
+          }
+
+          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'accessKeyId', secretKeyVariable: 'secretAccessKey']]) {
+            print "Running the AWS Cloud Custodian policies"
+            runCloudCustodian("-e AWS_ACCESS_KEY_ID=${accessKeyId} \
+              -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
+          }
+
+          // This block will be commented until Cloud Custodian has the "delete" operations coded.
+
+          /* withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
+            print "Running the Google Cloud Custodian policies"
+            runCloudCustodian(" -v ${googleAppCredentials}:/code/key.json \
+            -e GOOGLE_APPLICATION_CREDENTIALS=/code/key.json \
+            -e GOOGLE_CLOUD_PROJECT='bkprtesting'", 'google', 'us-east1')
+
+          } */
+        }
+      }
+    })
+  } catch (e) {
+
+    slackSend color: 'danger', message: """
+    The Jenkins-BKPR Cloud Custodian execution failed. 
+    Error message:
+    *${e.message}.*
+    <${env.BUILD_URL}|:jenkins: Click here for more info>
+    """
+    throw e
+  }
+}

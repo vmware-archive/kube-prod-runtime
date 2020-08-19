@@ -1,0 +1,39 @@
+policies:
+- name: bkpr-delete-cft-stacks
+  resource: cfn
+  comment: |
+    Clean-up Cloud Formation Stacks created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-delete-eks-clusters
+  resource: aws.eks
+  comment: |
+    Clean-up EKS clusters created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-delete-iam-svcaccounts
+  resource: aws.iam-user
+  comment: |
+    Clean-up temporary serviceaccounts created by Jenkins-BKPR
+    for its continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete

@@ -1,0 +1,15 @@
+# Not used at this moment. Cloud Custodian doesn't have
+# coded the "delete" operation for Google Cloud.
+policies:
+- name: bkpr-wipe-gke-clusters
+  resource: gcp.gke-cluster
+  comment: |
+    Clean-up GKE clusters created by Jenkins-BKPR for its
+    continuous integration tests.
+  filters:
+    - type: value
+      key: name
+      op: regex  
+      value: '^(pr-|trying-|staging-)*.bkpr'
+  actions:
+    - type: delete
