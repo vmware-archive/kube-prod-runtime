@@ -35,7 +35,7 @@ local EXTERNAL_DNS_IMAGE = (import "images.json")["external-dns"];
     rules: [
       {
         apiGroups: [""],
-        resources: ["services", "pods", "nodes"],
+        resources: ["services", "pods", "nodes", "endpoints"],
         verbs: ["get", "list", "watch"],
       },
       {
