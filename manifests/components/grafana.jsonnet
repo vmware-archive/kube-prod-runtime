@@ -35,6 +35,8 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
       namespace: "kubeprod",
     },
   },
+  // Some platform may need to override this (AKS in particular)
+  auth_proxy_header_name:: "X-Auth-Request-User",
 
   // Amount of persistent storage required by Alertmanager
   storage:: "1Gi",
@@ -154,7 +156,7 @@ local GRAFANA_DATA_MOUNTPOINT = "/opt/bitnami/grafana/data";
               },
               env_+: {
                 GF_AUTH_PROXY_ENABLED: "true",
-                GF_AUTH_PROXY_HEADER_NAME: "X-Auth-Request-User",
+                GF_AUTH_PROXY_HEADER_NAME: $.auth_proxy_header_name,
                 GF_AUTH_PROXY_HEADER_PROPERTY: "username",
                 GF_AUTH_PROXY_HEADERS: "Email:X-Auth-Request-Email",
                 GF_AUTH_PROXY_AUTO_SIGN_UP: "true",
