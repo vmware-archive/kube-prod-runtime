@@ -17,10 +17,10 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 // [1] see: https://issues.jenkins-ci.org/browse/JENKINS-41929
 
 def buildRelDefaults = [
-  'AKS_REL': '1.15,1.16',
-  'EKS_REL': '1.15,1.16',
-  'GKE_REL': '1.15,1.16',
-  'GEN_REL': '1.16',
+  'AKS_REL': '1.16,1.17',
+  'EKS_REL': '1.16,1.17',
+  'GKE_REL': '1.16,1.17-pre',
+  'GEN_REL': '1.16', // generic is tested on GKE, wait for 1.17 on the stable channel to change it
 ]
 
 properties([
