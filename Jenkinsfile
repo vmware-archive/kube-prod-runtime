@@ -16,6 +16,8 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 // corresponding parameter is set.
 // [1] see: https://issues.jenkins-ci.org/browse/JENKINS-41929
 
+// NOTE: need update below map at jenkins/cloud-custodian/Jenkinsfile
+// (until we create a common file for shared Jenkins code/data)
 def buildRelDefaults = [
   'AKS_REL': '1.16,1.17',
   'EKS_REL': '1.16,1.17',
