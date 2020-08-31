@@ -45,6 +45,9 @@ local grafana = import "../components/grafana.jsonnet";
   version: version,
 
   grafana: grafana {
+    // oauth2-proxy >= 6.0.0 doesn't provide "X-Auth-Request-User" header on AKS,
+    // use "X-Auth-Request-Email" instead
+    auth_proxy_header_name:: "X-Auth-Request-Email",
     prometheus:: $.prometheus.prometheus.svc,
     ingress+: {
       host: "grafana." + $.external_dns_zone_name,
