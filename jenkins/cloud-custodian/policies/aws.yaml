@@ -18,7 +18,7 @@ policies:
     - type: delete
 
 - name: bkpr-delete-subnets
-  resource: aws.eks
+  resource: aws.subnet
   comment: |
     Clean-up temporary subnets created by Jenkins-BKPR
     for it's continuous integration tests
@@ -31,7 +31,7 @@ policies:
     - type: delete
 
 - name: bkpr-delete-inet-gateways
-  resource: aws.eks
+  resource: aws.internet-gateway
   comment: |
     Clean-up temporary internet gateways created by Jenkins-BKPR
     for it's continuous integration tests
