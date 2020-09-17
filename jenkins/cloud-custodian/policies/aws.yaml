@@ -17,19 +17,6 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-delete-subnets
-  resource: aws.subnet
-  comment: |
-    Clean-up temporary subnets created by Jenkins-BKPR
-    for it's continuous integration tests
-  filters:
-    - type: value
-      key: "tag:created_by"
-      value: "jenkins-bkpr"
-      op: eq
-  actions:
-    - type: delete
-
 - name: bkpr-delete-inet-gateways
   resource: aws.internet-gateway
   comment: |
