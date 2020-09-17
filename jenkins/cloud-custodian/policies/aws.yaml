@@ -1,8 +1,13 @@
+# In order to troubleshoot the dependency errors in AWS when deleting
+# CloudFormation stacks (VPCs), it is needed to delete:
+# instances / subnets / security groups / inet gateways
+#
+# Ref: https://aws.amazon.com/premiumsupport/knowledge-center/troubleshoot-dependency-error-delete-vpc/
 policies:
-- name: bkpr-delete-cft-stacks
-  resource: cfn
+- name: bkpr-delete-eks-clusters
+  resource: aws.eks
   comment: |
-    Clean-up Cloud Formation Stacks created by Jenkins-BKPR
+    Clean-up EKS clusters created by Jenkins-BKPR
     for it's continuous integration tests
   filters:
     - type: value
@@ -12,10 +17,36 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-delete-eks-clusters
+- name: bkpr-delete-subnets
   resource: aws.eks
   comment: |
-    Clean-up EKS clusters created by Jenkins-BKPR
+    Clean-up temporary subnets created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-delete-inet-gateways
+  resource: aws.eks
+  comment: |
+    Clean-up temporary internet gateways created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-delete-cft-stacks
+  resource: cfn
+  comment: |
+    Clean-up Cloud Formation Stacks created by Jenkins-BKPR
     for it's continuous integration tests
   filters:
     - type: value
