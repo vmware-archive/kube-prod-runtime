@@ -17,7 +17,7 @@
     "mysqld-exporter": "bitnami/mysqld-exporter:0.12.1-debian-10-r86",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.34.1-debian-10-r1",
     "node-exporter": "bitnami/node-exporter:1.0.1-debian-10-r4",
-    "oauth2_proxy": "bitnami/oauth2-proxy:6.1.1-debian-10-r11",
+    "oauth2_proxy": "bitnami/oauth2-proxy:6.1.1-debian-10-r12",
     "powerdns": "psitrax/powerdns:v4.2.0",
     "prometheus": "bitnami/prometheus:2.20.1-debian-10-r1"
 }
