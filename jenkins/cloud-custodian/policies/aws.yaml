@@ -17,6 +17,19 @@ policies:
   actions:
     - type: delete
 
+- name: bkpr-release-public-ip-addresses
+  resource: aws.network-addr
+  comment: |
+    Release temporary IP addresses allocated by CFN
+    for the EKS cluster creation
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: release
+
 - name: bkpr-delete-inet-gateways
   resource: aws.internet-gateway
   comment: |
