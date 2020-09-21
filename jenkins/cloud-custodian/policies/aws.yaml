@@ -41,7 +41,7 @@ policies:
       value: "jenkins-bkpr"
       op: eq
   actions:
-    - type: release
+    - type: delete
 
 - name: bkpr-delete-elb
   resource: aws.elb
