@@ -30,6 +30,19 @@ policies:
   actions:
     - type: release
 
+- name: bkpr-delete-nat-gateways
+  resource: aws.nat-gateway
+  comment: |
+    Clean-up created NatGateways created by CFN
+    for the BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: release
+
 - name: bkpr-delete-inet-gateways
   resource: aws.internet-gateway
   comment: |
