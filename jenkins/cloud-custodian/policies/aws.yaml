@@ -33,7 +33,7 @@ policies:
 - name: bkpr-delete-nat-gateways
   resource: aws.nat-gateway
   comment: |
-    Clean-up created NatGateways created by CFN
+    Clean-up NatGateways created by CFN
     for the BKPR continuous integration tests
   filters:
     - type: value
@@ -42,6 +42,19 @@ policies:
       op: eq
   actions:
     - type: release
+
+- name: bkpr-delete-elb
+  resource: aws.elb
+  comment: |
+    Clean-up Elastic Load Balancers created by CFN
+    for the BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:kubernetes.io/service-name"
+      value: "kubeprod/nginx-ingress"
+      op: eq
+  actions:
+    - type: delete
 
 - name: bkpr-delete-inet-gateways
   resource: aws.internet-gateway
