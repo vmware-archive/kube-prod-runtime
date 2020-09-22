@@ -110,18 +110,17 @@ node('jnlp-agent-docker') {
               -e AZURE_CLIENT_SECRET=${AZURE_CLIENT_SECRET}", 'azure', 'eastus')
           }
 
-          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'accessKeyId', secretKeyVariable: 'secretAccessKey']]) {
-            print "Running the AWS Cloud Custodian policies"
-            runCloudCustodian("-e AWS_ACCESS_KEY_ID=${accessKeyId} \
-              -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
-          }
-
-          withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
+          withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {
             print "Running the Google Cloud Custodian policies"
             runCloudCustodian(" -v ${googleAppCredentials}:/code/key.json \
             -e GOOGLE_APPLICATION_CREDENTIALS=/code/key.json \
             -e GOOGLE_CLOUD_PROJECT='bkprtesting'", 'google', 'us-east1')
+          }
 
+          withCredentials([[$class: 'AmazonWebServicesCredentialsBinding', credentialsId: 'aws-eks-kubeprod-jenkins', accessKeyVariable: 'accessKeyId', secretKeyVariable: 'secretAccessKey']]) {
+            print "Running the AWS Cloud Custodian policies"
+            runCloudCustodian("-e AWS_ACCESS_KEY_ID=${accessKeyId} \
+              -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
           }
         }
       }
