@@ -8,8 +8,8 @@ policies:
     continuous integration tests.
   filters:
     - type: value
-      key: name
-      op: regex  
-      value: '^(pr-|trying-|staging-|master-)*.bkpr'
+      key: resourceLabels.created_by
+      op: eq
+      value: 'jenkins-bkpr'
   actions:
     - type: delete
