@@ -12,7 +12,7 @@
 properties([
   pipelineTriggers([cron('59 23 * * 6')]),
   parameters([
-    stringParam(name: 'CUSTODIAN_VERSION', defaultValue: '0.9.6.0', description: "Cloud Custodian tool version"),
+    stringParam(name: 'CUSTODIAN_VERSION', defaultValue: '0.9.6.1', description: "Cloud Custodian tool version"),
     stringParam(name: 'REMOTE_BRANCH', defaultValue: 'master', description: "Remote branch to pull Cloud Custodian policies from"),
   ])
 ])
@@ -116,15 +116,13 @@ node('jnlp-agent-docker') {
               -e AWS_SECRET_ACCESS_KEY=${secretAccessKey}", 'aws', 'us-east-1')
           }
 
-          // This block will be commented until Cloud Custodian has the "delete" operations coded.
-
-          /* withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
+          withCredentials([file(credentialsId: 'gke-kubeprod-jenkins', variable: 'googleAppCredentials')]) {          
             print "Running the Google Cloud Custodian policies"
             runCloudCustodian(" -v ${googleAppCredentials}:/code/key.json \
             -e GOOGLE_APPLICATION_CREDENTIALS=/code/key.json \
             -e GOOGLE_CLOUD_PROJECT='bkprtesting'", 'google', 'us-east1')
 
-          } */
+          }
         }
       }
     })

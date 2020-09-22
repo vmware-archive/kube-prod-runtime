@@ -10,6 +10,6 @@ policies:
     - type: value
       key: name
       op: regex  
-      value: '^(pr-|trying-|staging-)*.bkpr'
+      value: '^(pr-|trying-|staging-|master-)*.bkpr'
   actions:
     - type: delete
