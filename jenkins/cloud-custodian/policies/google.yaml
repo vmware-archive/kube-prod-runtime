@@ -1,5 +1,3 @@
-# Not used at this moment. Cloud Custodian doesn't have
-# coded the "delete" operation for Google Cloud.
 policies:
 - name: bkpr-wipe-gke-clusters
   resource: gcp.gke-cluster

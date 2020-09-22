@@ -56,7 +56,7 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-delete-inet-gateways
+- name: bkpr-detach-inet-gateways
   resource: aws.internet-gateway
   comment: |
     Clean-up temporary internet gateways created by Jenkins-BKPR
@@ -67,7 +67,21 @@ policies:
       value: "jenkins-bkpr"
       op: eq
   actions:
+    - type: detach
+
+- name: bkpr-delete-security-groups
+  resource: aws.security-group
+  comment: |
+    Clean-up temporary internet gateways created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      key: "tag:Name"
+      value: '^eks-cluster-sg\-(staging|pr|trying|master)\-.*'
+      op: regex
+  actions:
     - type: delete
+
 
 - name: bkpr-delete-cft-stacks
   resource: cfn
@@ -82,15 +96,3 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-delete-iam-svcaccounts
-  resource: aws.iam-user
-  comment: |
-    Clean-up temporary serviceaccounts created by Jenkins-BKPR
-    for its continuous integration tests
-  filters:
-    - type: value
-      key: "tag:created_by"
-      value: "jenkins-bkpr"
-      op: eq
-  actions:
-    - type: delete
