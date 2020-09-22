@@ -82,7 +82,6 @@ policies:
   actions:
     - type: delete
 
-
 - name: bkpr-delete-cft-stacks
   resource: cfn
   comment: |
@@ -96,3 +95,28 @@ policies:
   actions:
     - type: delete
 
+- name: bkpr-delete-security-groups
+  resource: aws.hostedzone
+  comment: |
+    Clean-up temporary internet gateways created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      op: regex
+      key: Name
+      value: '^(master|pr|trying|staging)\-.*.tests.bkpr.run.'
+  actions:
+    - type: delete
+
+- name: bkpr-delete-security-groups
+  resource: aws.iam-user
+  comment: |
+    Clean-up temporary internet gateways created by Jenkins-BKPR
+    for it's continuous integration tests
+  filters:
+    - type: value
+      op: regex
+      key: UserName
+      value: '^bkpr\-(pr|staging|trying|master)\-.*'
+  actions:
+    - type: delete
