@@ -29,6 +29,7 @@ policies:
       op: eq
   actions:
     - type: release
+      force: true
 
 - name: bkpr-delete-nat-gateways
   resource: aws.nat-gateway
@@ -68,6 +69,19 @@ policies:
       op: eq
   actions:
     - type: detach
+
+- name: bkpr-delete-inet-gateways
+  resource: aws.internet-gateway
+  comment: |
+    Delete internet gateways created by Jenkins-BKPR
+    for BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
 
 - name: bkpr-delete-security-groups
   resource: aws.security-group
