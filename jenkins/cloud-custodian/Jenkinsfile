@@ -12,7 +12,7 @@
 properties([
   pipelineTriggers([cron('59 23 * * 6')]),
   parameters([
-    stringParam(name: 'CUSTODIAN_VERSION', defaultValue: '0.8.46.0', description: "Cloud Custodian tool version"),
+    stringParam(name: 'CUSTODIAN_VERSION', defaultValue: '0.9.6.0', description: "Cloud Custodian tool version"),
     stringParam(name: 'REMOTE_BRANCH', defaultValue: 'master', description: "Remote branch to pull Cloud Custodian policies from"),
   ])
 ])
