@@ -9,7 +9,7 @@
     "elasticsearch-exporter": "bitnami/elasticsearch-exporter:1.1.0-debian-10-r84",
     "external-dns": "bitnami/external-dns:0.7.3-debian-10-r4",
     "fluentd": "bitnami/fluentd:1.11.2-debian-10-r2",
-    "grafana": "bitnami/grafana:7.2.0-debian-10-r13",
+    "grafana": "bitnami/grafana:7.2.0-debian-10-r14",
     "keycloak": "jboss/keycloak:8.0.1",
     "kibana": "bitnami/kibana:7.9.0-debian-10-r0",
     "kube-state-metrics": "bitnami/kube-state-metrics:1.9.7-debian-10-r18",
