@@ -8,7 +8,7 @@ policies:
   resource: aws.eks
   comment: |
     Clean-up EKS clusters created by Jenkins-BKPR
-    for it's continuous integration tests
+    for BKPR continuous integration tests
   filters:
     - type: value
       key: "tag:created_by"
@@ -17,16 +17,82 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-delete-inet-gateways
-  resource: aws.internet-gateway
+- name: bkpr-release-public-ip-addresses
+  resource: aws.network-addr
   comment: |
-    Clean-up temporary internet gateways created by Jenkins-BKPR
-    for it's continuous integration tests
+    Release temporary IP addresses allocated by CFN
+    for EKS clusters creation
   filters:
     - type: value
       key: "tag:created_by"
       value: "jenkins-bkpr"
       op: eq
+  actions:
+    - type: release
+      force: true
+
+- name: bkpr-delete-nat-gateways
+  resource: aws.nat-gateway
+  comment: |
+    Clean-up NatGateways created by CFN
+    for BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-delete-elb
+  resource: aws.elb
+  comment: |
+    Clean-up Elastic Load Balancers created by CFN
+    for BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:kubernetes.io/service-name"
+      value: "kubeprod/nginx-ingress"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-detach-inet-gateways
+  resource: aws.internet-gateway
+  comment: |
+    Detach internet gateways created by Jenkins-BKPR
+    for BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: detach
+
+- name: bkpr-delete-inet-gateways
+  resource: aws.internet-gateway
+  comment: |
+    Delete internet gateways created by Jenkins-BKPR
+    for BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:created_by"
+      value: "jenkins-bkpr"
+      op: eq
+  actions:
+    - type: delete
+
+- name: bkpr-delete-security-groups
+  resource: aws.security-group
+  comment: |
+    Clean-up temporary security-groups created by CFN
+    for BKPR continuous integration tests
+  filters:
+    - type: value
+      key: "tag:Name"
+      value: '^eks-cluster-sg\-(staging|pr|trying|master)\-.*'
+      op: regex
   actions:
     - type: delete
 
@@ -34,7 +100,7 @@ policies:
   resource: cfn
   comment: |
     Clean-up Cloud Formation Stacks created by Jenkins-BKPR
-    for it's continuous integration tests
+    for BKPR continuous integration tests
   filters:
     - type: value
       key: "tag:created_by"
@@ -43,15 +109,15 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-delete-iam-svcaccounts
+- name: bkpr-delete-iam-users
   resource: aws.iam-user
   comment: |
-    Clean-up temporary serviceaccounts created by Jenkins-BKPR
-    for its continuous integration tests
+    Clean-up temporary IAM users created by Jenkins-BKPR
+    for BKPR continuous integration tests
   filters:
     - type: value
-      key: "tag:created_by"
-      value: "jenkins-bkpr"
-      op: eq
+      op: regex
+      key: UserName
+      value: '^bkpr\-(pr|staging|trying|master)\-.*'
   actions:
     - type: delete
