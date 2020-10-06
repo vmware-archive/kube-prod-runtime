@@ -21,8 +21,8 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 def buildRelDefaults = [
   'AKS_REL': '1.16,1.17',
   'EKS_REL': '1.16,1.17',
-  'GKE_REL': '1.16,1.17-pre',
-  'GEN_REL': '1.16', // generic is tested on GKE, wait for 1.17 on the stable channel to change it
+  'GKE_REL': '1.16,1.17',
+  'GEN_REL': '1.17', // generic is tested on GKE, wait for 1.17 on the stable channel to change it
 ]
 
 properties([
