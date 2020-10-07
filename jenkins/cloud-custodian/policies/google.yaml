@@ -12,7 +12,7 @@ policies:
   actions:
     - type: delete
 
-- name: bkpr-wipe-gke-clusters
+- name: bkpr-wipe-gke-cluster-disks
   resource: gcp.disk
   comment: |
     Clean-up GKE pvcs by Jenkins-BKPR for its
