@@ -25,7 +25,7 @@ def buildRelDefaults = [
   'AKS_REL': '1.16,1.17',
   'EKS_REL': '1.16,1.17',
   'GKE_REL': '1.16,1.17',
-  'GEN_REL': '1.16',
+  'GEN_REL': '1.17',
 ]
 
 Void noLog(String cmd) {
