@@ -362,7 +362,7 @@ spec:
     env.GOPATH = "/go"
 
     node(label) {
-        timeout(time: 181, unit: 'MINUTES') {
+        timeout(time: 180, unit: 'MINUTES') {
             withEnv([
                 "HOME=${env.WORKSPACE}",
                 "PATH+KUBEPROD=${env.WORKSPACE}/src/github.com/bitnami/kube-prod-runtime/kubeprod/bin",
