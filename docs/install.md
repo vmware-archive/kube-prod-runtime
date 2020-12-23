@@ -20,6 +20,12 @@ BKPR_VERSION=$(curl --silent "https://api.github.com/repos/bitnami/kube-prod-run
 
 _The command configures the `BKPR_VERSION` variable with the latest stable version of BKPR. If you wish to use a pre-release or a specific version, please set it up accordingly._
 
+You can confirm that the environment variable has an expected value as follows:
+
+```bash
+echo $BKPR_VERSION
+```
+
 1. Use the following commands to download the desired release:
 
 On Linux:
