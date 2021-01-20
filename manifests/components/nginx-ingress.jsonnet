@@ -178,7 +178,7 @@ local NGNIX_INGRESS_IMAGE = (import "images.json")["nginx-ingress-controller"];
         {name: "https", port: 443, protocol: "TCP"},
       ],
       type: "LoadBalancer",
-      externalTrafficPolicy: "Local",  // preserve source IP (where supported)
+      externalTrafficPolicy: "Cluster",  // preserve source IP (where supported)
     },
   },
 
