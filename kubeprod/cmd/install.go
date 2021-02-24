@@ -22,6 +22,7 @@ package cmd
 import (
 	"fmt"
 	"regexp"
+	"runtime"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -110,6 +111,9 @@ func NewInstallSubcommand(cmd *cobra.Command, platform string, config installer.
 		return nil, fmt.Errorf("platform config path must be a file:// URL")
 	}
 	c.PlatformConfigPath = platformConfigURL.Path
+	if runtime.GOOS == "windows" {
+		c.PlatformConfigPath = c.PlatformConfigPath[1:]
+	}
 
 	c.Config, err = clientConfig.ClientConfig()
 	if err != nil {
