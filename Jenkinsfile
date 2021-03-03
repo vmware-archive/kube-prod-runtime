@@ -357,7 +357,6 @@ spec:
               path: .docker/config.json
 """
 ) {
-    env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
     env.PATH = "/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     env.GOPATH = "/go"
 
