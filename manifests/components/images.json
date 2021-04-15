@@ -11,7 +11,7 @@
     "external-dns": "bitnami/external-dns:0.7.6-debian-10-r83",
     "grafana": "bitnami/grafana:7.1.5-debian-10-r7",
     "keycloak": "jboss/keycloak:8.0.1",
-    "kibana": "bitnami/kibana:7.9.0-debian-10-r0",
+    "kibana": "bitnami/kibana:7.12.0-debian-10-r7",
     "kube-state-metrics": "bitnami/kube-state-metrics:1.9.8-debian-10-r47",
     "mariadb-galera": "bitnami/mariadb-galera:10.5.9-debian-10-r44",
     "mysqld-exporter": "bitnami/mysqld-exporter:0.12.1-debian-10-r86",
