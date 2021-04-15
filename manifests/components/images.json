@@ -13,7 +13,7 @@
     "keycloak": "jboss/keycloak:8.0.1",
     "kibana": "bitnami/kibana:7.9.0-debian-10-r0",
     "kube-state-metrics": "bitnami/kube-state-metrics:1.9.7-debian-10-r18",
-    "mariadb-galera": "bitnami/mariadb-galera:10.5.5-debian-10-r2",
+    "mariadb-galera": "bitnami/mariadb-galera:10.5.9-debian-10-r44",
     "mysqld-exporter": "bitnami/mysqld-exporter:0.12.1-debian-10-r86",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.44.0-debian-10-r54",
     "node-exporter": "bitnami/node-exporter:1.0.1-debian-10-r4",
