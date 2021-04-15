@@ -15,7 +15,7 @@
     "kube-state-metrics": "bitnami/kube-state-metrics:1.9.7-debian-10-r18",
     "mariadb-galera": "bitnami/mariadb-galera:10.5.5-debian-10-r2",
     "mysqld-exporter": "bitnami/mysqld-exporter:0.12.1-debian-10-r86",
-    "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.35.0-debian-10-r10",
+    "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.44.0-debian-10-r54",
     "node-exporter": "bitnami/node-exporter:1.0.1-debian-10-r4",
     "oauth2_proxy": "bitnami/oauth2-proxy:6.0.0-debian-10-r7",
     "powerdns": "psitrax/powerdns:v4.2.0",
