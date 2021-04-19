@@ -58,7 +58,7 @@ func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssi
 			// Azure :(
 			if strings.Contains(err.Error(), "PrincipalNotFound") && retries < maxTries {
 				log.Debugf("Azure returned %v, retrying", err)
-				time.Sleep(1)
+				time.Sleep(2)
 				continue
 			}
 
