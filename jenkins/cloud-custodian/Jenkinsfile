@@ -22,10 +22,10 @@ properties([
 // This map is taken from main Jenkinsfile, extracting the Kubernetes releases
 // numbers, e.g. plain `1.17` even if main Jenkinsfile had `1.17-pre` to handle rapid/beta channels
 def buildRelDefaults = [
-  'AKS_REL': '1.16,1.17',
-  'EKS_REL': '1.16,1.17',
-  'GKE_REL': '1.16,1.17',
-  'GEN_REL': '1.17',
+  'AKS_REL': '1.17,1.18',
+  'EKS_REL': '1.17,1.18',
+  'GKE_REL': '1.17,1.18',
+  'GEN_REL': '1.18',
 ]
 
 Void noLog(String cmd) {

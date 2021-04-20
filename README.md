@@ -29,6 +29,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 | `1.5`        | `1.14`-`1.15` | `1.14`-`1.15` | `1.14`-`1.15` |
 | `1.6`        | `1.15`-`1.16` | `1.15`-`1.16` | `1.15`-`1.16` |
 | `1.7`        | `1.16`-`1.17` | `1.16`-`1.17` | `1.16`-`1.17` |
+| `1.8`        | `1.17`-`1.18` | `1.17`-`1.17` | `1.17`-`1.18` |
 
 Note that the (experimental) `generic` platform is e2e tested on GKE.
 
