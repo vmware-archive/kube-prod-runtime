@@ -40,8 +40,9 @@ def buildRel = buildRelDefaults.collectEntries {
     key, value -> [(key): (params[key] != ""? params[key] : value)]
 }
 
-def parentZone = 'tests.bkpr.run'
-def parentZoneResourceGroup = 'jenkins-bkpr-rg'
+// Both live in the bkpr Azure subscription
+def parentZone = 'ci.bkpr.run'
+def parentZoneResourceGroup = 'bkpr-ci-rg'
 
 // Force using our pod
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
