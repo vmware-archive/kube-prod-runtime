@@ -383,7 +383,7 @@ spec:
                             }
                         }
 
-                        withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                        withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                             container('az') {
                                 sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
                                 sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
@@ -545,7 +545,7 @@ spec:
                                     dir("${env.WORKSPACE}/${clusterName}") {
                                         withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
                                             // NB: `kubeprod` also uses az cli credentials and $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                                            withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                                            withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                                                 runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}", (retryNum == maxRetries))
                                                 // clusterSetup
                                                 {
@@ -564,7 +564,7 @@ spec:
                                                         // delete`. We reuse an existing principal here to
                                                         //      a) avoid this leak
                                                         //      b) avoid having to give the "outer" principal (above) the power to create new service principals.
-                                                        withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                        withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                                                             sh """
                                                             az aks create                               \
                                                                 --verbose                               \
@@ -584,7 +584,7 @@ spec:
                                                     }
 
                                                     // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                                    withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                    withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                                                         // NB: writeJSON doesn't work without approvals(?)
                                                         // See https://issues.jenkins-ci.org/browse/JENKINS-44587
                                                         writeFile([file: "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json", text: """
