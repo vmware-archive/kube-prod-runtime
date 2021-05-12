@@ -19,10 +19,10 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 // NOTE: need update below map at jenkins/cloud-custodian/Jenkinsfile
 // (until we create a common file for shared Jenkins code/data)
 def buildRelDefaults = [
-  'AKS_REL': '1.16,1.17',
-  'EKS_REL': '1.16,1.17',
-  'GKE_REL': '1.16,1.17',
-  'GEN_REL': '1.17', // generic is tested on GKE, wait for 1.17 on the stable channel to change it
+  'AKS_REL': '1.18',
+  'EKS_REL': '1.17,1.18',
+  'GKE_REL': '1.17,1.18',
+  'GEN_REL': '1.18', // generic is tested on GKE, wait for 1.17 on the stable channel to change it
 ]
 
 properties([
@@ -40,8 +40,9 @@ def buildRel = buildRelDefaults.collectEntries {
     key, value -> [(key): (params[key] != ""? params[key] : value)]
 }
 
-def parentZone = 'tests.bkpr.run'
-def parentZoneResourceGroup = 'jenkins-bkpr-rg'
+// Both live in the bkpr Azure subscription
+def parentZone = 'ci.bkpr.run'
+def parentZoneResourceGroup = 'bkpr-ci-rg'
 
 // Force using our pod
 def label = env.BUILD_TAG.replaceAll(/[^a-zA-Z0-9-]/, '-').toLowerCase()
@@ -357,7 +358,6 @@ spec:
               path: .docker/config.json
 """
 ) {
-    env.http_proxy = 'http://proxy.webcache:80/'  // Note curl/libcurl needs explicit :80 !
     env.PATH = "/go/bin:/usr/local/go/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
     env.GOPATH = "/go"
 
@@ -383,7 +383,7 @@ spec:
                             }
                         }
 
-                        withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                        withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                             container('az') {
                                 sh "az login --service-principal -u \$AZURE_CLIENT_ID -p \$AZURE_CLIENT_SECRET -t \$AZURE_TENANT_ID"
                                 sh "az account set -s \$AZURE_SUBSCRIPTION_ID"
@@ -545,7 +545,7 @@ spec:
                                     dir("${env.WORKSPACE}/${clusterName}") {
                                         withEnv(["KUBECONFIG=${env.WORKSPACE}/.kubecfg-${clusterName}"]) {
                                             // NB: `kubeprod` also uses az cli credentials and $AZURE_SUBSCRIPTION_ID, $AZURE_TENANT_ID.
-                                            withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+                                            withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                                                 runIntegrationTest(platform, "aks --config=${clusterName}-autogen.json --dns-resource-group=${resourceGroup} --dns-zone=${dnsZone} --email=${adminEmail}", "--dns-suffix ${dnsZone}", (retryNum == maxRetries))
                                                 // clusterSetup
                                                 {
@@ -564,7 +564,7 @@ spec:
                                                         // delete`. We reuse an existing principal here to
                                                         //      a) avoid this leak
                                                         //      b) avoid having to give the "outer" principal (above) the power to create new service principals.
-                                                        withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                        withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                                                             sh """
                                                             az aks create                               \
                                                                 --verbose                               \
@@ -584,7 +584,7 @@ spec:
                                                     }
 
                                                     // Reuse this service principal for externalDNS and oauth2.  A real (paranoid) production setup would use separate minimal service principals here.
-                                                    withCredentials([azureServicePrincipal('jenkins-bkpr-contributor-sp')]) {
+                                                    withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
                                                         // NB: writeJSON doesn't work without approvals(?)
                                                         // See https://issues.jenkins-ci.org/browse/JENKINS-44587
                                                         writeFile([file: "${env.WORKSPACE}/${clusterName}/${clusterName}-autogen.json", text: """
