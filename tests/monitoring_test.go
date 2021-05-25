@@ -196,7 +196,7 @@ var _ = Describe("Monitoring", func() {
 			}, "10m", "5s").
 				Should(WithTransform(countEndpoints, BeNumerically(">", 0)))
 
-			Expect(managers.Active[0].Url).To(ContainSubstring(am_path + "/api/v1/alerts"))
+			Expect(managers.Active[0].Url).To(ContainSubstring(am_path + "/api/v2/alerts"))
 		})
 	})
 
