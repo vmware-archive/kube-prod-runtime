@@ -60,7 +60,7 @@ func httpClient(hosts *map[string]string) (*http.Client, error) {
 		rootCAs = x509.NewCertPool()
 	}
 
-	certs, err := ioutil.ReadFile("testdata/fakelerootx1.pem")
+	certs, err := ioutil.ReadFile("testdata/letsencrypt-stg-root-x1.pem")
 	if err != nil {
 		return nil, err
 	}
