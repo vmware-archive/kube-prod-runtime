@@ -528,7 +528,7 @@ spec:
                     def aksKversions = releasesFromStr(buildRel.AKS_REL)
                     for (x in aksKversions) {
                         def kversion = x.rel  // local bind required because closures
-                        def resourceGroup = 'jenkins-bkpr-rg'
+                        def resourceGroup = 'bkpr-ci-rg'
                         def location = "eastus"
                         def platform = "aks-" + kversion
 
