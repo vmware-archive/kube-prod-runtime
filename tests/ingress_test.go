@@ -271,7 +271,7 @@ var _ = Describe("Ingress", func() {
 		})
 	})
 
-	Context("with TLS", func() {
+	PContext("with TLS", func() {
 		BeforeEach(func() {
 			if *dnsSuffix == "" {
 				// This test requires a real DNS suffix, because letsencrypt

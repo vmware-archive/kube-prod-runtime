@@ -216,7 +216,6 @@ def runIntegrationTest(String description, String kubeprodArgs, String ginkgoArg
                                 --tags integration -r       \
                                 --randomizeAllSpecs         \
                                 --randomizeSuites           \
-                                --failOnPending             \
                                 --trace                     \
                                 --progress                  \
                                 --slowSpecThreshold=300     \
