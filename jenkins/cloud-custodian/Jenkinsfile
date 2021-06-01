@@ -22,10 +22,10 @@ properties([
 // This map is taken from main Jenkinsfile, extracting the Kubernetes releases
 // numbers, e.g. plain `1.17` even if main Jenkinsfile had `1.17-pre` to handle rapid/beta channels
 def buildRelDefaults = [
-  'AKS_REL': '1.17,1.18',
+  'AKS_REL': '1.18',
   'EKS_REL': '1.17,1.18',
   'GKE_REL': '1.17,1.18',
-  'GEN_REL': '1.18',
+  'GEN_REL': '1.18', // generic is tested on GKE, wait for 1.17 on the stable channel to change it
 ]
 
 Void noLog(String cmd) {
@@ -102,7 +102,7 @@ node('jnlp-agent-docker') {
     lockBkprPlatforms(platforms, {
       stage('Execute Cloud Custodian policies') {
         dir("kube-prod-runtime/jenkins/cloud-custodian") {
-          withCredentials([azureServicePrincipal('jenkins-bkpr-owner-sp')]) {
+          withCredentials([azureServicePrincipal('bkpr-jenkins-sp')]) {
             print "Running the Azure Cloud Custodian policies"
             runCloudCustodian("-e AZURE_TENANT_ID=${AZURE_TENANT_ID} \
               -e AZURE_SUBSCRIPTION_ID=${AZURE_SUBSCRIPTION_ID} \
