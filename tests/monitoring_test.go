@@ -118,6 +118,12 @@ var _ = Describe("Exporters", func() {
 		Entry("alertmanager", `alertmanager_peer_position`, Not(BeEmpty())),
 		Entry("kube-state-metrics", `kube_deployment_status_replicas{kubernetes_namespace="kubeprod",deployment="nginx-ingress-controller"}`, Not(BeEmpty())),
 		Entry("node-exporter", `node_cpu_seconds_total`, Not(BeEmpty())),
+		// The next expectation assumes some certificates have been requested recently. This check can
+		// fail for many reasons (e.g.: BKPR was installed a while ago and this test gets executed first
+		// among the whole suite). A suggested change would be to isolate this expectation with an explcit
+		// certificate resource creation to verify that this metric is exported. This would follow a
+		// known pattern of Arrange, Act, and Assert. When running locally, this line may need to be
+		// commented out.
 		Entry("cert-manager", `certmanager_http_acme_client_request_count`, Not(BeEmpty())),
 		Entry("elasticsearch", `elasticsearch_cluster_health_number_of_nodes{cluster="elasticsearch-cluster"}`, And(
 			ContainElement(HaveKeyWithValue("kubernetes_pod_name", "elasticsearch-logging-0")),
