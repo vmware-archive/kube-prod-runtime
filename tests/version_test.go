@@ -50,9 +50,13 @@ var _ = Describe("version", func() {
 		Expect(configmap.Data).To(HaveKeyWithValue(
 			"release",
 			SatisfyAny(
+				// local builds can also be versioned using the short git sha
 				Equal("dev-untagged"),
+				MatchRegexp(`[\da-g]{7}`),
+				// release versions (starts with a v and don't have any extra suffixes)
+				MatchRegexp(`v\d+\.\d+\.\d+`),
+				// prelease versions (e.g.: suffixed with -rc1)
 				MatchRegexp(`\d+\.\d+\.\d+(?:-.*)`),
 			)))
 	})
-
 })
