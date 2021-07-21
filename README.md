@@ -30,8 +30,7 @@ The following matrix shows which Kubernetes versions and platforms are supported
 | `1.6` (deprecated) | `1.15`-`1.16` | `1.15`-`1.16` | `1.15`-`1.16` |
 | `1.7`              | `1.16`-`1.17` | `1.16`-`1.17` | `1.16`-`1.17` |
 | `1.8` (current)    | `1.17`-`1.18` | `1.17`-`1.18` | `1.17`-`1.18` |
-| `1.9`  (planned)   | `1.18`-`1.19` | `1.18`-`1.19` | `1.18`-`1.19` |
-| `1.10` (planned)   | `1.19`-`1.20` | `1.19`-`1.20` | `1.19`-`1.20` |
+| `1.9` (planned)    | `1.18`        | `1.18`-`1.19` | `1.18`-`1.19` |
 
 Note that the (experimental) `generic` platform is e2e tested on GKE.
 

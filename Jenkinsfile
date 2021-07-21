@@ -19,7 +19,7 @@ import org.jenkinsci.plugins.pipeline.modeldefinition.Utils
 // NOTE: need update below map at jenkins/cloud-custodian/Jenkinsfile
 // (until we create a common file for shared Jenkins code/data)
 def buildRelDefaults = [
-  'AKS_REL': '1.18,1.19',
+  'AKS_REL': '1.18',
   'EKS_REL': '1.18,1.19',
   'GKE_REL': '1.18,1.19',
   'GEN_REL': '1.18', // generic is tested on GKE stable channel
