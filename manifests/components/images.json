@@ -16,7 +16,7 @@
     "mariadb-galera": "bitnami/mariadb-galera:10.5.10-debian-10-r25",
     "mysqld-exporter": "bitnami/mysqld-exporter:0.12.1-debian-10-r86",
     "nginx-ingress-controller": "bitnami/nginx-ingress-controller:0.34.1-debian-10-r1",
-    "node-exporter": "bitnami/node-exporter:1.2.2-debian-10-r35",
+    "node-exporter": "bitnami/node-exporter:1.2.2-debian-10-r36",
     "oauth2_proxy": "bitnami/oauth2-proxy:6.0.0-debian-10-r7",
     "powerdns": "psitrax/powerdns:v4.2.0",
     "prometheus": "bitnami/prometheus:2.26.0-debian-10-r8"
