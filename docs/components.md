@@ -54,10 +54,14 @@ The following deployment parameters are supported, tested, and will be honored a
     config:: import "kubeprod-autogen.json",
     // Place your overrides here
     elasticsearch+: {
-        replicas: 5,
+		sts+: {
+			spec+: {
+				replicas: 5
+			},
+		},
         // min_master_nodes > round(replicas / 2)
         min_master_nodes: 3,
-    }
+    },
 }
 ```
 
