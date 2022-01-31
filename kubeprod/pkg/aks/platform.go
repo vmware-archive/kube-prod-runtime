@@ -47,7 +47,7 @@ const (
 func createRoleAssignment(ctx context.Context, roleClient authorization.RoleAssignmentsClient, scope string, params authorization.RoleAssignmentCreateParameters) (authorization.RoleAssignment, error) {
 	uid := uuid.NewV4()
 
-	const maxTries = 30
+	const maxTries = 90
 
 	// Azure will throw PrincipalNotFound if used "too soon" after creation :(
 	for retries := 0; ; retries++ {
