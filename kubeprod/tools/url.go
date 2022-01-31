@@ -23,6 +23,8 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"runtime"
+	"strings"
 )
 
 func CwdURL() (*url.URL, error) {
@@ -32,6 +34,9 @@ func CwdURL() (*url.URL, error) {
 	}
 	if cwd[len(cwd)-1] != '/' {
 		cwd = cwd + "/"
+	}
+	if runtime.GOOS == "windows" {
+		cwd = strings.Replace(cwd, "\\", "/", -1)
 	}
 	return &url.URL{Scheme: "file", Path: cwd}, nil
 }

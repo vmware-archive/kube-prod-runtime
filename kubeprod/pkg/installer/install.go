@@ -28,6 +28,7 @@ import (
 	"net/url"
 	"os"
 	"path"
+	goruntime "runtime"
 
 	"github.com/bitnami/kubecfg/pkg/kubecfg"
 	"github.com/bitnami/kubecfg/utils"
@@ -170,6 +171,10 @@ func (c InstallCmd) Update(out io.Writer) error {
 	if err != nil {
 		return err
 	}
+	if goruntime.GOOS == "windows" {
+		input.Path = input.Path[1:]
+	}
+
 
 	validate := kubecfg.ValidateCmd{
 		Mapper:        c.Mapper,
